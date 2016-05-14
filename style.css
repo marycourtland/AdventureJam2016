@@ -1,0 +1,43 @@
+body {
+  background-color: #38372F;
+}
+
+#board-layers {
+  width: 500px;
+  height: 500px;
+  margin: 3rem auto;
+  position: relative;
+}
+
+.board-layer {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 500px;
+  height: 500px;
+}
+
+/*
+#mouse-overlay:hover {
+  cursor: pointer;
+
+}
+*/
+
+#game {
+  background: white;
+  border: 1px solid black;
+  border-bottom: none;
+  border-right: none;
+}
+
+.cell {
+    border: 1px solid black;
+    border-top: none;
+    border-left: none;
+    color: darkgreen;
+    text-align: center;
+    position: absolute;
+    font-family: monospace;
+    font-size: 12px;
+}
