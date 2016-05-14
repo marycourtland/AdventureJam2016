@@ -34,7 +34,6 @@ RuleSet.prototype.transform = function(state, neighbors) {
     // If we try to transform anything unknown, things will just stay constant.
     if (!(state in this.stateMap)) { return state; }
 
-    // TODO: validate that neighbors has the correct structure?
     var sum = deepWeightedSum(neighbors, this.weights);
 
     if (sum >= this.stateMap[state].length) { return state; }

@@ -85,7 +85,7 @@ Cell.prototype.add = function(species) {
 
 
 
-},{"./species-battle":6}],3:[function(require,module,exports){
+},{"./species-battle":7}],3:[function(require,module,exports){
 // Example:
 // env = new Env({x:30, y:30});
 
@@ -177,8 +177,36 @@ Env.prototype.randomCoords = function() {
 }
 
 },{"./advancerator.js":1,"./cell.js":2}],4:[function(require,module,exports){
+module.exports = GrowthRules = {
+    plants: {
+        stateMap: {
+            0: [0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1],
+            1: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+        },
+        weights: [
+            [1, 2, 1],
+            [2, 0, 2],
+            [1, 2, 1]
+        ]
+    },
+
+    plantsCatalyzed: {
+        stateMap: {
+            0: [0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+            1: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+        },
+        weights: [
+            [1, 2, 1],
+            [2, 0, 2],
+            [1, 2, 1]
+        ]
+    }
+}
+
+},{}],5:[function(require,module,exports){
 var Env = require('./environment');
 var Species= require('./species');
+var GrowthRules = require('./growth-rules')
 
 module.exports = Map = {};
 
@@ -188,23 +216,34 @@ var speciesData = [
     { id: 'character', symbol: '😃' },
     { id: 'alien',     symbol: '😵' },
 
-    // previous symbol: ∴
-    { id: 'grass',     symbol: '',     color: 'green',
+    { id: 'grass',     symbol: '∴',      color: 'lightgreen', 
         rules: {
-            stateMap: {
-                0: [0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1],
-                1: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
-            },
-            weights: [
-                [1, 2, 1],
-                [2, 0, 2],
-                [1, 2, 1]
+            default: GrowthRules.plants
+        }
+    },
+
+    { id: 'flowers',   symbol: '✨',     color: 'red',
+        rules: {
+            default: GrowthRules.plants
+        }
+    },
+
+    { id: 'trees',     symbol: '&psi;', color: 'green', passable: false,
+        rules: {
+            default: GrowthRules.plants,
+            conditional: [
+                // the presence of grass catalyzes tree growth
+                // threshhold indicates the number of grass neighbors
+                // that are needed in order to trigger this set of rules
+                {
+                    species_id: 'grass',
+                    threshhold: 4, // number of neighbors to trigger this conditional
+                    rules: GrowthRules.plantsCatalyzed
+                }
             ]
         }
     },
-    
-    { id: 'flowers',   symbol: '✨',     color: 'red' },
-    { id: 'tree',      symbol: '&psi;', color: 'green', passable: false },
+
     { id: 'zap',       symbol: '⚡' }
 ]
 
@@ -230,12 +269,17 @@ Map.init = function(size, dims, htmlElement) {
 Map.generate = function() {
     var self = this;
 
-    // register grass with all of the cells
+    // register grass and trees with all of the cells
     self.env.range().forEach(function(coords) {
         self.env.get(coords).add(self.species.grass);
+        self.env.get(coords).add(self.species.trees);
     })
 
     self.sow(self.species.grass, 1/10);
+
+    self.sow(self.species.flowers, 1/30)
+
+    self.sow(self.species.trees, 1/20);
 
     self.env.advance(6);
 }
@@ -284,7 +328,7 @@ Map.render = function() {
     }
 }
 
-},{"./environment":3,"./species":8}],5:[function(require,module,exports){
+},{"./environment":3,"./growth-rules":4,"./species":9}],6:[function(require,module,exports){
 // EXAMPLE:
 //
 // var ruleset = new RuleSet({
@@ -321,7 +365,6 @@ RuleSet.prototype.transform = function(state, neighbors) {
     // If we try to transform anything unknown, things will just stay constant.
     if (!(state in this.stateMap)) { return state; }
 
-    // TODO: validate that neighbors has the correct structure?
     var sum = deepWeightedSum(neighbors, this.weights);
 
     if (sum >= this.stateMap[state].length) { return state; }
@@ -363,7 +406,7 @@ function indexWeights(deepArray) {
     return output;
 }
 
-},{}],6:[function(require,module,exports){
+},{}],7:[function(require,module,exports){
 // This module is for deciding the winning species in a cell!
 // 
 // For now, it's just 'which species is higher in the pecking order'
@@ -374,7 +417,7 @@ module.exports = SpeciesBattle = {
         'blank',
         'grass',
         'flowers',
-        'tree',
+        'trees',
         'zap',
         'explode'
     ],
@@ -391,7 +434,7 @@ module.exports = SpeciesBattle = {
     }
 }
 
-},{}],7:[function(require,module,exports){
+},{}],8:[function(require,module,exports){
 // THE POINT OF THIS MODULE IS....
 //
 //    ... To take a cell object and decide whether it has a species in it.
@@ -402,14 +445,14 @@ var masks = {
     false: 0
 }
 
-module.exports = SpeciesMask = function(species) {
+module.exports = SpeciesMask = function(species_id) {
     return function(cell) {
         if (!cell || !cell.species) return masks[false];
-        return masks[cell.species.id === species.id];
+        return masks[cell.species.id === species_id];
     }
 }
 
-},{}],8:[function(require,module,exports){
+},{}],9:[function(require,module,exports){
 var RuleSet = require('./ruleset');
 var SpeciesMask = require('./species-mask');
 
@@ -421,13 +464,31 @@ module.exports = Species = function(params) {
     // behavior
     this.passable = params.passable || true;
 
-    this.ruleSet = new RuleSet(params.rules);
+    this.initRules(params.rules);
+
+    //this.ruleSet = new RuleSet(params.rules);
 
     // This is a function to decide whether a cell hosts this species or not
-    this.mask = SpeciesMask(this);
+    this.mask = SpeciesMask(this.id);
 }
 
 Species.prototype = {};
+
+// this is sort of messy; it populates stuff in the rules object
+Species.prototype.initRules = function(rules) {
+    this.rules = rules || {};
+
+    // The default rules govern how the species spreads based on its own presence
+    this.rules.default = new RuleSet(this.rules.default)   
+
+    // Conditional rules are based on other species
+    this.rules.conditional = this.rules.conditional || [];
+
+    this.rules.conditional.forEach(function(condition) {
+        condition.mask = SpeciesMask(condition.species_id);
+        condition.rules = new RuleSet(condition.rules);
+    })
+}
 
 Species.prototype.getSymbol = function() { return this.symbol; }
 Species.prototype.getColor = function() { return this.color; }
@@ -436,28 +497,61 @@ Species.prototype.getColor = function() { return this.color; }
 Species.prototype.nextState = function(cell, neighbors) {
     // turn these things into arrays of 1s and 0s (or whatever)
     var self = this;
-    var maskedCell = this.mask(cell);
-    var maskedNeighbors = neighbors.map(function(coordmap) {
-        // return another coordmap
-        return {coords: coordmap.coords, value: self.mask(coordmap.value)};
-    });
 
-    return this.ruleSet.transform(maskedCell, maskedNeighbors);
+    // these are the rules to use.
+    var ruleset = this.decideRuleset(cell, neighbors)
+    
+    // these are masked by THIS species, not a foreign species returned by decideRuleset
+    var maskedCell = this.mask(cell);
+    var maskedNeighbors = mapCoordmap(neighbors, self.mask);
+
+    return ruleset.transform(maskedCell, maskedNeighbors);
 }
 
 
+Species.prototype.decideRuleset = function(cell, neighbors) {
+    var winningRuleset = this.rules.default;
 
-},{"./ruleset":5,"./species-mask":7}],9:[function(require,module,exports){
+    if (this.rules.conditional.length === 0) return winningRuleset;
+
+    var winningCount = 0; // the winning conditional species will be the one with the most neighbors. **Not weighted
+    this.rules.conditional.forEach(function(condition) {
+        var maskedNeighbors = mapCoordmap(neighbors, condition.mask);
+        var count = coordmapSum(maskedNeighbors);
+
+        // the number of neighbors has to be larger than the threshhold
+        if (condition.threshhold && count < condition.threshhold) return;
+
+        if (count > winningCount) {
+            winningRuleset = condition.rules;
+            winningCount = count;
+        }
+    })
+
+    return winningRuleset;
+}
+
+// TODO make a coordmap object type...
+function mapCoordmap(coordmap, mapFunction) {
+    return coordmap.map(function(coordmapItem) {
+        return {coords: coordmapItem.coords, value: mapFunction(coordmapItem.value)};
+    })
+}
+
+function coordmapSum(coordmap) {
+    var sum = 0
+    coordmap.forEach(function(coordmapItem) {
+        sum += coordmapItem.value;
+    })
+    return sum;
+}
+
+},{"./ruleset":6,"./species-mask":8}],10:[function(require,module,exports){
 var Map = require('./map');
 
 var game = {};
 game.size = {x:50, y:50}; // cells
 game.cellDims = {x:10, y:10}; // pixels
-
-
-var boardElement;
-
-window.onload = initGame;
 
 function initGame() {
     boardElement = document.getElementById('game');
@@ -465,5 +559,6 @@ function initGame() {
     Map.init(game.size, game.cellDims, boardElement);
 }
 
+window.onload = initGame;
 
-},{"./map":4}]},{},[9]);
+},{"./map":5}]},{},[10]);

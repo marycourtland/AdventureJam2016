@@ -8,7 +8,7 @@ module.exports = SpeciesBattle = {
         'blank',
         'grass',
         'flowers',
-        'tree',
+        'trees',
         'zap',
         'explode'
     ],
