@@ -8,9 +8,9 @@ var masks = {
     false: 0
 }
 
-module.exports = SpeciesMask = function(species) {
+module.exports = SpeciesMask = function(species_id) {
     return function(cell) {
         if (!cell || !cell.species) return masks[false];
-        return masks[cell.species.id === species.id];
+        return masks[cell.species.id === species_id];
     }
 }

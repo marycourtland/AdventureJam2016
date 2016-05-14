@@ -1,5 +1,6 @@
 var Env = require('./environment');
 var Species= require('./species');
+var GrowthRules = require('./growth-rules')
 
 module.exports = Map = {};
 
@@ -9,23 +10,34 @@ var speciesData = [
     { id: 'character', symbol: '😃' },
     { id: 'alien',     symbol: '😵' },
 
-    // previous symbol: ∴
-    { id: 'grass',     symbol: '',     color: 'green',
+    { id: 'grass',     symbol: '∴',      color: 'lightgreen', 
         rules: {
-            stateMap: {
-                0: [0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1],
-                1: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
-            },
-            weights: [
-                [1, 2, 1],
-                [2, 0, 2],
-                [1, 2, 1]
+            default: GrowthRules.plants
+        }
+    },
+
+    { id: 'flowers',   symbol: '✨',     color: 'red',
+        rules: {
+            default: GrowthRules.plants
+        }
+    },
+
+    { id: 'trees',     symbol: '&psi;', color: 'green', passable: false,
+        rules: {
+            default: GrowthRules.plants,
+            conditional: [
+                // the presence of grass catalyzes tree growth
+                // threshhold indicates the number of grass neighbors
+                // that are needed in order to trigger this set of rules
+                {
+                    species_id: 'grass',
+                    threshhold: 4, // number of neighbors to trigger this conditional
+                    rules: GrowthRules.plantsCatalyzed
+                }
             ]
         }
     },
-    
-    { id: 'flowers',   symbol: '✨',     color: 'red' },
-    { id: 'tree',      symbol: '&psi;', color: 'green', passable: false },
+
     { id: 'zap',       symbol: '⚡' }
 ]
 
@@ -51,12 +63,17 @@ Map.init = function(size, dims, htmlElement) {
 Map.generate = function() {
     var self = this;
 
-    // register grass with all of the cells
+    // register grass and trees with all of the cells
     self.env.range().forEach(function(coords) {
         self.env.get(coords).add(self.species.grass);
+        self.env.get(coords).add(self.species.trees);
     })
 
     self.sow(self.species.grass, 1/10);
+
+    self.sow(self.species.flowers, 1/30)
+
+    self.sow(self.species.trees, 1/20);
 
     self.env.advance(6);
 }
