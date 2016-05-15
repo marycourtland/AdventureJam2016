@@ -9,8 +9,7 @@ module.exports = SpeciesBattle = {
         'grass',
         'flowers',
         'trees',
-        'zap',
-        'explode'
+        'magic',
     ],
 
     decide: function(ids) {

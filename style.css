@@ -17,12 +17,10 @@ body {
   height: 500px;
 }
 
-/*
 #mouse-overlay:hover {
   cursor: pointer;
 
 }
-*/
 
 #game {
   background: white;

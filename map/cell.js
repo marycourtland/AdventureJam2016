@@ -48,6 +48,11 @@ Cell.prototype.flush = function() {
 }
 
 Cell.prototype.add = function(species) {
+    if (!species) {
+        // this happens when a species dies
+        species = this.allSpecies.blank; // this SHOULD be one of the registered species
+    }
+
     if (!(species.id in this.allSpecies)) {
         this.allSpecies[species.id] = species;
     }

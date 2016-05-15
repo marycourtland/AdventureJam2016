@@ -72,6 +72,11 @@ Cell.prototype.flush = function() {
 }
 
 Cell.prototype.add = function(species) {
+    if (!species) {
+        // this happens when a species dies
+        species = this.allSpecies.blank; // this SHOULD be one of the registered species
+    }
+
     if (!(species.id in this.allSpecies)) {
         this.allSpecies[species.id] = species;
     }
@@ -112,9 +117,11 @@ Env.prototype.init = function(blank_cell) {
 }
 
 Env.prototype.advance = function(numTimes) {
-    if (numTimes === 'undefined') numTimes = 1;
+    if (typeof numTimes === 'undefined') numTimes = 1;
 
-    for (var t = 0; t < numTimes; t++) { Advancerator(this); }
+    for (var t = 0; t <= numTimes; t+=1){
+        Advancerator(this);
+    }
 
     return this;
 }
@@ -178,7 +185,19 @@ Env.prototype.randomCoords = function() {
 
 },{"./advancerator.js":1,"./cell.js":2}],4:[function(require,module,exports){
 module.exports = GrowthRules = {
-    plants: {
+    magic: {
+        stateMap: {
+            0: [0, 0, 0, 1, 1, 1, 1, 1, 0],
+            1: [0, 0, 1, 1, 0, 1, 1, 0, 0]
+        },
+        weights: [
+            [1, 1, 1],
+            [1, 0, 1],
+            [1, 1, 1]
+        ]
+    },
+
+   plants: {
         stateMap: {
             0: [0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1],
             1: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
@@ -200,6 +219,23 @@ module.exports = GrowthRules = {
             [2, 0, 2],
             [1, 2, 1]
         ]
+    },
+    plantsDying: {
+        stateMap: {
+            0: [0, 0, 0, 0, 0, 0, 0, 0, 0],
+            1: [0, 0, 0, 0, 0, 1, 1, 1, 1]
+        },
+        weights: [
+            [1, 1, 1],
+            [1, 0, 1],
+            [1, 1, 1]
+        ]
+    },
+    completeDeath: {
+        stateMap: {
+            0: [0, 0, 0, 0, 0, 0, 0, 0, 0],
+            1: [0, 0, 0, 0, 0, 0, 0, 0, 0]
+        }
     }
 }
 
@@ -216,15 +252,33 @@ var speciesData = [
     { id: 'character', symbol: '😃' },
     { id: 'alien',     symbol: '😵' },
 
-    { id: 'grass',     symbol: '∴',      color: 'lightgreen', 
+    { id: 'magic',     symbol: '⚡',      color: 'purple',
         rules: {
-            default: GrowthRules.plants
+            default: GrowthRules.magic
         }
     },
 
-    { id: 'flowers',   symbol: '✨',     color: 'red',
+    { id: 'grass',     symbol: '∴',      color: 'lightgreen', 
         rules: {
-            default: GrowthRules.plants
+            default: GrowthRules.plants,
+            conditional: [
+                {
+                    species_id: 'magic',
+                    rules: GrowthRules.plantsDying
+                }
+            ]
+        }
+    },
+
+    { id: 'flowers',   symbol: '✨',     color: 'blue',
+        rules: {
+            default: GrowthRules.plants,
+            conditional: [
+                {
+                    species_id: 'magic',
+                    rules: GrowthRules.plantsDying
+                }
+            ]
         }
     },
 
@@ -239,12 +293,15 @@ var speciesData = [
                     species_id: 'grass',
                     threshhold: 4, // number of neighbors to trigger this conditional
                     rules: GrowthRules.plantsCatalyzed
+                },
+                {
+                    species_id: 'magic',
+                    rules: GrowthRules.plantsDying
                 }
             ]
         }
     },
 
-    { id: 'zap',       symbol: '⚡' }
 ]
 
 Map.species = {};
@@ -271,17 +328,32 @@ Map.generate = function() {
 
     // register grass and trees with all of the cells
     self.env.range().forEach(function(coords) {
+        self.env.get(coords).add(self.species.magic)
         self.env.get(coords).add(self.species.grass);
         self.env.get(coords).add(self.species.trees);
     })
 
+    self.randomClump([
+        {x:  0, y:  0},
+        {x:  1, y:  1},
+        {x: -1, y:  1},
+        {x:  1, y: -1},
+        {x: -1, y: -1},
+        {x:  0, y: -1},
+        {x:  0, y:  1},
+        {x: -1, y:  0},
+        {x:  1, y:  0},
+    ], self.species.magic)
+
+    //self.sow(self.species.magic, 1/20)
+
     self.sow(self.species.grass, 1/10);
 
-    self.sow(self.species.flowers, 1/30)
+    self.sow(self.species.flowers, 1/50)
 
-    self.sow(self.species.trees, 1/20);
+    self.sow(self.species.trees, 1/30);
 
-    self.env.advance(6);
+    self.env.advance(5);
 }
 
 // randomly set cells as the species
@@ -296,6 +368,25 @@ Map.sow = function(species, frequency) {
     }
 
     seeds.forEach(function(coords) { self.env.set(coords, species); })
+
+    return this
+}
+
+Map.randomClump = function(coordClump, species) {
+    // Pick a random spot and paste the the clump 
+    var self = this;
+    var center = self.env.randomCoords();
+    
+    coordClump.forEach(function(coords) {
+        var targetCoords = {x: coords.x + center.x, y: coords.y + center.y};
+        self.env.set(targetCoords, species);
+    })
+
+    return this
+}
+
+Map.advance = function() {
+    this.env.advance();
 }
 
 
@@ -418,8 +509,7 @@ module.exports = SpeciesBattle = {
         'grass',
         'flowers',
         'trees',
-        'zap',
-        'explode'
+        'magic',
     ],
 
     decide: function(ids) {
@@ -560,5 +650,10 @@ function initGame() {
 }
 
 window.onload = initGame;
+
+window.onclick = function() {
+    Map.advance();
+    Map.render();
+}
 
 },{"./map":5}]},{},[10]);
