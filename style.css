@@ -12,8 +12,13 @@ a {
   font: 8pt sans-serif;
 }
 
+  #hud > * {
+    margin-right: 1em;
+  }
+
   #hud #info {
     float: right;
+    margin-right: 0;
   }
 
 

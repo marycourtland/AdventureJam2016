@@ -1,12 +1,19 @@
-module.exports = Renderer = function(dims) {
+module.exports = Renderer = function(html, dims, center) {
+    // Direct references. So the parent should not overwrite them.
+    this.html = html;
     this.dims = dims;
+    this.centerCoords = center;
+    this.centerPx = {
+        x: html.getBoundingClientRect().width / 2,
+        y: html.getBoundingClientRect().height / 2
+    }
 }
 
 
 // Settings
 cellClass = 'cell'
 cellIdDelimiter = '_'
-cellIdPrefix = Renderer.cellClass + Renderer.cellIdDelimiter;
+cellIdPrefix = cellClass + cellIdDelimiter;
 
 
 // Methods
@@ -38,20 +45,26 @@ Renderer.prototype.refreshCell = function(cellElement, cellObject) {
 
 Renderer.prototype.positionCell = function(cellElement, coords) {
     cellElement.setAttribute('id',  this.coordsToId(coords));
-    cellElement.style.left = (coords.x * this.dims.x) + 'px';
-    cellElement.style.top = (coords.y * this.dims.y) + 'px';
+
+    var position = {
+        x: this.centerPx.x + (-this.centerCoords.x + coords.x) * this.dims.x,
+        y: this.centerPx.y + (-this.centerCoords.y + coords.y) * this.dims.y
+    }
+
+    cellElement.style.left = position.x + 'px';
+    cellElement.style.top = position.y + 'px';
     return cellElement;
 }
 
-Renderer.prototype.render = function(env, html) {
+Renderer.prototype.render = function(env) {
     var self = this;
 
-    html.innerHTML = '';
+    self.html.innerHTML = '';
 
     env.range().forEach(function(coords) {
         var cellElement = self.createCell(env.get(coords));
         self.positionCell(cellElement, coords);
-        html.appendChild(cellElement);
+        self.html.appendChild(cellElement);
     })
 }
 

@@ -13,10 +13,36 @@ function initGame() {
 }
 
 function bindEvents() {
-    document.getElementById('mouse-overlay').onclick = function() {
+    var mouseOverlay = document.getElementById('mouse-overlay');
+
+    mouseOverlay.onclick = function() {
         Map.advance();
         Map.render();
     }
+
+    var keyboardCallbacks = {
+        37: function goLeft(evt) {
+            Map.recenter(Map.center.x - 1, Map.center.y);
+        },
+
+        39: function goRight(evt) {
+            Map.recenter(Map.center.x + 1, Map.center.y);
+        },
+
+        38: function goUp(evt) {
+            Map.recenter(Map.center.x, Map.center.y - 1);
+        },
+
+        40: function goDown(evt) {
+            Map.recenter(Map.center.x, Map.center.y + 1);
+        }
+    }
+
+    window.addEventListener('keyup', function(event) {
+        var keycode = event.fake || window.event ? event.keyCode : event.which;
+        if (keycode in keyboardCallbacks) keyboardCallbacks[keycode]();
+    });
+
 }
 
 

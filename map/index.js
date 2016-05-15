@@ -29,7 +29,7 @@ var speciesData = [
         }
     },
 
-    { id: 'flowers',   symbol: '✨',     color: 'blue',
+    { id: 'flowers',   symbol: '✨',     color: 'orange',
         rules: {
             default: GrowthRules.plants,
             conditional: [
@@ -71,11 +71,12 @@ speciesData.forEach(function(s) {
 
 
 Map.init = function(size, dims, htmlElement) {
-    this.html = htmlElement;
     this.size = size;
     this.dims = dims;
 
-    this.renderer = new Renderer(this.dims);
+    this.center = {x: Math.floor(size.x/2), y: Math.floor(size.y/2)} // use Map.setCenter to change this
+
+    this.renderer = new Renderer(htmlElement, this.dims, this.center);
 
     this.env = new Env(this.size, this.species.blank);
 
@@ -101,9 +102,9 @@ Map.generate = function() {
     self.sow(self.species.flowers, 1/50)
     self.sow(self.species.trees, 1/30);
 
-    self.env.advance(5);
+    self.env.advance(4);
 
-    self.clump({x: 20, y:20}, [
+    self.clump(self.env.randomCoords(), [
         {x:  0, y:  0},
         {x:  1, y:  1},
         {x: -1, y:  1},
@@ -114,6 +115,8 @@ Map.generate = function() {
         {x: -1, y:  0},
         {x:  1, y:  0},
     ], self.species.magic)
+
+    self.env.advance(1);
 }
 
 // randomly set cells as the species
@@ -146,12 +149,13 @@ Map.clump = function(center, coordClump, species) {
 
 Map.advance = function() {
     this.env.advance();
+    return this;
 }
 
 
 // RENDERING
-Map.render = function() { this.renderer.render(this.env, this.html); }
-Map.refresh = function() { this.renderer.refresh(this.env); }
+Map.render = function() { this.renderer.render(this.env); return this; }
+Map.refresh = function() { this.renderer.refresh(this.env); return this; }
 
 Map.zoomFactor = 2;
 
@@ -159,12 +163,21 @@ Map.zoomIn = function() {
     this.dims.x *= Map.zoomFactor;
     this.dims.y *= Map.zoomFactor;
     this.refresh();
+    return this;
 }
 
 Map.zoomOut = function() {
     this.dims.x /= Map.zoomFactor;
     this.dims.y /= Map.zoomFactor;
     this.refresh();
+    return this;
+}
+
+Map.recenter = function(x, y) {
+    this.center.x = x;
+    this.center.y = y;
+    this.refresh();
+    return this;
 }
 
 
