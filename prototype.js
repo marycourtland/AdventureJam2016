@@ -11,3 +11,8 @@ function initGame() {
 }
 
 window.onload = initGame;
+
+window.onclick = function() {
+    Map.advance();
+    Map.render();
+}
