@@ -2,7 +2,7 @@ var Map = require('./map');
 
 var game = {};
 game.size = {x:50, y:50}; // cells
-game.cellDims = {x:50, y:50}; // pixels
+game.cellDims = {x:20, y:20}; // pixels
 window.game = game;
 
 function initGame() {
