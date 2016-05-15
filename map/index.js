@@ -73,6 +73,7 @@ Map.init = function(size, dims, htmlElement) {
     this.html = htmlElement;
     this.size = size;
     this.dims = dims;
+    this.renderer.dims = this.dims; // ugh 
 
     this.env = new Env(this.size, this.species.blank);
 
@@ -149,30 +150,87 @@ Map.advance = function() {
 
 
 // RENDERING
+Map.render = function() { Map.renderer.render(); }
+Map.refresh = function() { Map.renderer.refresh(); }
 
-Map.render = function() {
-    var dims = this.dims;
-    var html = this.html;
-    var env = this.env;
+Map.zoomFactor = 2;
+
+Map.zoomIn = function() {
+    this.dims.x *= Map.zoomFactor;
+    this.dims.y *= Map.zoomFactor;
+    this.refresh();
+}
+
+Map.zoomOut = function() {
+    this.dims.x /= Map.zoomFactor;
+    this.dims.y /= Map.zoomFactor;
+    this.refresh();
+}
+
+
+// clump all this stuff together in a renderer
+Map.renderer = {};
+
+
+Map.renderer.cellClass = 'cell'
+Map.renderer.cellIdDelimiter = '_'
+Map.renderer.cellIdPrefix = Map.renderer.cellClass + Map.renderer.cellIdDelimiter;
+
+Map.renderer.coordsToId = function(coords) {
+    return this.cellIdPrefix + coords.x + this.cellIdDelimiter + coords.y
+}
+Map.renderer.idToCoords = function(id) {
+    var coordArray = id.slice(this.cellIdPrefix.length).split(this.cellIdDelimiter);
+    return {x: coordArray[0], y: coordArray[1] }
+}
+
+Map.renderer.createCell = function(cellObject) {
+    var cellElement = document.createElement('div');
+    cellElement.setAttribute('class', this.cellClass);
+    this.refreshCell(cellElement, cellObject);
+    return cellElement;
+}
+
+Map.renderer.refreshCell = function(cellElement, cellObject) {
+    cellElement.style.width = this.dims.x + 'px';
+    cellElement.style.height = this.dims.y + 'px';
+    cellElement.style.lineHeight = this.dims.y + 'px';
+    cellElement.style.backgroundColor = cellObject.species.getColor();
+    cellElement.innerHTML = cellObject.species.getSymbol();
+}
+
+Map.renderer.positionCell = function(cellElement, coords) {
+    cellElement.setAttribute('id',  this.coordsToId(coords));
+    cellElement.style.left = (coords.x * this.dims.x) + 'px';
+    cellElement.style.top = (coords.y * this.dims.y) + 'px';
+    return cellElement;
+}
+
+Map.renderer.render = function() {
+    var html = Map.html;
+    var env = Map.env;
+    var self = this;
 
     html.innerHTML = '';
 
     env.range().forEach(function(coords) {
-        renderCell(coords, env.get(coords));
+        var cellElement = self.createCell(env.get(coords));
+        self.positionCell(cellElement, coords);
+        html.appendChild(cellElement);
     })
-
-    function renderCell(coords, cell) {
-        var cell_element = document.createElement('div');
-
-        cell_element.setAttribute('class', 'cell')
-        cell_element.style.left = (coords.x * dims.x) + 'px';
-        cell_element.style.top = (coords.y * dims.y) + 'px';
-        cell_element.style.width = dims.x + 'px';
-        cell_element.style.height = dims.y + 'px';
-        cell_element.style.lineHeight = dims.y + 'px';
-        cell_element.style.backgroundColor = cell.species.getColor();
-        cell_element.innerHTML= cell.species.getSymbol();
-
-        html.appendChild(cell_element);
-    }
 }
+
+Map.renderer.refresh = function() {
+    var env = Map.env;
+    var self = this;
+ 
+    env.range().forEach(function(coords) {
+        var cellObject = env.get(coords);
+        var cellElement = document.getElementById(self.coordsToId(coords));
+        self.refreshCell(cellElement, cellObject)
+        self.positionCell(cellElement, coords)
+    })
+}
+
+
+
