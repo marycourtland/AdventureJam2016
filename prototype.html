@@ -7,8 +7,17 @@
     <script type="text/javascript" src="game-bundled.js"></script>
   </head>
   <body>
+    <div id="hud">
+      <a id='zoom-out-button' href='javascript: UI.zoomOut();'>Zoom Out</a>
+      <a id='zoom-in-button' href='javascript: UI.zoomIn();'>Zoom In</a>
+      <a id='sleep-button' href='javascript: Map.advance().render();'>Sleep</a>
+      <span>Move with arrow keys</span>
+      <span id='info'></span>
+    </div>
     <div id="board-layers">
       <div class="board-layer" id="game"></div>
+      <img class="board-layer" id="game-envelope" src="images/game_envelope.png"></img>
+      <div class="board-layer" id="game-shadow"></div>
       <div class="board-layer" id="mouse-overlay"></div>
     </div>
     </div>

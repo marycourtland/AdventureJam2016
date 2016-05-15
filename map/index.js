@@ -1,6 +1,7 @@
 var Env = require('./environment');
 var Species= require('./species');
 var GrowthRules = require('./growth-rules')
+var Renderer = require('./renderer')
 
 module.exports = Map = {};
 
@@ -28,7 +29,7 @@ var speciesData = [
         }
     },
 
-    { id: 'flowers',   symbol: '✨',     color: 'blue',
+    { id: 'flowers',   symbol: '✨',     color: 'orange',
         rules: {
             default: GrowthRules.plants,
             conditional: [
@@ -70,9 +71,12 @@ speciesData.forEach(function(s) {
 
 
 Map.init = function(size, dims, htmlElement) {
-    this.html = htmlElement;
     this.size = size;
     this.dims = dims;
+
+    this.center = {x: Math.floor(size.x/2), y: Math.floor(size.y/2)} // use Map.setCenter to change this
+
+    this.renderer = new Renderer(htmlElement, this.dims, this.center);
 
     this.env = new Env(this.size, this.species.blank);
 
@@ -84,14 +88,23 @@ Map.init = function(size, dims, htmlElement) {
 Map.generate = function() {
     var self = this;
 
-    // register grass and trees with all of the cells
+    // register involved species with all of the cells
     self.env.range().forEach(function(coords) {
         self.env.get(coords).add(self.species.magic)
         self.env.get(coords).add(self.species.grass);
         self.env.get(coords).add(self.species.trees);
     })
 
-    self.randomClump([
+
+    //self.sow(self.species.magic, 1/20)
+
+    self.sow(self.species.grass, 1/10);
+    self.sow(self.species.flowers, 1/50)
+    self.sow(self.species.trees, 1/30);
+
+    self.env.advance(4);
+
+    self.clump(self.env.randomCoords(), [
         {x:  0, y:  0},
         {x:  1, y:  1},
         {x: -1, y:  1},
@@ -103,15 +116,7 @@ Map.generate = function() {
         {x:  1, y:  0},
     ], self.species.magic)
 
-    //self.sow(self.species.magic, 1/20)
-
-    self.sow(self.species.grass, 1/10);
-
-    self.sow(self.species.flowers, 1/50)
-
-    self.sow(self.species.trees, 1/30);
-
-    self.env.advance(5);
+    self.env.advance(1);
 }
 
 // randomly set cells as the species
@@ -130,10 +135,9 @@ Map.sow = function(species, frequency) {
     return this
 }
 
-Map.randomClump = function(coordClump, species) {
-    // Pick a random spot and paste the the clump 
+// paste the clump at the designated center
+Map.clump = function(center, coordClump, species) {
     var self = this;
-    var center = self.env.randomCoords();
     
     coordClump.forEach(function(coords) {
         var targetCoords = {x: coords.x + center.x, y: coords.y + center.y};
@@ -145,34 +149,37 @@ Map.randomClump = function(coordClump, species) {
 
 Map.advance = function() {
     this.env.advance();
+    return this;
 }
 
 
 // RENDERING
+Map.render = function() { this.renderer.render(this.env); return this; }
+Map.refresh = function() { this.renderer.refresh(this.env); return this; }
 
-Map.render = function() {
-    var dims = this.dims;
-    var html = this.html;
-    var env = this.env;
+Map.zoomFactor = 2;
 
-    html.innerHTML = '';
-
-    env.range().forEach(function(coords) {
-        renderCell(coords, env.get(coords));
-    })
-
-    function renderCell(coords, cell) {
-        var cell_element = document.createElement('div');
-
-        cell_element.setAttribute('class', 'cell')
-        cell_element.style.left = (coords.x * dims.x) + 'px';
-        cell_element.style.top = (coords.y * dims.y) + 'px';
-        cell_element.style.width = dims.x + 'px';
-        cell_element.style.height = dims.y + 'px';
-        cell_element.style.lineHeight = dims.y + 'px';
-        cell_element.style.backgroundColor = cell.species.getColor();
-        cell_element.innerHTML= cell.species.getSymbol();
-
-        html.appendChild(cell_element);
-    }
+Map.zoomIn = function() {
+    this.dims.x *= Map.zoomFactor;
+    this.dims.y *= Map.zoomFactor;
+    this.refresh();
+    return this;
 }
+
+Map.zoomOut = function() {
+    this.dims.x /= Map.zoomFactor;
+    this.dims.y /= Map.zoomFactor;
+    this.refresh();
+    return this;
+}
+
+Map.recenter = function(x, y) {
+    this.center.x = x;
+    this.center.y = y;
+    this.refresh();
+    return this;
+}
+
+
+// clump all this stuff together in a renderer
+Map.renderer = require('./renderer')

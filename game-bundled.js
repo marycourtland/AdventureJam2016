@@ -90,7 +90,7 @@ Cell.prototype.add = function(species) {
 
 
 
-},{"./species-battle":7}],3:[function(require,module,exports){
+},{"./species-battle":8}],3:[function(require,module,exports){
 // Example:
 // env = new Env({x:30, y:30});
 
@@ -243,6 +243,7 @@ module.exports = GrowthRules = {
 var Env = require('./environment');
 var Species= require('./species');
 var GrowthRules = require('./growth-rules')
+var Renderer = require('./renderer')
 
 module.exports = Map = {};
 
@@ -270,7 +271,7 @@ var speciesData = [
         }
     },
 
-    { id: 'flowers',   symbol: '✨',     color: 'blue',
+    { id: 'flowers',   symbol: '✨',     color: 'orange',
         rules: {
             default: GrowthRules.plants,
             conditional: [
@@ -312,9 +313,12 @@ speciesData.forEach(function(s) {
 
 
 Map.init = function(size, dims, htmlElement) {
-    this.html = htmlElement;
     this.size = size;
     this.dims = dims;
+
+    this.center = {x: Math.floor(size.x/2), y: Math.floor(size.y/2)} // use Map.setCenter to change this
+
+    this.renderer = new Renderer(htmlElement, this.dims, this.center);
 
     this.env = new Env(this.size, this.species.blank);
 
@@ -326,14 +330,23 @@ Map.init = function(size, dims, htmlElement) {
 Map.generate = function() {
     var self = this;
 
-    // register grass and trees with all of the cells
+    // register involved species with all of the cells
     self.env.range().forEach(function(coords) {
         self.env.get(coords).add(self.species.magic)
         self.env.get(coords).add(self.species.grass);
         self.env.get(coords).add(self.species.trees);
     })
 
-    self.randomClump([
+
+    //self.sow(self.species.magic, 1/20)
+
+    self.sow(self.species.grass, 1/10);
+    self.sow(self.species.flowers, 1/50)
+    self.sow(self.species.trees, 1/30);
+
+    self.env.advance(4);
+
+    self.clump(self.env.randomCoords(), [
         {x:  0, y:  0},
         {x:  1, y:  1},
         {x: -1, y:  1},
@@ -345,15 +358,7 @@ Map.generate = function() {
         {x:  1, y:  0},
     ], self.species.magic)
 
-    //self.sow(self.species.magic, 1/20)
-
-    self.sow(self.species.grass, 1/10);
-
-    self.sow(self.species.flowers, 1/50)
-
-    self.sow(self.species.trees, 1/30);
-
-    self.env.advance(5);
+    self.env.advance(1);
 }
 
 // randomly set cells as the species
@@ -372,10 +377,9 @@ Map.sow = function(species, frequency) {
     return this
 }
 
-Map.randomClump = function(coordClump, species) {
-    // Pick a random spot and paste the the clump 
+// paste the clump at the designated center
+Map.clump = function(center, coordClump, species) {
     var self = this;
-    var center = self.env.randomCoords();
     
     coordClump.forEach(function(coords) {
         var targetCoords = {x: coords.x + center.x, y: coords.y + center.y};
@@ -387,39 +391,127 @@ Map.randomClump = function(coordClump, species) {
 
 Map.advance = function() {
     this.env.advance();
+    return this;
 }
 
 
 // RENDERING
+Map.render = function() { this.renderer.render(this.env); return this; }
+Map.refresh = function() { this.renderer.refresh(this.env); return this; }
 
-Map.render = function() {
-    var dims = this.dims;
-    var html = this.html;
-    var env = this.env;
+Map.zoomFactor = 2;
 
-    html.innerHTML = '';
+Map.zoomIn = function() {
+    this.dims.x *= Map.zoomFactor;
+    this.dims.y *= Map.zoomFactor;
+    this.refresh();
+    return this;
+}
 
-    env.range().forEach(function(coords) {
-        renderCell(coords, env.get(coords));
-    })
+Map.zoomOut = function() {
+    this.dims.x /= Map.zoomFactor;
+    this.dims.y /= Map.zoomFactor;
+    this.refresh();
+    return this;
+}
 
-    function renderCell(coords, cell) {
-        var cell_element = document.createElement('div');
+Map.recenter = function(x, y) {
+    this.center.x = x;
+    this.center.y = y;
+    this.refresh();
+    return this;
+}
 
-        cell_element.setAttribute('class', 'cell')
-        cell_element.style.left = (coords.x * dims.x) + 'px';
-        cell_element.style.top = (coords.y * dims.y) + 'px';
-        cell_element.style.width = dims.x + 'px';
-        cell_element.style.height = dims.y + 'px';
-        cell_element.style.lineHeight = dims.y + 'px';
-        cell_element.style.backgroundColor = cell.species.getColor();
-        cell_element.innerHTML= cell.species.getSymbol();
 
-        html.appendChild(cell_element);
+// clump all this stuff together in a renderer
+Map.renderer = require('./renderer')
+
+},{"./environment":3,"./growth-rules":4,"./renderer":6,"./species":10}],6:[function(require,module,exports){
+module.exports = Renderer = function(html, dims, center) {
+    // Direct references. So the parent should not overwrite them.
+    this.html = html;
+    this.dims = dims;
+    this.centerCoords = center;
+    this.centerPx = {
+        x: html.getBoundingClientRect().width / 2,
+        y: html.getBoundingClientRect().height / 2
     }
 }
 
-},{"./environment":3,"./growth-rules":4,"./species":9}],6:[function(require,module,exports){
+
+// Settings
+cellClass = 'cell'
+cellIdDelimiter = '_'
+cellIdPrefix = cellClass + cellIdDelimiter;
+
+
+// Methods
+
+Renderer.prototype = {};
+
+Renderer.prototype.coordsToId = function(coords) {
+    return cellIdPrefix + coords.x + cellIdDelimiter + coords.y
+}
+Renderer.prototype.idToCoords = function(id) {
+    var coordArray = id.slice(cellIdPrefix.length).split(cellIdDelimiter);
+    return {x: coordArray[0], y: coordArray[1] }
+}
+
+Renderer.prototype.createCell = function(cellObject) {
+    var cellElement = document.createElement('div');
+    cellElement.setAttribute('class', cellClass);
+    this.refreshCell(cellElement, cellObject);
+    return cellElement;
+}
+
+Renderer.prototype.refreshCell = function(cellElement, cellObject) {
+    cellElement.style.width = this.dims.x + 'px';
+    cellElement.style.height = this.dims.y + 'px';
+    cellElement.style.lineHeight = this.dims.y + 'px';
+    cellElement.style.backgroundColor = cellObject.species.getColor();
+    cellElement.innerHTML = cellObject.species.getSymbol();
+}
+
+Renderer.prototype.positionCell = function(cellElement, coords) {
+    cellElement.setAttribute('id',  this.coordsToId(coords));
+
+    var position = {
+        x: this.centerPx.x + (-this.centerCoords.x + coords.x) * this.dims.x,
+        y: this.centerPx.y + (-this.centerCoords.y + coords.y) * this.dims.y
+    }
+
+    cellElement.style.left = position.x + 'px';
+    cellElement.style.top = position.y + 'px';
+    return cellElement;
+}
+
+Renderer.prototype.render = function(env) {
+    var self = this;
+
+    self.html.innerHTML = '';
+
+    env.range().forEach(function(coords) {
+        var cellElement = self.createCell(env.get(coords));
+        self.positionCell(cellElement, coords);
+        self.html.appendChild(cellElement);
+    })
+}
+
+Renderer.prototype.refresh = function(env) {
+    var self = this;
+ 
+    env.range().forEach(function(coords) {
+        var cellObject = env.get(coords);
+        var cellElement = document.getElementById(self.coordsToId(coords));
+        self.refreshCell(cellElement, cellObject)
+        self.positionCell(cellElement, coords)
+    })
+}
+
+
+
+
+},{}],7:[function(require,module,exports){
 // EXAMPLE:
 //
 // var ruleset = new RuleSet({
@@ -497,7 +589,7 @@ function indexWeights(deepArray) {
     return output;
 }
 
-},{}],7:[function(require,module,exports){
+},{}],8:[function(require,module,exports){
 // This module is for deciding the winning species in a cell!
 // 
 // For now, it's just 'which species is higher in the pecking order'
@@ -524,7 +616,7 @@ module.exports = SpeciesBattle = {
     }
 }
 
-},{}],8:[function(require,module,exports){
+},{}],9:[function(require,module,exports){
 // THE POINT OF THIS MODULE IS....
 //
 //    ... To take a cell object and decide whether it has a species in it.
@@ -542,7 +634,7 @@ module.exports = SpeciesMask = function(species_id) {
     }
 }
 
-},{}],9:[function(require,module,exports){
+},{}],10:[function(require,module,exports){
 var RuleSet = require('./ruleset');
 var SpeciesMask = require('./species-mask');
 
@@ -636,24 +728,90 @@ function coordmapSum(coordmap) {
     return sum;
 }
 
-},{"./ruleset":6,"./species-mask":8}],10:[function(require,module,exports){
+},{"./ruleset":7,"./species-mask":9}],11:[function(require,module,exports){
 var Map = require('./map');
 
 var game = {};
 game.size = {x:50, y:50}; // cells
-game.cellDims = {x:10, y:10}; // pixels
+game.cellDims = {x:50, y:50}; // pixels
+window.game = game;
 
 function initGame() {
     boardElement = document.getElementById('game');
 
     Map.init(game.size, game.cellDims, boardElement);
+    bindEvents();
 }
 
-window.onload = initGame;
+function bindEvents() {
+    var mouseOverlay = document.getElementById('mouse-overlay');
 
-window.onclick = function() {
-    Map.advance();
-    Map.render();
+    mouseOverlay.onclick = function() {
+        Map.advance();
+        Map.render();
+    }
+
+    var keyboardCallbacks = {
+        37: function goLeft(evt) {
+            Map.recenter(Map.center.x - 1, Map.center.y);
+        },
+
+        39: function goRight(evt) {
+            Map.recenter(Map.center.x + 1, Map.center.y);
+        },
+
+        38: function goUp(evt) {
+            Map.recenter(Map.center.x, Map.center.y - 1);
+        },
+
+        40: function goDown(evt) {
+            Map.recenter(Map.center.x, Map.center.y + 1);
+        }
+    }
+
+    window.addEventListener('keyup', function(event) {
+        var keycode = event.fake || window.event ? event.keyCode : event.which;
+        if (keycode in keyboardCallbacks) keyboardCallbacks[keycode]();
+    });
+
 }
 
-},{"./map":5}]},{},[10]);
+
+// UI/HUD
+
+window.UI = {};
+
+UI.infoTimeout = null;
+
+// Display info text for the specified lifetime
+// If lifetime isn't specified, then the text will stay up forever (until something else is shown)
+UI.info = function(text, lifetime) {
+
+    document.getElementById('info').textContent = text;
+
+    clearTimeout(UI.infoTimeout);
+    if (typeof lifetime === 'number') {
+        UI.infoTimeout = setTimeout(function() {
+            UI.info('', false);
+        }, lifetime)
+    }
+}
+
+// Display info text only while the given function is executing
+UI.infoWrap = function(text, fn) {
+    return function() {
+        UI.info(text);
+
+        setTimeout(function() {
+            fn();
+            UI.info('');
+        }, 0)
+    }
+}
+
+UI.zoomOut = UI.infoWrap('zooming...', function() { Map.zoomOut(); })
+UI.zoomIn = UI.infoWrap('zooming...', function() { Map.zoomIn(); })
+
+window.onload = UI.infoWrap('loading...', initGame);
+
+},{"./map":5}]},{},[11]);
