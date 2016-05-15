@@ -1,6 +1,7 @@
 var Env = require('./environment');
 var Species= require('./species');
 var GrowthRules = require('./growth-rules')
+var Renderer = require('./renderer')
 
 module.exports = Map = {};
 
@@ -73,7 +74,8 @@ Map.init = function(size, dims, htmlElement) {
     this.html = htmlElement;
     this.size = size;
     this.dims = dims;
-    this.renderer.dims = this.dims; // ugh 
+
+    this.renderer = new Renderer(this.dims);
 
     this.env = new Env(this.size, this.species.blank);
 
@@ -85,14 +87,23 @@ Map.init = function(size, dims, htmlElement) {
 Map.generate = function() {
     var self = this;
 
-    // register grass and trees with all of the cells
+    // register involved species with all of the cells
     self.env.range().forEach(function(coords) {
         self.env.get(coords).add(self.species.magic)
         self.env.get(coords).add(self.species.grass);
         self.env.get(coords).add(self.species.trees);
     })
 
-    self.randomClump([
+
+    //self.sow(self.species.magic, 1/20)
+
+    self.sow(self.species.grass, 1/10);
+    self.sow(self.species.flowers, 1/50)
+    self.sow(self.species.trees, 1/30);
+
+    self.env.advance(5);
+
+    self.clump({x: 20, y:20}, [
         {x:  0, y:  0},
         {x:  1, y:  1},
         {x: -1, y:  1},
@@ -103,16 +114,6 @@ Map.generate = function() {
         {x: -1, y:  0},
         {x:  1, y:  0},
     ], self.species.magic)
-
-    //self.sow(self.species.magic, 1/20)
-
-    self.sow(self.species.grass, 1/10);
-
-    self.sow(self.species.flowers, 1/50)
-
-    self.sow(self.species.trees, 1/30);
-
-    self.env.advance(5);
 }
 
 // randomly set cells as the species
@@ -131,10 +132,9 @@ Map.sow = function(species, frequency) {
     return this
 }
 
-Map.randomClump = function(coordClump, species) {
-    // Pick a random spot and paste the the clump 
+// paste the clump at the designated center
+Map.clump = function(center, coordClump, species) {
     var self = this;
-    var center = self.env.randomCoords();
     
     coordClump.forEach(function(coords) {
         var targetCoords = {x: coords.x + center.x, y: coords.y + center.y};
@@ -150,8 +150,8 @@ Map.advance = function() {
 
 
 // RENDERING
-Map.render = function() { Map.renderer.render(); }
-Map.refresh = function() { Map.renderer.refresh(); }
+Map.render = function() { this.renderer.render(this.env, this.html); }
+Map.refresh = function() { this.renderer.refresh(this.env); }
 
 Map.zoomFactor = 2;
 
@@ -169,68 +169,4 @@ Map.zoomOut = function() {
 
 
 // clump all this stuff together in a renderer
-Map.renderer = {};
-
-
-Map.renderer.cellClass = 'cell'
-Map.renderer.cellIdDelimiter = '_'
-Map.renderer.cellIdPrefix = Map.renderer.cellClass + Map.renderer.cellIdDelimiter;
-
-Map.renderer.coordsToId = function(coords) {
-    return this.cellIdPrefix + coords.x + this.cellIdDelimiter + coords.y
-}
-Map.renderer.idToCoords = function(id) {
-    var coordArray = id.slice(this.cellIdPrefix.length).split(this.cellIdDelimiter);
-    return {x: coordArray[0], y: coordArray[1] }
-}
-
-Map.renderer.createCell = function(cellObject) {
-    var cellElement = document.createElement('div');
-    cellElement.setAttribute('class', this.cellClass);
-    this.refreshCell(cellElement, cellObject);
-    return cellElement;
-}
-
-Map.renderer.refreshCell = function(cellElement, cellObject) {
-    cellElement.style.width = this.dims.x + 'px';
-    cellElement.style.height = this.dims.y + 'px';
-    cellElement.style.lineHeight = this.dims.y + 'px';
-    cellElement.style.backgroundColor = cellObject.species.getColor();
-    cellElement.innerHTML = cellObject.species.getSymbol();
-}
-
-Map.renderer.positionCell = function(cellElement, coords) {
-    cellElement.setAttribute('id',  this.coordsToId(coords));
-    cellElement.style.left = (coords.x * this.dims.x) + 'px';
-    cellElement.style.top = (coords.y * this.dims.y) + 'px';
-    return cellElement;
-}
-
-Map.renderer.render = function() {
-    var html = Map.html;
-    var env = Map.env;
-    var self = this;
-
-    html.innerHTML = '';
-
-    env.range().forEach(function(coords) {
-        var cellElement = self.createCell(env.get(coords));
-        self.positionCell(cellElement, coords);
-        html.appendChild(cellElement);
-    })
-}
-
-Map.renderer.refresh = function() {
-    var env = Map.env;
-    var self = this;
- 
-    env.range().forEach(function(coords) {
-        var cellObject = env.get(coords);
-        var cellElement = document.getElementById(self.coordsToId(coords));
-        self.refreshCell(cellElement, cellObject)
-        self.positionCell(cellElement, coords)
-    })
-}
-
-
-
+Map.renderer = require('./renderer')
