@@ -9,8 +9,9 @@ var SpeciesBattle = require('./species-battle')
 
 module.exports = Cell = function(blank) {
     this.species = null;
-    this.allSpecies = {}; // indexed by id
+    this.register = {}; // indexed by id
     this.set(blank || '');
+
 
     // the 'next' slot is just a holding pattern until the current iteration is finalized
     // use cell.next(species), then cell.flush() to set it
@@ -19,10 +20,25 @@ module.exports = Cell = function(blank) {
 
 Cell.prototype = {};
 
+// convenience, to get the species object
+Cell.prototype.get = function(species_id) {
+    if (!(species_id in this.register)) return null;
+
+    return this.register[species_id].species;
+}
+
+// get the age of the current dominant species
+Cell.prototype.getAge = function() {
+    if (!this.species) return null;
+    
+    return this.register[this.species.id].age;
+}
+
 // sets the dominant species
 Cell.prototype.set = function(species) {
     this.species = species;
     this.add(species); // just in case it's not already set
+
     return this;
 }
 
@@ -30,35 +46,55 @@ Cell.prototype.set = function(species) {
 // ** each registered species does its own computation
 Cell.prototype.next = function(neighbors) {
     var nextStates = {};
-    for (var id in this.allSpecies) {
-        nextStates[id] = this.allSpecies[id].nextState(this, neighbors);
+    for (var id in this.register) {
+        nextStates[id] = this.get(id).nextState(this, neighbors);
     }
 
     // Which species are contenders for dominance in this cell?
-    var contenders = Object.keys(nextStates).filter(function(id) { return nextStates[id] === 1; }) 
-    //console.log('  ' + Object.keys(nextStates).join(','))
-    //console.log('  ' + Object.keys(nextStates).map(function(id) { return id + '_' + nextStates[id]; }).join(','))
+    var contenders = Object.keys(nextStates).filter(function(id) { return nextStates[id].state === 1; }) 
 
     // THE SPECIES BATTLE IT OUT...
-    this.nextSpecies = this.allSpecies[SpeciesBattle.decide(contenders)];
+    this.nextSpecies = this.get(SpeciesBattle.decide(contenders));
+
+    // Update age
+    if (this.nextSpecies)
+    this.register[this.nextSpecies.id].age = nextStates[this.nextSpecies.id].age;
+    
 }
 
 Cell.prototype.flush = function() {
+    // increment age?
+    var previousSpeciesId = this.species ? this.species.id : null;
+
+    if (!!this.nextSpecies) { 
+        // if the species is incumbent, increment its age.
+        if (previousSpeciesId === this.nextSpecies.id) {
+            this.register[this.nextSpecies.id].age += 1;
+        }
+        else if (!!previousSpeciesId) {
+            // reset of the age of the newly-dead species to 0
+            this.register[previousSpeciesId].age = 0;
+        }
+    }
+
     this.set(this.nextSpecies);
 }
 
 Cell.prototype.add = function(species) {
     if (!species) {
         // this happens when a species dies
-        species = this.allSpecies.blank; // this SHOULD be one of the registered species
+        species = this.get('blank'); // this SHOULD be one of the registered species
     }
 
-    if (!(species.id in this.allSpecies)) {
-        this.allSpecies[species.id] = species;
+    if (!(species.id in this.register)) {
+        this.register[species.id] = {
+            species: species,
+            age: 0
+        }
     }
 
     // make sure there's a dominant species
-    if (Object.keys(this.allSpecies).length === 1 || !this.species) {
+    if (Object.keys(this.register).length === 1 || !this.species) {
         this.species = species;
     }
     return this;

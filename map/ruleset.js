@@ -3,7 +3,7 @@
 // var ruleset = new RuleSet({
 //  stateMap: {
 //      0: [0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1],
-//      1: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+//      1: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0.9] // the 0.9 means it's a 90% chance of getting a 1.
 //  },
 //  weights: [
 //      [1, 2, 1],
@@ -38,7 +38,13 @@ RuleSet.prototype.transform = function(state, neighbors) {
 
     if (sum >= this.stateMap[state].length) { return state; }
 
-    return this.stateMap[state][sum];
+    return this.probabilisticState(this.stateMap[state][sum]);
+}
+
+// Input 0.3 for a 30% chance at getting a 1 (versus a 0)
+RuleSet.prototype.probabilisticState = function(state) {
+   if (state === 0 || state === 1) return state;
+   return Math.random() < state ? 1 : 0;
 }
 
 // neighbors should be a coord-map, like:

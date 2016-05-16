@@ -33,8 +33,9 @@ var SpeciesBattle = require('./species-battle')
 
 module.exports = Cell = function(blank) {
     this.species = null;
-    this.allSpecies = {}; // indexed by id
+    this.register = {}; // indexed by id
     this.set(blank || '');
+
 
     // the 'next' slot is just a holding pattern until the current iteration is finalized
     // use cell.next(species), then cell.flush() to set it
@@ -43,10 +44,25 @@ module.exports = Cell = function(blank) {
 
 Cell.prototype = {};
 
+// convenience, to get the species object
+Cell.prototype.get = function(species_id) {
+    if (!(species_id in this.register)) return null;
+
+    return this.register[species_id].species;
+}
+
+// get the age of the current dominant species
+Cell.prototype.getAge = function() {
+    if (!this.species) return null;
+    
+    return this.register[this.species.id].age;
+}
+
 // sets the dominant species
 Cell.prototype.set = function(species) {
     this.species = species;
     this.add(species); // just in case it's not already set
+
     return this;
 }
 
@@ -54,35 +70,55 @@ Cell.prototype.set = function(species) {
 // ** each registered species does its own computation
 Cell.prototype.next = function(neighbors) {
     var nextStates = {};
-    for (var id in this.allSpecies) {
-        nextStates[id] = this.allSpecies[id].nextState(this, neighbors);
+    for (var id in this.register) {
+        nextStates[id] = this.get(id).nextState(this, neighbors);
     }
 
     // Which species are contenders for dominance in this cell?
-    var contenders = Object.keys(nextStates).filter(function(id) { return nextStates[id] === 1; }) 
-    //console.log('  ' + Object.keys(nextStates).join(','))
-    //console.log('  ' + Object.keys(nextStates).map(function(id) { return id + '_' + nextStates[id]; }).join(','))
+    var contenders = Object.keys(nextStates).filter(function(id) { return nextStates[id].state === 1; }) 
 
     // THE SPECIES BATTLE IT OUT...
-    this.nextSpecies = this.allSpecies[SpeciesBattle.decide(contenders)];
+    this.nextSpecies = this.get(SpeciesBattle.decide(contenders));
+
+    // Update age
+    if (this.nextSpecies)
+    this.register[this.nextSpecies.id].age = nextStates[this.nextSpecies.id].age;
+    
 }
 
 Cell.prototype.flush = function() {
+    // increment age?
+    var previousSpeciesId = this.species ? this.species.id : null;
+
+    if (!!this.nextSpecies) { 
+        // if the species is incumbent, increment its age.
+        if (previousSpeciesId === this.nextSpecies.id) {
+            this.register[this.nextSpecies.id].age += 1;
+        }
+        else if (!!previousSpeciesId) {
+            // reset of the age of the newly-dead species to 0
+            this.register[previousSpeciesId].age = 0;
+        }
+    }
+
     this.set(this.nextSpecies);
 }
 
 Cell.prototype.add = function(species) {
     if (!species) {
         // this happens when a species dies
-        species = this.allSpecies.blank; // this SHOULD be one of the registered species
+        species = this.get('blank'); // this SHOULD be one of the registered species
     }
 
-    if (!(species.id in this.allSpecies)) {
-        this.allSpecies[species.id] = species;
+    if (!(species.id in this.register)) {
+        this.register[species.id] = {
+            species: species,
+            age: 0
+        }
     }
 
     // make sure there's a dominant species
-    if (Object.keys(this.allSpecies).length === 1 || !this.species) {
+    if (Object.keys(this.register).length === 1 || !this.species) {
         this.species = species;
     }
     return this;
@@ -90,7 +126,147 @@ Cell.prototype.add = function(species) {
 
 
 
-},{"./species-battle":8}],3:[function(require,module,exports){
+},{"./species-battle":9}],3:[function(require,module,exports){
+module.exports = GrowthRules = {
+    magic: {
+        stateMap: {
+            0: [0.001, 0.1, 0, 1, 1, 1, 1, 1, 0],
+            1: [0, 0, 0, 1, 0, 1, 1, 0, 0]
+        },
+        weights: [
+            [1, 1, 1],
+            [1, 0, 1],
+            [1, 1, 1]
+        ]
+    },
+
+    // When plants are old enough, they become stable - less likely to grow, slightly likely to die
+    plantsStable: {
+        stateMap: {
+            0: [  0,   0,   0, 0,   0, 0.1, 0.1, 1, 1, 1, 1,    1],
+            1: [0.9, 0.9, 0.8, 1,   1,   1,   1, 1, 1, 1, 1, 0.95]
+        },
+        weights: [
+            [1, 2, 1],
+            [2, 0, 2],
+            [1, 2, 1]
+        ]
+    },
+
+    plants: {
+        stateMap: {
+            0: [0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1],
+            1: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+        },
+        weights: [
+            [1, 2, 1],
+            [2, 0, 2],
+            [1, 2, 1]
+        ]
+    },
+
+    plantsCatalyzed: {
+        stateMap: {
+            0: [0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+            1: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+        },
+        weights: [
+            [1, 2, 1],
+            [2, 0, 2],
+            [1, 2, 1]
+        ]
+    },
+    plantsDying: {
+        stateMap: {
+            0: [0, 0, 0, 0, 0, 0, 0, 0, 0],
+            1: [0, 0, 0, 0, 0, 1, 1, 1, 1]
+        },
+        weights: [
+            [1, 1, 1],
+            [1, 0, 1],
+            [1, 1, 1]
+        ]
+    },
+    completeDeath: {
+        stateMap: {
+            0: [0, 0, 0, 0, 0, 0, 0, 0, 0],
+            1: [0, 0, 0, 0, 0, 0, 0, 0, 0]
+        }
+    }
+}
+
+},{}],4:[function(require,module,exports){
+var GrowthRules = require('./growth-rules')
+
+// Conditional growth rules are sorted by priority, low > high.
+
+module.exports = speciesData = [
+    { id: 'blank',     symbol: '' },
+    { id: 'character', symbol: '😃' },
+    { id: 'alien',     symbol: '😵' },
+
+    { id: 'magic',     symbol: '⚡',      color: 'purple',
+        rules: {
+            default: GrowthRules.magic
+        }
+    },
+
+    { id: 'grass',     symbol: '∴',      color: 'lightgreen', 
+        rules: {
+            default: GrowthRules.plants,
+            conditional: [
+                {
+                    min_neighbors: 1,
+                    species_id: 'magic',
+                    rules: GrowthRules.plantsDying
+                }
+            ]
+        }
+    },
+
+    { id: 'flowers',   symbol: '✨',     color: 'orange',
+        rules: {
+            default: GrowthRules.plants,
+            conditional: [
+                {
+                    min_neighbors: 1,
+                    species_id: 'magic',
+                    rules: GrowthRules.plantsDying
+                }
+            ]
+        }
+    },
+
+    { id: 'trees',     symbol: '&psi;', color: 'green', passable: false,
+        rules: {
+            default: GrowthRules.plants,
+            conditional: [
+                // the presence of grass catalyzes tree growth
+                {
+                    species_id: 'grass',
+                    min_neighbors: 4,
+                    rules: GrowthRules.plantsCatalyzed
+                },
+
+                // tree growth stabilizes when the trees are old
+                {
+                    species_id: 'trees',
+                    min_age: 3,
+                    rules: GrowthRules.plantsStable
+                },
+
+                {
+                    min_neighbors: 1,
+                    species_id: 'magic',
+                    rules: GrowthRules.plantsDying
+                }
+            ]
+        }
+    },
+
+]
+
+},{"./growth-rules":3}],5:[function(require,module,exports){
 // Example:
 // env = new Env({x:30, y:30});
 
@@ -119,7 +295,7 @@ Env.prototype.init = function(blank_cell) {
 Env.prototype.advance = function(numTimes) {
     if (typeof numTimes === 'undefined') numTimes = 1;
 
-    for (var t = 0; t <= numTimes; t+=1){
+    for (var t = 0; t < numTimes; t+=1){
         Advancerator(this);
     }
 
@@ -183,131 +359,17 @@ Env.prototype.randomCoords = function() {
     }
 }
 
-},{"./advancerator.js":1,"./cell.js":2}],4:[function(require,module,exports){
-module.exports = GrowthRules = {
-    magic: {
-        stateMap: {
-            0: [0, 0, 0, 1, 1, 1, 1, 1, 0],
-            1: [0, 0, 1, 1, 0, 1, 1, 0, 0]
-        },
-        weights: [
-            [1, 1, 1],
-            [1, 0, 1],
-            [1, 1, 1]
-        ]
-    },
-
-   plants: {
-        stateMap: {
-            0: [0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1],
-            1: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
-        },
-        weights: [
-            [1, 2, 1],
-            [2, 0, 2],
-            [1, 2, 1]
-        ]
-    },
-
-    plantsCatalyzed: {
-        stateMap: {
-            0: [0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-            1: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
-        },
-        weights: [
-            [1, 2, 1],
-            [2, 0, 2],
-            [1, 2, 1]
-        ]
-    },
-    plantsDying: {
-        stateMap: {
-            0: [0, 0, 0, 0, 0, 0, 0, 0, 0],
-            1: [0, 0, 0, 0, 0, 1, 1, 1, 1]
-        },
-        weights: [
-            [1, 1, 1],
-            [1, 0, 1],
-            [1, 1, 1]
-        ]
-    },
-    completeDeath: {
-        stateMap: {
-            0: [0, 0, 0, 0, 0, 0, 0, 0, 0],
-            1: [0, 0, 0, 0, 0, 0, 0, 0, 0]
-        }
-    }
-}
-
-},{}],5:[function(require,module,exports){
+},{"./advancerator.js":1,"./cell.js":2}],6:[function(require,module,exports){
 var Env = require('./environment');
 var Species= require('./species');
-var GrowthRules = require('./growth-rules')
 var Renderer = require('./renderer')
+var SpeciesData = require('./data/species') 
 
 module.exports = Map = {};
 
-// TODO: The game should be responsible for these species, not the map
-var speciesData = [
-    { id: 'blank',     symbol: '' },
-    { id: 'character', symbol: '😃' },
-    { id: 'alien',     symbol: '😵' },
-
-    { id: 'magic',     symbol: '⚡',      color: 'purple',
-        rules: {
-            default: GrowthRules.magic
-        }
-    },
-
-    { id: 'grass',     symbol: '∴',      color: 'lightgreen', 
-        rules: {
-            default: GrowthRules.plants,
-            conditional: [
-                {
-                    species_id: 'magic',
-                    rules: GrowthRules.plantsDying
-                }
-            ]
-        }
-    },
-
-    { id: 'flowers',   symbol: '✨',     color: 'orange',
-        rules: {
-            default: GrowthRules.plants,
-            conditional: [
-                {
-                    species_id: 'magic',
-                    rules: GrowthRules.plantsDying
-                }
-            ]
-        }
-    },
-
-    { id: 'trees',     symbol: '&psi;', color: 'green', passable: false,
-        rules: {
-            default: GrowthRules.plants,
-            conditional: [
-                // the presence of grass catalyzes tree growth
-                // threshhold indicates the number of grass neighbors
-                // that are needed in order to trigger this set of rules
-                {
-                    species_id: 'grass',
-                    threshhold: 4, // number of neighbors to trigger this conditional
-                    rules: GrowthRules.plantsCatalyzed
-                },
-                {
-                    species_id: 'magic',
-                    rules: GrowthRules.plantsDying
-                }
-            ]
-        }
-    },
-
-]
-
+// initialize species based on the data
 Map.species = {};
-
-speciesData.forEach(function(s) {
+SpeciesData.forEach(function(s) {
     Map.species[s.id] = new Species(s);
 })
 
@@ -426,7 +488,7 @@ Map.recenter = function(x, y) {
 // clump all this stuff together in a renderer
 Map.renderer = require('./renderer')
 
-},{"./environment":3,"./growth-rules":4,"./renderer":6,"./species":10}],6:[function(require,module,exports){
+},{"./data/species":4,"./environment":5,"./renderer":7,"./species":11}],7:[function(require,module,exports){
 module.exports = Renderer = function(html, dims, center) {
     // Direct references. So the parent should not overwrite them.
     this.html = html;
@@ -511,13 +573,13 @@ Renderer.prototype.refresh = function(env) {
 
 
 
-},{}],7:[function(require,module,exports){
+},{}],8:[function(require,module,exports){
 // EXAMPLE:
 //
 // var ruleset = new RuleSet({
 //  stateMap: {
 //      0: [0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1],
-//      1: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+//      1: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0.9] // the 0.9 means it's a 90% chance of getting a 1.
 //  },
 //  weights: [
 //      [1, 2, 1],
@@ -552,7 +614,13 @@ RuleSet.prototype.transform = function(state, neighbors) {
 
     if (sum >= this.stateMap[state].length) { return state; }
 
-    return this.stateMap[state][sum];
+    return this.probabilisticState(this.stateMap[state][sum]);
+}
+
+// Input 0.3 for a 30% chance at getting a 1 (versus a 0)
+RuleSet.prototype.probabilisticState = function(state) {
+   if (state === 0 || state === 1) return state;
+   return Math.random() < state ? 1 : 0;
 }
 
 // neighbors should be a coord-map, like:
@@ -589,7 +657,7 @@ function indexWeights(deepArray) {
     return output;
 }
 
-},{}],8:[function(require,module,exports){
+},{}],9:[function(require,module,exports){
 // This module is for deciding the winning species in a cell!
 // 
 // For now, it's just 'which species is higher in the pecking order'
@@ -616,7 +684,7 @@ module.exports = SpeciesBattle = {
     }
 }
 
-},{}],9:[function(require,module,exports){
+},{}],10:[function(require,module,exports){
 // THE POINT OF THIS MODULE IS....
 //
 //    ... To take a cell object and decide whether it has a species in it.
@@ -634,7 +702,7 @@ module.exports = SpeciesMask = function(species_id) {
     }
 }
 
-},{}],10:[function(require,module,exports){
+},{}],11:[function(require,module,exports){
 var RuleSet = require('./ruleset');
 var SpeciesMask = require('./species-mask');
 
@@ -687,7 +755,14 @@ Species.prototype.nextState = function(cell, neighbors) {
     var maskedCell = this.mask(cell);
     var maskedNeighbors = mapCoordmap(neighbors, self.mask);
 
-    return ruleset.transform(maskedCell, maskedNeighbors);
+    var nextState = ruleset.transform(maskedCell, maskedNeighbors);
+
+    // propagate age (this will only be used if nextState is 1)
+    // TODO: make a way to compose things together (like self.mask and cell.getAge)
+    var maskedAges = mapCoordmap(neighbors, function(cell) { return !!cell ? self.mask(cell) * cell.getAge() : 0 });
+    var age = Math.ceil(coordmapAvg(maskedAges));
+    
+    return {state: nextState, age: age};
 }
 
 
@@ -696,18 +771,19 @@ Species.prototype.decideRuleset = function(cell, neighbors) {
 
     if (this.rules.conditional.length === 0) return winningRuleset;
 
-    var winningCount = 0; // the winning conditional species will be the one with the most neighbors. **Not weighted
+    // Conditional rules are sorted from lowest priority to highest.
+
     this.rules.conditional.forEach(function(condition) {
         var maskedNeighbors = mapCoordmap(neighbors, condition.mask);
         var count = coordmapSum(maskedNeighbors);
 
-        // the number of neighbors has to be larger than the threshhold
-        if (condition.threshhold && count < condition.threshhold) return;
+        // the number of neighbors has to meet the neighbor threshhold
+        if (condition.min_neighbors && count < condition.min_neighbors) return;
 
-        if (count > winningCount) {
-            winningRuleset = condition.rules;
-            winningCount = count;
-        }
+        // the cell age has to meet the age threshhold
+        if (condition.min_age && cell.getAge() < condition.min_age) return;
+
+        winningRuleset = condition.rules;
     })
 
     return winningRuleset;
@@ -728,12 +804,16 @@ function coordmapSum(coordmap) {
     return sum;
 }
 
-},{"./ruleset":7,"./species-mask":9}],11:[function(require,module,exports){
+function coordmapAvg(coordmap) {
+    return coordmapSum(coordmap) / coordmap.length;
+}
+
+},{"./ruleset":8,"./species-mask":10}],12:[function(require,module,exports){
 var Map = require('./map');
 
 var game = {};
 game.size = {x:50, y:50}; // cells
-game.cellDims = {x:50, y:50}; // pixels
+game.cellDims = {x:18, y:18}; // pixels
 window.game = game;
 
 function initGame() {
@@ -814,4 +894,4 @@ UI.zoomIn = UI.infoWrap('zooming...', function() { Map.zoomIn(); })
 
 window.onload = UI.infoWrap('loading...', initGame);
 
-},{"./map":5}]},{},[11]);
+},{"./map":6}]},{},[12]);
