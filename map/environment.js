@@ -26,7 +26,7 @@ Env.prototype.init = function(blank_cell) {
 Env.prototype.advance = function(numTimes) {
     if (typeof numTimes === 'undefined') numTimes = 1;
 
-    for (var t = 0; t <= numTimes; t+=1){
+    for (var t = 0; t < numTimes; t+=1){
         Advancerator(this);
     }
 

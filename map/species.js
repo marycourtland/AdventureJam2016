@@ -50,7 +50,14 @@ Species.prototype.nextState = function(cell, neighbors) {
     var maskedCell = this.mask(cell);
     var maskedNeighbors = mapCoordmap(neighbors, self.mask);
 
-    return ruleset.transform(maskedCell, maskedNeighbors);
+    var nextState = ruleset.transform(maskedCell, maskedNeighbors);
+
+    // propagate age (this will only be used if nextState is 1)
+    // TODO: make a way to compose things together (like self.mask and cell.getAge)
+    var maskedAges = mapCoordmap(neighbors, function(cell) { return !!cell ? self.mask(cell) * cell.getAge() : 0 });
+    var age = Math.ceil(coordmapAvg(maskedAges));
+    
+    return {state: nextState, age: age};
 }
 
 
@@ -59,18 +66,19 @@ Species.prototype.decideRuleset = function(cell, neighbors) {
 
     if (this.rules.conditional.length === 0) return winningRuleset;
 
-    var winningCount = 0; // the winning conditional species will be the one with the most neighbors. **Not weighted
+    // Conditional rules are sorted from lowest priority to highest.
+
     this.rules.conditional.forEach(function(condition) {
         var maskedNeighbors = mapCoordmap(neighbors, condition.mask);
         var count = coordmapSum(maskedNeighbors);
 
-        // the number of neighbors has to be larger than the threshhold
-        if (condition.threshhold && count < condition.threshhold) return;
+        // the number of neighbors has to meet the neighbor threshhold
+        if (condition.min_neighbors && count < condition.min_neighbors) return;
 
-        if (count > winningCount) {
-            winningRuleset = condition.rules;
-            winningCount = count;
-        }
+        // the cell age has to meet the age threshhold
+        if (condition.min_age && cell.getAge() < condition.min_age) return;
+
+        winningRuleset = condition.rules;
     })
 
     return winningRuleset;
@@ -89,4 +97,8 @@ function coordmapSum(coordmap) {
         sum += coordmapItem.value;
     })
     return sum;
+}
+
+function coordmapAvg(coordmap) {
+    return coordmapSum(coordmap) / coordmap.length;
 }
