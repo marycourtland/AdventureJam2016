@@ -79,5 +79,11 @@ Renderer.prototype.refresh = function(env) {
     })
 }
 
-
+// Returns the number of pixels between the html's NW corner and the map's NW corner (at 0,0) 
+Renderer.prototype.getPixelOffset = function() {
+    return {
+        x: this.centerPx.x + -this.centerCoords.x * this.dims.x,
+        y: this.centerPx.y + -this.centerCoords.y * this.dims.y
+    }
+}
 

@@ -1,14 +1,27 @@
 var Map = require('./map');
+var Sprite = require('./sprite');
+var SpriteData = require('./sprite-data');
 
 var game = {};
 game.size = {x:50, y:50}; // cells
-game.cellDims = {x:18, y:18}; // pixels
+game.cellDims = {x:30, y:30}; // pixels
 window.game = game;
+
+var Character;
 
 function initGame() {
     boardElement = document.getElementById('game');
+    charElement = document.getElementById('game-characters')
 
     Map.init(game.size, game.cellDims, boardElement);
+    Map.recenter(0, 0)
+
+    // TODO: this is a bare sprite... should have a character object
+    // which binds itself to map coordinates (not pixels)
+    Character = (new Sprite(SpriteData.character)).setFrame('up').scaleTo(game.cellDims).place(charElement);
+    Character.move(Map.getOffset()).move({x: game.cellDims.x/2, y: game.cellDims.y/2});
+    window.ch = Character;
+
     bindEvents();
 }
 
@@ -17,24 +30,28 @@ function bindEvents() {
 
     mouseOverlay.onclick = function() {
         Map.advance();
-        Map.render();
+        Map.refresh();
     }
 
     var keyboardCallbacks = {
         37: function goLeft(evt) {
             Map.recenter(Map.center.x - 1, Map.center.y);
+            Character.setFrame('left');
         },
 
         39: function goRight(evt) {
             Map.recenter(Map.center.x + 1, Map.center.y);
+            Character.setFrame('right');
         },
 
         38: function goUp(evt) {
             Map.recenter(Map.center.x, Map.center.y - 1);
+            Character.setFrame('up');
         },
 
         40: function goDown(evt) {
             Map.recenter(Map.center.x, Map.center.y + 1);
+            Character.setFrame('down');
         }
     }
 

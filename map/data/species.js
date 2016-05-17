@@ -4,16 +4,17 @@ var GrowthRules = require('./growth-rules')
 
 module.exports = speciesData = [
     { id: 'blank',     symbol: '' },
-    { id: 'character', symbol: '😃' },
-    { id: 'alien',     symbol: '😵' },
+    { id: 'character', symbol: '&#9786;' },
+    { id: 'alien',     symbol: '&#128565;' },
 
-    { id: 'magic',     symbol: '⚡',      color: 'purple',
+    //{ id: 'magic',     symbol: '⚡',      color: 'purple',
+    { id: 'magic',     symbol: '&#x26a1;',      color: 'purple',
         rules: {
             default: GrowthRules.magic
         }
     },
 
-    { id: 'grass',     symbol: '∴',      color: 'lightgreen', 
+    { id: 'grass',     symbol: '&#8756;',      color: 'lightgreen', 
         rules: {
             default: GrowthRules.plants,
             conditional: [
@@ -26,7 +27,7 @@ module.exports = speciesData = [
         }
     },
 
-    { id: 'flowers',   symbol: '✨',     color: 'orange',
+    { id: 'flowers',   symbol: '&#10024;',     color: 'orange',
         rules: {
             default: GrowthRules.plants,
             conditional: [
