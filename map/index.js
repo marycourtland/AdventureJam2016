@@ -58,8 +58,6 @@ Map.generate = function() {
         {x:  1, y:  0},
     ], self.species.magic)
 
-    self.sow(self.species.grass, 1)
-
     self.env.advance(1);
 }
 
