@@ -202,16 +202,17 @@ var GrowthRules = require('./growth-rules')
 
 module.exports = speciesData = [
     { id: 'blank',     symbol: '' },
-    { id: 'character', symbol: '😃' },
-    { id: 'alien',     symbol: '😵' },
+    { id: 'character', symbol: '&#9786;' },
+    { id: 'alien',     symbol: '&#128565;' },
 
-    { id: 'magic',     symbol: '⚡',      color: 'purple',
+    //{ id: 'magic',     symbol: '⚡',      color: 'purple',
+    { id: 'magic',     symbol: '&#x26a1;',      color: 'purple',
         rules: {
             default: GrowthRules.magic
         }
     },
 
-    { id: 'grass',     symbol: '∴',      color: 'lightgreen', 
+    { id: 'grass',     symbol: '&#8756;',      color: 'lightgreen', 
         rules: {
             default: GrowthRules.plants,
             conditional: [
@@ -224,7 +225,7 @@ module.exports = speciesData = [
         }
     },
 
-    { id: 'flowers',   symbol: '✨',     color: 'orange',
+    { id: 'flowers',   symbol: '&#10024;',     color: 'orange',
         rules: {
             default: GrowthRules.plants,
             conditional: [
@@ -420,6 +421,8 @@ Map.generate = function() {
         {x:  1, y:  0},
     ], self.species.magic)
 
+    self.sow(self.species.grass, 1)
+
     self.env.advance(1);
 }
 
@@ -482,6 +485,11 @@ Map.recenter = function(x, y) {
     this.center.y = y;
     this.refresh();
     return this;
+}
+
+// ugh
+Map.getOffset = function() {
+    return this.renderer.getPixelOffset();
 }
 
 
@@ -570,7 +578,13 @@ Renderer.prototype.refresh = function(env) {
     })
 }
 
-
+// Returns the number of pixels between the html's NW corner and the map's NW corner (at 0,0) 
+Renderer.prototype.getPixelOffset = function() {
+    return {
+        x: this.centerPx.x + -this.centerCoords.x * this.dims.x,
+        y: this.centerPx.y + -this.centerCoords.y * this.dims.y
+    }
+}
 
 
 },{}],8:[function(require,module,exports){
@@ -810,16 +824,29 @@ function coordmapAvg(coordmap) {
 
 },{"./ruleset":8,"./species-mask":10}],12:[function(require,module,exports){
 var Map = require('./map');
+var Sprite = require('./sprite');
+var SpriteData = require('./sprite-data');
 
 var game = {};
 game.size = {x:50, y:50}; // cells
-game.cellDims = {x:18, y:18}; // pixels
+game.cellDims = {x:30, y:30}; // pixels
 window.game = game;
+
+var Character;
 
 function initGame() {
     boardElement = document.getElementById('game');
+    charElement = document.getElementById('game-characters')
 
     Map.init(game.size, game.cellDims, boardElement);
+    Map.recenter(0, 0)
+
+    // TODO: this is a bare sprite... should have a character object
+    // which binds itself to map coordinates (not pixels)
+    Character = (new Sprite(SpriteData.character)).setFrame('up').scaleTo(game.cellDims).place(charElement);
+    Character.move(Map.getOffset()).move({x: game.cellDims.x/2, y: game.cellDims.y/2});
+    window.ch = Character;
+
     bindEvents();
 }
 
@@ -828,24 +855,28 @@ function bindEvents() {
 
     mouseOverlay.onclick = function() {
         Map.advance();
-        Map.render();
+        Map.refresh();
     }
 
     var keyboardCallbacks = {
         37: function goLeft(evt) {
             Map.recenter(Map.center.x - 1, Map.center.y);
+            Character.setFrame('left');
         },
 
         39: function goRight(evt) {
             Map.recenter(Map.center.x + 1, Map.center.y);
+            Character.setFrame('right');
         },
 
         38: function goUp(evt) {
             Map.recenter(Map.center.x, Map.center.y - 1);
+            Character.setFrame('up');
         },
 
         40: function goDown(evt) {
             Map.recenter(Map.center.x, Map.center.y + 1);
+            Character.setFrame('down');
         }
     }
 
@@ -894,4 +925,147 @@ UI.zoomIn = UI.infoWrap('zooming...', function() { Map.zoomIn(); })
 
 window.onload = UI.infoWrap('loading...', initGame);
 
-},{"./map":6}]},{},[12]);
+},{"./map":6,"./sprite":14,"./sprite-data":13}],13:[function(require,module,exports){
+module.exports = SpriteData = {};
+
+SpriteData.character = {
+    name: 'character',
+    url: 'images/character.png',
+    frame_size: {x: 80,  y:180},
+    frame_origin: {x: 40, y:90},
+
+    frames: {
+        'up':    {x: 0, y:0},
+        'down':  {x: 1, y:0},
+        'left':  {x: 2, y:0},
+        'right': {x: 3, y:0},
+    }
+}
+
+},{}],14:[function(require,module,exports){
+// warning, messy code
+
+module.exports = Sprite = function(data) {
+    this.data = data;
+    this.scale = 1;
+
+    // determine total image size
+    this.size = {x:0, y:0};
+    for (var frame in this.data.frames) {
+        var f = this.data.frames[frame];
+        this.size.x = Math.max(this.size.x, f.x);
+        this.size.y = Math.max(this.size.y, f.y);
+    }
+    this.size.x += 1;
+    this.size.y += 1;
+    this.size.x *= this.data.frame_size.x;
+    this.size.y *= this.data.frame_size.y;
+
+    // position of sprite in the game
+    this.position = {x:0, y:0}
+
+    this.init();
+}
+
+Sprite.prototype = {};
+
+Sprite.prototype.init = function() {
+    this.html = document.createElement('div');
+    this.html.setAttribute('id', 'sprite-' + this.data.name);
+    this.html.setAttribute('class', 'sprite');
+    this.html.style.backgroundImage = 'url("' + this.data.url + '")';
+    this.frame = Object.keys(this.data.frames)[0];
+    this.refresh();
+    return this;
+}
+
+
+Sprite.prototype.refresh = function() {
+    this.refreshScale();
+    this.refreshFrame();
+    this.refreshPosition();
+    return this;
+}
+
+Sprite.prototype.refreshScale = function() {
+    // size of the background, including all frames
+    var bgSize = {
+        x: this.size.x * this.scale,
+        y: this.size.y * this.scale
+    }
+
+    // size of the sprite's html element (width, height)
+    var spriteSize = {
+        x: this.data.frame_size.x * this.scale,
+        y: this.data.frame_size.y * this.scale
+    }
+
+
+    // set html
+    this.html.style.backgroundSize = bgSize.x + 'px ' + bgSize.y + 'px';
+
+    this.html.style.width = spriteSize.x + 'px';
+    this.html.style.height = spriteSize.y + 'px';
+    
+    return this;
+}
+
+Sprite.prototype.refreshFrame = function() {
+    // position of the background (to get the proper frame)
+    var bgPos = {
+        x: -this.data.frame_size.x * this.data.frames[this.frame].x * this.scale,
+        y: -this.data.frame_size.y * this.data.frames[this.frame].y * this.scale
+    }
+
+    this.html.style.backgroundPosition = bgPos.x + 'px ' + bgPos.y + 'px';
+
+    return this;
+}
+
+Sprite.prototype.refreshPosition = function() {
+
+    // adjust the sprite until its origin is lined up with its position
+    var posOffset = {
+        x: -this.data.frame_origin.x * this.scale,
+        y: -this.data.frame_origin.y * this.scale
+    }
+
+    this.html.style.left = (posOffset.x + this.position.x) + 'px';
+    this.html.style.top = (posOffset.y + this.position.y) + 'px';
+
+    return this;
+}
+
+Sprite.prototype.setFrame = function(frame) {
+    console.assert(frame in this.data.frames, 'Sprite sheet does not contain frame "' + frame + '"')
+    this.frame = frame;
+    this.refreshFrame();
+    return this;
+}
+
+Sprite.prototype.scaleBy = function(factor) {
+    this.scale *= factor;
+    this.refreshScale();
+    return this;
+}
+
+Sprite.prototype.scaleTo = function(size) {
+    // scales by size.y, since scale is scalar
+    this.scale = size.y / this.data.frame_size.y ;
+    this.refreshScale();
+    return this;
+}
+
+Sprite.prototype.place = function(container) {
+    container.appendChild(this.html);
+    return this;
+}
+
+Sprite.prototype.move = function(change) {
+    this.position.x += change.x;
+    this.position.y += change.y;
+    this.refreshPosition();
+    return this;
+}
+
+},{}]},{},[12]);

@@ -58,6 +58,8 @@ Map.generate = function() {
         {x:  1, y:  0},
     ], self.species.magic)
 
+    self.sow(self.species.grass, 1)
+
     self.env.advance(1);
 }
 
@@ -120,6 +122,11 @@ Map.recenter = function(x, y) {
     this.center.y = y;
     this.refresh();
     return this;
+}
+
+// ugh
+Map.getOffset = function() {
+    return this.renderer.getPixelOffset();
 }
 
 

@@ -54,6 +54,12 @@ a {
   font-size: 12px;
 }
 
+.sprite {
+  position: absolute;
+  background-repeat: no-repeat;
+}
+
+
 /* shadow border animated */
 
 #game-shadow {
