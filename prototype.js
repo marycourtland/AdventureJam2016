@@ -3,10 +3,13 @@ var Sprite = require('./sprite');
 var Character = require('./character')
 var SpriteData = require('./sprite-data');
 var Utils = require('./utils');
+ 
+var Settings = window.Settings;
 
 var game = {};
-game.size = {x:50, y:50}; // cells
-game.cellDims = {x:30, y:30}; // pixels
+game.size = Settings.gameSize; 
+game.cellDims = Settings.cellDims;
+
 window.game = game;
 
 var player; 
@@ -35,6 +38,8 @@ function initGame() {
     window.pl = player;
 
     bindEvents();
+
+    iterateMap();
 }
 
 function bindEvents() {
@@ -79,6 +84,27 @@ function refreshCamera() {
         Map.recenter(player.coords);
         player.refresh();
     }
+}
+
+game.iterationTimeout = null;
+window.iterateMap = function() {
+    if (Settings.mapIterationTimeout <= 0) return;
+
+    clearTimeout(game.iterationTimeout);
+    game.iterationTimeout = setTimeout(function() {
+        Map.advance();
+
+        if (!Settings.randomizeCellIteration) {
+            Map.refresh();
+        }
+        else {
+            // TODO: set random times for each new cell to refresh
+        }
+
+        // schedule another map iteration
+        iterateMap();
+
+    }, Settings.mapIterationTimeout)
 }
 
 // UI/HUD
