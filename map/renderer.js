@@ -8,7 +8,7 @@ module.exports = Renderer = function(html, dims, center) {
         x: this.bbox.width / 2,
         y: this.bbox.height / 2
     }
-    this.viewSize = {
+    this.viewsize = {
         x: this.bbox.width / this.dims.x,
         y: this.bbox.height / this.dims.y
     }
@@ -63,6 +63,8 @@ Renderer.prototype.positionCell = function(cellElement, coords) {
 Renderer.prototype.render = function(env) {
     var self = this;
 
+    self.rescale();
+
     self.html.innerHTML = '';
 
     env.range().forEach(function(coords) {
@@ -75,6 +77,8 @@ Renderer.prototype.render = function(env) {
 Renderer.prototype.refresh = function(env, fullRefresh) {
     var self = this;
 
+    self.rescale();
+
     var coordsToRefresh = env.range();
 
     if (!fullRefresh) coordsToRefresh = coordsToRefresh.filter(function(crd) { return self.isInView(crd); });
@@ -85,6 +89,15 @@ Renderer.prototype.refresh = function(env, fullRefresh) {
         self.refreshCell(cellElement, cellObject)
         self.positionCell(cellElement, coords)
     })
+}
+
+Renderer.prototype.rescale = function() {
+    // argh
+    this.viewSize = {
+        x: this.bbox.width / this.dims.x,
+        y: this.bbox.height / this.dims.y
+    };
+    return this;
 }
 
 // Returns the number of pixels between the html's NW corner and the map's NW corner (at 0,0) 
