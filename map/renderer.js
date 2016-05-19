@@ -3,12 +3,16 @@ module.exports = Renderer = function(html, dims, center) {
     this.html = html;
     this.dims = dims;
     this.centerCoords = center;
+    this.bbox = html.getBoundingClientRect();
     this.centerPx = {
-        x: html.getBoundingClientRect().width / 2,
-        y: html.getBoundingClientRect().height / 2
+        x: this.bbox.width / 2,
+        y: this.bbox.height / 2
+    }
+    this.viewsize = {
+        x: this.bbox.width / this.dims.x,
+        y: this.bbox.height / this.dims.y
     }
 }
-
 
 // Settings
 cellClass = 'cell'
@@ -31,11 +35,11 @@ Renderer.prototype.idToCoords = function(id) {
 Renderer.prototype.createCell = function(cellObject) {
     var cellElement = document.createElement('div');
     cellElement.setAttribute('class', cellClass);
-    this.refreshCell(cellElement, cellObject);
+    this.styleCell(cellElement, cellObject);
     return cellElement;
 }
 
-Renderer.prototype.refreshCell = function(cellElement, cellObject) {
+Renderer.prototype.styleCell = function(cellElement, cellObject) {
     cellElement.style.width = this.dims.x + 'px';
     cellElement.style.height = this.dims.y + 'px';
     cellElement.style.lineHeight = this.dims.y + 'px';
@@ -59,6 +63,8 @@ Renderer.prototype.positionCell = function(cellElement, coords) {
 Renderer.prototype.render = function(env) {
     var self = this;
 
+    self.rescale();
+
     self.html.innerHTML = '';
 
     env.range().forEach(function(coords) {
@@ -68,15 +74,35 @@ Renderer.prototype.render = function(env) {
     })
 }
 
-Renderer.prototype.refresh = function(env) {
+Renderer.prototype.refresh = function(env, fullRefresh) {
     var self = this;
+
+    self.rescale();
+
+    var coordsToRefresh = env.range();
+
+    // TODO: this is super buggy with cells that used to be in view but aren't anymore
+    if (!fullRefresh) coordsToRefresh = coordsToRefresh.filter(function(crd) { return self.isInView(crd); });
  
-    env.range().forEach(function(coords) {
-        var cellObject = env.get(coords);
-        var cellElement = document.getElementById(self.coordsToId(coords));
-        self.refreshCell(cellElement, cellObject)
-        self.positionCell(cellElement, coords)
-    })
+    coordsToRefresh.forEach(function(coords) { self.refreshCoords(env, coords); })
+    return this;
+}
+
+Renderer.prototype.refreshCoords = function(env, coords) {
+    var cellObject = env.get(coords);
+    var cellElement = document.getElementById(this.coordsToId(coords));
+    this.styleCell(cellElement, cellObject)
+    this.positionCell(cellElement, coords);
+    return this;
+}
+
+Renderer.prototype.rescale = function() {
+    // argh
+    this.viewSize = {
+        x: this.bbox.width / this.dims.x,
+        y: this.bbox.height / this.dims.y
+    };
+    return this;
 }
 
 // Returns the number of pixels between the html's NW corner and the map's NW corner (at 0,0) 
@@ -87,3 +113,21 @@ Renderer.prototype.getPixelOffset = function() {
     }
 }
 
+// Returns cell coords, not pixels
+Renderer.prototype.getViewBbox = function() {
+    return {
+        x1: this.centerCoords.x - this.viewSize.x/2,
+        x2: this.centerCoords.x + this.viewSize.x/2,
+        y1: this.centerCoords.y - this.viewSize.y/2,
+        y2: this.centerCoords.y + this.viewSize.y/2,
+    }
+}
+
+// Returns whether a cell coords is in view or not
+Renderer.prototype.isInView = function(coords) {
+    var bbox = this.getViewBbox();
+    return coords.x > bbox.x1
+        && coords.x < bbox.x2
+        && coords.y > bbox.y1
+        && coords.y < bbox.y2;
+}

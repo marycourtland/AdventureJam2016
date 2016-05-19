@@ -90,6 +90,15 @@ Map.clump = function(center, coordClump, species) {
     return this
 }
 
+// iterates over a coordmap
+Map.forEach = function(fn) {
+    var self = this;
+    self.env.range().forEach(function(coords) {
+        fn(coords, self.env.get(coords));
+    });
+    return this;
+}
+
 Map.advance = function() {
     this.env.advance();
     return this;
@@ -102,10 +111,20 @@ Map.isInWindow = function(coords) {
     return distance < this.window;
 }
 
+// Different than isInWindow. Uses the rectangular renderer view
+Map.isInView = function(coords) {
+    return this.renderer.isInView(coords);
+}
+
 
 // RENDERING
 Map.render = function() { this.renderer.render(this.env); return this; }
 Map.refresh = function() { this.renderer.refresh(this.env); return this; }
+
+Map.refreshCell = function(coords, forceRefresh) {
+    if (!forceRefresh && !this.isInView(coords)) return this;
+    this.renderer.refreshCoords(this.env, coords);
+}
 
 Map.zoomFactor = 2;
 

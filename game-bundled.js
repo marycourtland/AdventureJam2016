@@ -74,7 +74,7 @@ Character.prototype.refresh = function() {
     this.sprite.refreshPosition();
 }
 
-},{"./sprite":15,"./sprite-data":14,"./utils":16}],2:[function(require,module,exports){
+},{"./sprite":15,"./sprite-data":14,"./utils":17}],2:[function(require,module,exports){
 // This is the procedure which executes the advancing of the environment species
 // from one iteration to the next.
 //
@@ -281,7 +281,7 @@ module.exports = speciesData = [
     { id: 'character', symbol: '&#9786;' },
     { id: 'alien',     symbol: '&#128565;' },
 
-    { id: 'magic',     symbol: '&#x26a1;',      color: 'purple',
+    { id: 'magic',     symbol: '&#8960;',      color: '#923B9E',
         rules: {
             default: GrowthRules.magic
         }
@@ -300,7 +300,7 @@ module.exports = speciesData = [
         }
     },
 
-    { id: 'flowers',   symbol: '&#10024;',     color: 'orange',
+    { id: 'flowers',   symbol: '&#9880;',     color: '#E46511',
         rules: {
             default: GrowthRules.plants,
             conditional: [
@@ -528,6 +528,15 @@ Map.clump = function(center, coordClump, species) {
     return this
 }
 
+// iterates over a coordmap
+Map.forEach = function(fn) {
+    var self = this;
+    self.env.range().forEach(function(coords) {
+        fn(coords, self.env.get(coords));
+    });
+    return this;
+}
+
 Map.advance = function() {
     this.env.advance();
     return this;
@@ -540,10 +549,20 @@ Map.isInWindow = function(coords) {
     return distance < this.window;
 }
 
+// Different than isInWindow. Uses the rectangular renderer view
+Map.isInView = function(coords) {
+    return this.renderer.isInView(coords);
+}
+
 
 // RENDERING
 Map.render = function() { this.renderer.render(this.env); return this; }
 Map.refresh = function() { this.renderer.refresh(this.env); return this; }
+
+Map.refreshCell = function(coords, forceRefresh) {
+    if (!forceRefresh && !this.isInView(coords)) return this;
+    this.renderer.refreshCoords(this.env, coords);
+}
 
 Map.zoomFactor = 2;
 
@@ -585,12 +604,16 @@ module.exports = Renderer = function(html, dims, center) {
     this.html = html;
     this.dims = dims;
     this.centerCoords = center;
+    this.bbox = html.getBoundingClientRect();
     this.centerPx = {
-        x: html.getBoundingClientRect().width / 2,
-        y: html.getBoundingClientRect().height / 2
+        x: this.bbox.width / 2,
+        y: this.bbox.height / 2
+    }
+    this.viewsize = {
+        x: this.bbox.width / this.dims.x,
+        y: this.bbox.height / this.dims.y
     }
 }
-
 
 // Settings
 cellClass = 'cell'
@@ -613,11 +636,11 @@ Renderer.prototype.idToCoords = function(id) {
 Renderer.prototype.createCell = function(cellObject) {
     var cellElement = document.createElement('div');
     cellElement.setAttribute('class', cellClass);
-    this.refreshCell(cellElement, cellObject);
+    this.styleCell(cellElement, cellObject);
     return cellElement;
 }
 
-Renderer.prototype.refreshCell = function(cellElement, cellObject) {
+Renderer.prototype.styleCell = function(cellElement, cellObject) {
     cellElement.style.width = this.dims.x + 'px';
     cellElement.style.height = this.dims.y + 'px';
     cellElement.style.lineHeight = this.dims.y + 'px';
@@ -641,6 +664,8 @@ Renderer.prototype.positionCell = function(cellElement, coords) {
 Renderer.prototype.render = function(env) {
     var self = this;
 
+    self.rescale();
+
     self.html.innerHTML = '';
 
     env.range().forEach(function(coords) {
@@ -650,15 +675,35 @@ Renderer.prototype.render = function(env) {
     })
 }
 
-Renderer.prototype.refresh = function(env) {
+Renderer.prototype.refresh = function(env, fullRefresh) {
     var self = this;
+
+    self.rescale();
+
+    var coordsToRefresh = env.range();
+
+    // TODO: this is super buggy with cells that used to be in view but aren't anymore
+    if (!fullRefresh) coordsToRefresh = coordsToRefresh.filter(function(crd) { return self.isInView(crd); });
  
-    env.range().forEach(function(coords) {
-        var cellObject = env.get(coords);
-        var cellElement = document.getElementById(self.coordsToId(coords));
-        self.refreshCell(cellElement, cellObject)
-        self.positionCell(cellElement, coords)
-    })
+    coordsToRefresh.forEach(function(coords) { self.refreshCoords(env, coords); })
+    return this;
+}
+
+Renderer.prototype.refreshCoords = function(env, coords) {
+    var cellObject = env.get(coords);
+    var cellElement = document.getElementById(this.coordsToId(coords));
+    this.styleCell(cellElement, cellObject)
+    this.positionCell(cellElement, coords);
+    return this;
+}
+
+Renderer.prototype.rescale = function() {
+    // argh
+    this.viewSize = {
+        x: this.bbox.width / this.dims.x,
+        y: this.bbox.height / this.dims.y
+    };
+    return this;
 }
 
 // Returns the number of pixels between the html's NW corner and the map's NW corner (at 0,0) 
@@ -669,6 +714,24 @@ Renderer.prototype.getPixelOffset = function() {
     }
 }
 
+// Returns cell coords, not pixels
+Renderer.prototype.getViewBbox = function() {
+    return {
+        x1: this.centerCoords.x - this.viewSize.x/2,
+        x2: this.centerCoords.x + this.viewSize.x/2,
+        y1: this.centerCoords.y - this.viewSize.y/2,
+        y2: this.centerCoords.y + this.viewSize.y/2,
+    }
+}
+
+// Returns whether a cell coords is in view or not
+Renderer.prototype.isInView = function(coords) {
+    var bbox = this.getViewBbox();
+    return coords.x > bbox.x1
+        && coords.x < bbox.x2
+        && coords.y > bbox.y1
+        && coords.y < bbox.y2;
+}
 
 },{}],9:[function(require,module,exports){
 // EXAMPLE:
@@ -911,10 +974,13 @@ var Sprite = require('./sprite');
 var Character = require('./character')
 var SpriteData = require('./sprite-data');
 var Utils = require('./utils');
+ 
+var Settings = window.Settings;
 
 var game = {};
-game.size = {x:50, y:50}; // cells
-game.cellDims = {x:30, y:30}; // pixels
+game.size = Settings.gameSize; 
+game.cellDims = Settings.cellDims;
+
 window.game = game;
 
 var player; 
@@ -939,10 +1005,10 @@ function initGame() {
     // ugh, TODO clean this up
     player.sprite.scaleTo(game.cellDims).place(charElement);
     player.moveTo(Map.center)
-
     window.pl = player;
 
     bindEvents();
+    iterateMap();
 }
 
 function bindEvents() {
@@ -989,44 +1055,39 @@ function refreshCamera() {
     }
 }
 
+// TODO: maybe things would be nicer if this was demoted to a worker
+game.iterationTimeout = null;
+window.iterateMap = function() {
+    if (Settings.mapIterationTimeout <= 0) return;
+
+    Map.advance();
+
+    if (!Settings.randomizeCellIteration) {
+        Map.refresh();
+    }
+    else {
+        // Pick random times to show the cell update
+        // TODO: the isInView call might be outdated if we change views
+        Map.forEach(function(coords, cell) {
+            if (!Map.isInView(coords)) return;
+            setTimeout(function() {
+                Map.refreshCell(coords);
+            }, Math.random() * Settings.mapIterationTimeout);
+        })
+    }
+    
+    // Schedule another map iteration
+    clearTimeout(game.iterationTimeout);
+    game.iterationTimeout = setTimeout(function() {
+        iterateMap();
+    }, Settings.mapIterationTimeout)
+}
+
 // UI/HUD
-
-window.UI = {};
-
-UI.infoTimeout = null;
-
-// Display info text for the specified lifetime
-// If lifetime isn't specified, then the text will stay up forever (until something else is shown)
-UI.info = function(text, lifetime) {
-
-    document.getElementById('info').textContent = text;
-
-    clearTimeout(UI.infoTimeout);
-    if (typeof lifetime === 'number') {
-        UI.infoTimeout = setTimeout(function() {
-            UI.info('', false);
-        }, lifetime)
-    }
-}
-
-// Display info text only while the given function is executing
-UI.infoWrap = function(text, fn) {
-    return function() {
-        UI.info(text);
-
-        setTimeout(function() {
-            fn();
-            UI.info('');
-        }, 0)
-    }
-}
-
-UI.zoomOut = UI.infoWrap('zooming...', function() { Map.zoomOut(); })
-UI.zoomIn = UI.infoWrap('zooming...', function() { Map.zoomIn(); })
-
+window.UI = require('./ui');
 window.onload = UI.infoWrap('loading...', initGame);
 
-},{"./character":1,"./map":7,"./sprite":15,"./sprite-data":14,"./utils":16}],14:[function(require,module,exports){
+},{"./character":1,"./map":7,"./sprite":15,"./sprite-data":14,"./ui":16,"./utils":17}],14:[function(require,module,exports){
 module.exports = SpriteData = {};
 
 SpriteData.player = {
@@ -1178,6 +1239,43 @@ Sprite.prototype.moveTo = function(position) {
 }
 
 },{}],16:[function(require,module,exports){
+// UI/HUD
+
+module.exports = UI = {};
+
+UI.infoTimeout = null;
+
+// Display info text for the specified lifetime
+// If lifetime isn't specified, then the text will stay up forever (until something else is shown)
+UI.info = function(text, lifetime) {
+
+    document.getElementById('info').textContent = text;
+
+    clearTimeout(UI.infoTimeout);
+    if (typeof lifetime === 'number') {
+        UI.infoTimeout = setTimeout(function() {
+            UI.info('', false);
+        }, lifetime)
+    }
+}
+
+// Display info text only while the given function is executing
+UI.infoWrap = function(text, fn) {
+    return function() {
+        UI.info(text);
+
+        setTimeout(function() {
+            fn();
+            UI.info('');
+        }, 0)
+    }
+}
+
+UI.zoomOut = UI.infoWrap('zooming...', function() { Map.zoomOut(); })
+UI.zoomIn = UI.infoWrap('zooming...', function() { Map.zoomIn(); })
+
+
+},{}],17:[function(require,module,exports){
 module.exports = Utils = {};
 
 Utils.dirs = { 
