@@ -93,6 +93,7 @@ Sprite.prototype.refreshPosition = function() {
 
 Sprite.prototype.setFrame = function(frame) {
     console.assert(frame in this.data.frames, 'Sprite sheet does not contain frame "' + frame + '"')
+    if (this.frame === frame) return this; // no need to redo stuff
     this.frame = frame;
     this.refreshFrame();
     return this;
@@ -119,6 +120,13 @@ Sprite.prototype.place = function(container) {
 Sprite.prototype.move = function(change) {
     this.position.x += change.x;
     this.position.y += change.y;
+    this.refreshPosition();
+    return this;
+}
+
+Sprite.prototype.moveTo = function(position) {
+    this.position.x = position.x;
+    this.position.y = position.y;
     this.refreshPosition();
     return this;
 }
