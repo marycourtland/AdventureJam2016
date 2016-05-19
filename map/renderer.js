@@ -3,12 +3,16 @@ module.exports = Renderer = function(html, dims, center) {
     this.html = html;
     this.dims = dims;
     this.centerCoords = center;
+    this.bbox = html.getBoundingClientRect();
     this.centerPx = {
-        x: html.getBoundingClientRect().width / 2,
-        y: html.getBoundingClientRect().height / 2
+        x: this.bbox.width / 2,
+        y: this.bbox.height / 2
+    }
+    this.viewSize = {
+        x: this.bbox.width / this.dims.x,
+        y: this.bbox.height / this.dims.y
     }
 }
-
 
 // Settings
 cellClass = 'cell'
@@ -68,10 +72,14 @@ Renderer.prototype.render = function(env) {
     })
 }
 
-Renderer.prototype.refresh = function(env) {
+Renderer.prototype.refresh = function(env, fullRefresh) {
     var self = this;
+
+    var coordsToRefresh = env.range();
+
+    if (!fullRefresh) coordsToRefresh = coordsToRefresh.filter(function(crd) { return self.isInView(crd); });
  
-    env.range().forEach(function(coords) {
+    coordsToRefresh.forEach(function(coords) {
         var cellObject = env.get(coords);
         var cellElement = document.getElementById(self.coordsToId(coords));
         self.refreshCell(cellElement, cellObject)
@@ -87,3 +95,21 @@ Renderer.prototype.getPixelOffset = function() {
     }
 }
 
+// Returns cell coords, not pixels
+Renderer.prototype.getViewBbox = function() {
+    return {
+        x1: this.centerCoords.x - this.viewSize.x/2,
+        x2: this.centerCoords.x + this.viewSize.x/2,
+        y1: this.centerCoords.y - this.viewSize.y/2,
+        y2: this.centerCoords.y + this.viewSize.y/2,
+    }
+}
+
+// Returns whether a cell coords is in view or not
+Renderer.prototype.isInView = function(coords) {
+    var bbox = this.getViewBbox();
+    return coords.x > bbox.x1
+        && coords.x < bbox.x2
+        && coords.y > bbox.y1
+        && coords.y < bbox.y2;
+}

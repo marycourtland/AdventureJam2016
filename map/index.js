@@ -90,6 +90,15 @@ Map.clump = function(center, coordClump, species) {
     return this
 }
 
+// iterates over a coordmap
+Map.forEach = function(fn) {
+    var self = this;
+    self.env.range().forEach(function(coords) {
+        fn({coords: coords, value: self.env.get(coords)})
+    });
+    return this;
+}
+
 Map.advance = function() {
     this.env.advance();
     return this;
@@ -100,6 +109,11 @@ Map.isInWindow = function(coords) {
     // Right now there's a circular window
     var distance = Math.sqrt(Math.pow((coords.x - this.center.x), 2) + Math.pow((coords.y - this.center.y), 2));
     return distance < this.window;
+}
+
+// Different than isInWindow. Uses the rectangular renderer view
+Map.isInView = function(coords) {
+    return this.renderer.isInView(coords);
 }
 
 

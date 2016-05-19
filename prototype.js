@@ -39,6 +39,8 @@ function initGame() {
 
     bindEvents();
 
+    console.log(Map.renderer.isInView({x:17, y:24}))
+
     iterateMap();
 }
 
