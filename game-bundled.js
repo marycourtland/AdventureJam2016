@@ -1,4 +1,80 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
+var Sprite = require('./sprite');
+var SpriteData = require('./sprite-data');
+var Utils = require('./utils');
+
+module.exports = Character = function(params) {
+    params.id = params.id || '';
+    params.sprite= params.sprite || '';
+
+    console.assert(params.sprite in SpriteData, "spriteId doesn't exist: " + params.sprite);
+
+    this.map= params.map;
+    this.id = params.id;
+    this.sprite = new Sprite(SpriteData[params.sprite]).setFrame(Object.keys(SpriteData[params.sprite].frames)[0]);
+    this.coords = {x:0, y:0};
+
+}
+
+Character.prototype = {};
+
+
+Character.prototype.moveTo = function(coords) {
+    this.coords.x = coords.x;
+    this.coords.y = coords.y;
+
+    // move sprite
+    var pos = {
+        x: this.coords.x * this.map.dims.x,
+        y: this.coords.y * this.map.dims.y,
+    }
+
+    var offset = this.map.getOffset();
+    this.sprite.moveTo({x: pos.x + offset.x, y: pos.y + offset.y});
+
+    // put the sprite in the center of the tile
+    this.sprite.move({x: this.map.dims.x / 2, y: this.map.dims.y / 2});
+
+    // TODO: make sure it doesn't go off the map... or handle that case or something
+
+    return this;
+}
+
+Character.prototype.move = function(diff) {
+    console.assert(Math.abs(diff.x) + Math.abs(diff.y) === 1, 'character should only move 1 step at a time')
+
+    this.moveTo({x: this.coords.x + diff.x, y: this.coords.y + diff.y});
+    this.faceDirection(diff);
+    return this;
+}
+
+
+Character.prototype.faceDirection = function(dir) {
+    if (!(dir in Utils.dirs)) { return this; }
+    var dirCoords = Utils.dirs[dir];
+    var scaledDir = {
+        x: dirCoords.x / (dirCoords.x === 0 ? 1 : Math.abs(dirCoords.x)),
+        y: dirCoords.y / (dirCoords.y === 0 ? 1 : Math.abs(dirCoords.y))
+    };
+
+    var frame;
+    for (var dirFrame in Utils.dirs) {
+        if (scaledDir.x === Utils.dirs[dirFrame].x && scaledDir.y === Utils.dirs[dirFrame].y) {
+            frame = dirFrame;
+            break;
+        }
+    }
+
+    this.sprite.setFrame(frame);
+    return this;
+}
+
+Character.prototype.refresh = function() {
+    this.moveTo(this.coords);
+    this.sprite.refreshPosition();
+}
+
+},{"./sprite":15,"./sprite-data":14,"./utils":16}],2:[function(require,module,exports){
 // This is the procedure which executes the advancing of the environment species
 // from one iteration to the next.
 //
@@ -21,7 +97,7 @@ module.exports = Advancerator = function(env) {
     })
 }
 
-},{}],2:[function(require,module,exports){
+},{}],3:[function(require,module,exports){
 // A cell (location on the grid) can have multiple species living in it.
 // But one of them is dominant (which will be displayed)
 //
@@ -126,7 +202,7 @@ Cell.prototype.add = function(species) {
 
 
 
-},{"./species-battle":9}],3:[function(require,module,exports){
+},{"./species-battle":10}],4:[function(require,module,exports){
 module.exports = GrowthRules = {
     magic: {
         stateMap: {
@@ -195,24 +271,23 @@ module.exports = GrowthRules = {
     }
 }
 
-},{}],4:[function(require,module,exports){
+},{}],5:[function(require,module,exports){
 var GrowthRules = require('./growth-rules')
 
 // Conditional growth rules are sorted by priority, low > high.
 
 module.exports = speciesData = [
-    { id: 'blank',     symbol: '' },
+    { id: 'blank',     symbol: '~',             color: '#5F4F29'},
     { id: 'character', symbol: '&#9786;' },
     { id: 'alien',     symbol: '&#128565;' },
 
-    //{ id: 'magic',     symbol: '⚡',      color: 'purple',
     { id: 'magic',     symbol: '&#x26a1;',      color: 'purple',
         rules: {
             default: GrowthRules.magic
         }
     },
 
-    { id: 'grass',     symbol: '&#8756;',      color: 'lightgreen', 
+    { id: 'grass',     symbol: '&#8756;',      color: '#46CF46', 
         rules: {
             default: GrowthRules.plants,
             conditional: [
@@ -238,7 +313,7 @@ module.exports = speciesData = [
         }
     },
 
-    { id: 'trees',     symbol: '&psi;', color: 'green', passable: false,
+    { id: 'trees',     symbol: '&psi;', color: '#174925', passable: false,
         rules: {
             default: GrowthRules.plants,
             conditional: [
@@ -267,7 +342,7 @@ module.exports = speciesData = [
 
 ]
 
-},{"./growth-rules":3}],5:[function(require,module,exports){
+},{"./growth-rules":4}],6:[function(require,module,exports){
 // Example:
 // env = new Env({x:30, y:30});
 
@@ -360,7 +435,7 @@ Env.prototype.randomCoords = function() {
     }
 }
 
-},{"./advancerator.js":1,"./cell.js":2}],6:[function(require,module,exports){
+},{"./advancerator.js":2,"./cell.js":3}],7:[function(require,module,exports){
 var Env = require('./environment');
 var Species= require('./species');
 var Renderer = require('./renderer')
@@ -375,13 +450,14 @@ SpeciesData.forEach(function(s) {
 })
 
 
-Map.init = function(size, dims, htmlElement) {
-    this.size = size;
-    this.dims = dims;
+Map.init = function(params) {
+    this.size = params.size;
+    this.dims = params.dims;
+    this.window = params.window; // what radius of tiles should comprise the camera window?
 
-    this.center = {x: Math.floor(size.x/2), y: Math.floor(size.y/2)} // use Map.setCenter to change this
+    this.center = {x: Math.floor(this.size.x/2), y: Math.floor(this.size.y/2)} // use Map.setCenter to change this
 
-    this.renderer = new Renderer(htmlElement, this.dims, this.center);
+    this.renderer = new Renderer(params.html, this.dims, this.center);
 
     this.env = new Env(this.size, this.species.blank);
 
@@ -457,6 +533,13 @@ Map.advance = function() {
     return this;
 }
 
+// MARGINS / CAMERA
+Map.isInWindow = function(coords) {
+    // Right now there's a circular window
+    var distance = Math.sqrt(Math.pow((coords.x - this.center.x), 2) + Math.pow((coords.y - this.center.y), 2));
+    return distance < this.window;
+}
+
 
 // RENDERING
 Map.render = function() { this.renderer.render(this.env); return this; }
@@ -467,6 +550,7 @@ Map.zoomFactor = 2;
 Map.zoomIn = function() {
     this.dims.x *= Map.zoomFactor;
     this.dims.y *= Map.zoomFactor;
+    this.window /= Map.zoomFactor;
     this.refresh();
     return this;
 }
@@ -474,13 +558,14 @@ Map.zoomIn = function() {
 Map.zoomOut = function() {
     this.dims.x /= Map.zoomFactor;
     this.dims.y /= Map.zoomFactor;
+    this.window *= Map.zoomFactor;
     this.refresh();
     return this;
 }
 
-Map.recenter = function(x, y) {
-    this.center.x = x;
-    this.center.y = y;
+Map.recenter = function(coords) {
+    this.center.x = coords.x;
+    this.center.y = coords.y;
     this.refresh();
     return this;
 }
@@ -494,7 +579,7 @@ Map.getOffset = function() {
 // clump all this stuff together in a renderer
 Map.renderer = require('./renderer')
 
-},{"./data/species":4,"./environment":5,"./renderer":7,"./species":11}],7:[function(require,module,exports){
+},{"./data/species":5,"./environment":6,"./renderer":8,"./species":12}],8:[function(require,module,exports){
 module.exports = Renderer = function(html, dims, center) {
     // Direct references. So the parent should not overwrite them.
     this.html = html;
@@ -585,7 +670,7 @@ Renderer.prototype.getPixelOffset = function() {
 }
 
 
-},{}],8:[function(require,module,exports){
+},{}],9:[function(require,module,exports){
 // EXAMPLE:
 //
 // var ruleset = new RuleSet({
@@ -669,7 +754,7 @@ function indexWeights(deepArray) {
     return output;
 }
 
-},{}],9:[function(require,module,exports){
+},{}],10:[function(require,module,exports){
 // This module is for deciding the winning species in a cell!
 // 
 // For now, it's just 'which species is higher in the pecking order'
@@ -696,7 +781,7 @@ module.exports = SpeciesBattle = {
     }
 }
 
-},{}],10:[function(require,module,exports){
+},{}],11:[function(require,module,exports){
 // THE POINT OF THIS MODULE IS....
 //
 //    ... To take a cell object and decide whether it has a species in it.
@@ -714,7 +799,7 @@ module.exports = SpeciesMask = function(species_id) {
     }
 }
 
-},{}],11:[function(require,module,exports){
+},{}],12:[function(require,module,exports){
 var RuleSet = require('./ruleset');
 var SpeciesMask = require('./species-mask');
 
@@ -820,30 +905,42 @@ function coordmapAvg(coordmap) {
     return coordmapSum(coordmap) / coordmap.length;
 }
 
-},{"./ruleset":8,"./species-mask":10}],12:[function(require,module,exports){
+},{"./ruleset":9,"./species-mask":11}],13:[function(require,module,exports){
 var Map = require('./map');
 var Sprite = require('./sprite');
+var Character = require('./character')
 var SpriteData = require('./sprite-data');
+var Utils = require('./utils');
 
 var game = {};
 game.size = {x:50, y:50}; // cells
 game.cellDims = {x:30, y:30}; // pixels
 window.game = game;
 
-var Character;
+var player; 
 
 function initGame() {
     boardElement = document.getElementById('game');
     charElement = document.getElementById('game-characters')
 
-    Map.init(game.size, game.cellDims, boardElement);
-    Map.recenter(0, 0)
+    Map.init({
+        size: game.size,
+        dims: game.cellDims,
+        window: 7,
+        html: boardElement
+    });
 
-    // TODO: this is a bare sprite... should have a character object
-    // which binds itself to map coordinates (not pixels)
-    Character = (new Sprite(SpriteData.character)).setFrame('up').scaleTo(game.cellDims).place(charElement);
-    Character.move(Map.getOffset()).move({x: game.cellDims.x/2, y: game.cellDims.y/2});
-    window.ch = Character;
+    player = new Character({
+        map: Map,
+        id: 'player',
+        sprite: 'player'
+    })
+
+    // ugh, TODO clean this up
+    player.sprite.scaleTo(game.cellDims).place(charElement);
+    player.moveTo(Map.center)
+
+    window.pl = player;
 
     bindEvents();
 }
@@ -858,23 +955,23 @@ function bindEvents() {
 
     var keyboardCallbacks = {
         37: function goLeft(evt) {
-            Map.recenter(Map.center.x - 1, Map.center.y);
-            Character.setFrame('left');
+            player.move(Utils.dirs['w']);
+            refreshCamera();
         },
 
         39: function goRight(evt) {
-            Map.recenter(Map.center.x + 1, Map.center.y);
-            Character.setFrame('right');
+            player.move(Utils.dirs['e']);
+            refreshCamera();
         },
 
         38: function goUp(evt) {
-            Map.recenter(Map.center.x, Map.center.y - 1);
-            Character.setFrame('up');
+            player.move(Utils.dirs['n']);
+            refreshCamera();
         },
 
         40: function goDown(evt) {
-            Map.recenter(Map.center.x, Map.center.y + 1);
-            Character.setFrame('down');
+            player.move(Utils.dirs['s']);
+            refreshCamera();
         }
     }
 
@@ -885,6 +982,12 @@ function bindEvents() {
 
 }
 
+function refreshCamera() {
+    if (!Map.isInWindow(player.coords)) {
+        Map.recenter(player.coords);
+        player.refresh();
+    }
+}
 
 // UI/HUD
 
@@ -923,24 +1026,24 @@ UI.zoomIn = UI.infoWrap('zooming...', function() { Map.zoomIn(); })
 
 window.onload = UI.infoWrap('loading...', initGame);
 
-},{"./map":6,"./sprite":14,"./sprite-data":13}],13:[function(require,module,exports){
+},{"./character":1,"./map":7,"./sprite":15,"./sprite-data":14,"./utils":16}],14:[function(require,module,exports){
 module.exports = SpriteData = {};
 
-SpriteData.character = {
-    name: 'character',
-    url: 'images/character.png',
+SpriteData.player = {
+    name: 'player',
+    url: 'images/player.png',
     frame_size: {x: 80,  y:180},
     frame_origin: {x: 40, y:90},
 
     frames: {
-        'up':    {x: 0, y:0},
-        'down':  {x: 1, y:0},
-        'left':  {x: 2, y:0},
-        'right': {x: 3, y:0},
+        'n': {x: 0, y:0},
+        's': {x: 1, y:0},
+        'w': {x: 2, y:0},
+        'e': {x: 3, y:0},
     }
 }
 
-},{}],14:[function(require,module,exports){
+},{}],15:[function(require,module,exports){
 // warning, messy code
 
 module.exports = Sprite = function(data) {
@@ -1036,6 +1139,7 @@ Sprite.prototype.refreshPosition = function() {
 
 Sprite.prototype.setFrame = function(frame) {
     console.assert(frame in this.data.frames, 'Sprite sheet does not contain frame "' + frame + '"')
+    if (this.frame === frame) return this; // no need to redo stuff
     this.frame = frame;
     this.refreshFrame();
     return this;
@@ -1066,4 +1170,22 @@ Sprite.prototype.move = function(change) {
     return this;
 }
 
-},{}]},{},[12]);
+Sprite.prototype.moveTo = function(position) {
+    this.position.x = position.x;
+    this.position.y = position.y;
+    this.refreshPosition();
+    return this;
+}
+
+},{}],16:[function(require,module,exports){
+module.exports = Utils = {};
+
+Utils.dirs = { 
+    'n': {x: 0, y: -1},
+    's': {x: 0, y: 1},
+    'w': {x: -1, y:0},
+    'e': {x: 1, y:0}
+}
+
+
+},{}]},{},[13]);

@@ -1,26 +1,38 @@
 var Map = require('./map');
 var Sprite = require('./sprite');
+var Character = require('./character')
 var SpriteData = require('./sprite-data');
+var Utils = require('./utils');
 
 var game = {};
 game.size = {x:50, y:50}; // cells
 game.cellDims = {x:30, y:30}; // pixels
 window.game = game;
 
-var Character;
+var player; 
 
 function initGame() {
     boardElement = document.getElementById('game');
     charElement = document.getElementById('game-characters')
 
-    Map.init(game.size, game.cellDims, boardElement);
-    Map.recenter(0, 0)
+    Map.init({
+        size: game.size,
+        dims: game.cellDims,
+        window: 7,
+        html: boardElement
+    });
 
-    // TODO: this is a bare sprite... should have a character object
-    // which binds itself to map coordinates (not pixels)
-    Character = (new Sprite(SpriteData.character)).setFrame('up').scaleTo(game.cellDims).place(charElement);
-    Character.move(Map.getOffset()).move({x: game.cellDims.x/2, y: game.cellDims.y/2});
-    window.ch = Character;
+    player = new Character({
+        map: Map,
+        id: 'player',
+        sprite: 'player'
+    })
+
+    // ugh, TODO clean this up
+    player.sprite.scaleTo(game.cellDims).place(charElement);
+    player.moveTo(Map.center)
+
+    window.pl = player;
 
     bindEvents();
 }
@@ -35,23 +47,23 @@ function bindEvents() {
 
     var keyboardCallbacks = {
         37: function goLeft(evt) {
-            Map.recenter(Map.center.x - 1, Map.center.y);
-            Character.setFrame('left');
+            player.move(Utils.dirs['w']);
+            refreshCamera();
         },
 
         39: function goRight(evt) {
-            Map.recenter(Map.center.x + 1, Map.center.y);
-            Character.setFrame('right');
+            player.move(Utils.dirs['e']);
+            refreshCamera();
         },
 
         38: function goUp(evt) {
-            Map.recenter(Map.center.x, Map.center.y - 1);
-            Character.setFrame('up');
+            player.move(Utils.dirs['n']);
+            refreshCamera();
         },
 
         40: function goDown(evt) {
-            Map.recenter(Map.center.x, Map.center.y + 1);
-            Character.setFrame('down');
+            player.move(Utils.dirs['s']);
+            refreshCamera();
         }
     }
 
@@ -62,6 +74,12 @@ function bindEvents() {
 
 }
 
+function refreshCamera() {
+    if (!Map.isInWindow(player.coords)) {
+        Map.recenter(player.coords);
+        player.refresh();
+    }
+}
 
 // UI/HUD
 

@@ -3,18 +3,17 @@ var GrowthRules = require('./growth-rules')
 // Conditional growth rules are sorted by priority, low > high.
 
 module.exports = speciesData = [
-    { id: 'blank',     symbol: '' },
+    { id: 'blank',     symbol: '~',             color: '#5F4F29'},
     { id: 'character', symbol: '&#9786;' },
     { id: 'alien',     symbol: '&#128565;' },
 
-    //{ id: 'magic',     symbol: '⚡',      color: 'purple',
     { id: 'magic',     symbol: '&#x26a1;',      color: 'purple',
         rules: {
             default: GrowthRules.magic
         }
     },
 
-    { id: 'grass',     symbol: '&#8756;',      color: 'lightgreen', 
+    { id: 'grass',     symbol: '&#8756;',      color: '#46CF46', 
         rules: {
             default: GrowthRules.plants,
             conditional: [
@@ -40,7 +39,7 @@ module.exports = speciesData = [
         }
     },
 
-    { id: 'trees',     symbol: '&psi;', color: 'green', passable: false,
+    { id: 'trees',     symbol: '&psi;', color: '#174925', passable: false,
         rules: {
             default: GrowthRules.plants,
             conditional: [

@@ -12,13 +12,14 @@ SpeciesData.forEach(function(s) {
 })
 
 
-Map.init = function(size, dims, htmlElement) {
-    this.size = size;
-    this.dims = dims;
+Map.init = function(params) {
+    this.size = params.size;
+    this.dims = params.dims;
+    this.window = params.window; // what radius of tiles should comprise the camera window?
 
-    this.center = {x: Math.floor(size.x/2), y: Math.floor(size.y/2)} // use Map.setCenter to change this
+    this.center = {x: Math.floor(this.size.x/2), y: Math.floor(this.size.y/2)} // use Map.setCenter to change this
 
-    this.renderer = new Renderer(htmlElement, this.dims, this.center);
+    this.renderer = new Renderer(params.html, this.dims, this.center);
 
     this.env = new Env(this.size, this.species.blank);
 
@@ -94,6 +95,13 @@ Map.advance = function() {
     return this;
 }
 
+// MARGINS / CAMERA
+Map.isInWindow = function(coords) {
+    // Right now there's a circular window
+    var distance = Math.sqrt(Math.pow((coords.x - this.center.x), 2) + Math.pow((coords.y - this.center.y), 2));
+    return distance < this.window;
+}
+
 
 // RENDERING
 Map.render = function() { this.renderer.render(this.env); return this; }
@@ -104,6 +112,7 @@ Map.zoomFactor = 2;
 Map.zoomIn = function() {
     this.dims.x *= Map.zoomFactor;
     this.dims.y *= Map.zoomFactor;
+    this.window /= Map.zoomFactor;
     this.refresh();
     return this;
 }
@@ -111,13 +120,14 @@ Map.zoomIn = function() {
 Map.zoomOut = function() {
     this.dims.x /= Map.zoomFactor;
     this.dims.y /= Map.zoomFactor;
+    this.window *= Map.zoomFactor;
     this.refresh();
     return this;
 }
 
-Map.recenter = function(x, y) {
-    this.center.x = x;
-    this.center.y = y;
+Map.recenter = function(coords) {
+    this.center.x = coords.x;
+    this.center.y = coords.y;
     this.refresh();
     return this;
 }
