@@ -94,7 +94,7 @@ Map.clump = function(center, coordClump, species) {
 Map.forEach = function(fn) {
     var self = this;
     self.env.range().forEach(function(coords) {
-        fn({coords: coords, value: self.env.get(coords)})
+        fn(coords, self.env.get(coords));
     });
     return this;
 }
@@ -120,6 +120,11 @@ Map.isInView = function(coords) {
 // RENDERING
 Map.render = function() { this.renderer.render(this.env); return this; }
 Map.refresh = function() { this.renderer.refresh(this.env); return this; }
+
+Map.refreshCell = function(coords, forceRefresh) {
+    if (!forceRefresh && !this.isInView(coords)) return this;
+    this.renderer.refreshCoords(this.env, coords);
+}
 
 Map.zoomFactor = 2;
 

@@ -34,13 +34,9 @@ function initGame() {
     // ugh, TODO clean this up
     player.sprite.scaleTo(game.cellDims).place(charElement);
     player.moveTo(Map.center)
-
     window.pl = player;
 
     bindEvents();
-
-    console.log(Map.renderer.isInView({x:17, y:24}))
-
     iterateMap();
 }
 
@@ -88,24 +84,31 @@ function refreshCamera() {
     }
 }
 
+// TODO: maybe things would be nicer if this was demoted to a worker
 game.iterationTimeout = null;
 window.iterateMap = function() {
     if (Settings.mapIterationTimeout <= 0) return;
 
+    Map.advance();
+
+    if (!Settings.randomizeCellIteration) {
+        Map.refresh();
+    }
+    else {
+        // Pick random times to show the cell update
+        // TODO: the isInView call might be outdated if we change views
+        Map.forEach(function(coords, cell) {
+            if (!Map.isInView(coords)) return;
+            setTimeout(function() {
+                Map.refreshCell(coords);
+            }, Math.random() * Settings.mapIterationTimeout);
+        })
+    }
+    
+    // Schedule another map iteration
     clearTimeout(game.iterationTimeout);
     game.iterationTimeout = setTimeout(function() {
-        Map.advance();
-
-        if (!Settings.randomizeCellIteration) {
-            Map.refresh();
-        }
-        else {
-            // TODO: set random times for each new cell to refresh
-        }
-
-        // schedule another map iteration
         iterateMap();
-
     }, Settings.mapIterationTimeout)
 }
 

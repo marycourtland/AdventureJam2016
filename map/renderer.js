@@ -35,11 +35,11 @@ Renderer.prototype.idToCoords = function(id) {
 Renderer.prototype.createCell = function(cellObject) {
     var cellElement = document.createElement('div');
     cellElement.setAttribute('class', cellClass);
-    this.refreshCell(cellElement, cellObject);
+    this.styleCell(cellElement, cellObject);
     return cellElement;
 }
 
-Renderer.prototype.refreshCell = function(cellElement, cellObject) {
+Renderer.prototype.styleCell = function(cellElement, cellObject) {
     cellElement.style.width = this.dims.x + 'px';
     cellElement.style.height = this.dims.y + 'px';
     cellElement.style.lineHeight = this.dims.y + 'px';
@@ -81,14 +81,19 @@ Renderer.prototype.refresh = function(env, fullRefresh) {
 
     var coordsToRefresh = env.range();
 
+    // TODO: this is super buggy with cells that used to be in view but aren't anymore
     if (!fullRefresh) coordsToRefresh = coordsToRefresh.filter(function(crd) { return self.isInView(crd); });
  
-    coordsToRefresh.forEach(function(coords) {
-        var cellObject = env.get(coords);
-        var cellElement = document.getElementById(self.coordsToId(coords));
-        self.refreshCell(cellElement, cellObject)
-        self.positionCell(cellElement, coords)
-    })
+    coordsToRefresh.forEach(function(coords) { self.refreshCoords(env, coords); })
+    return this;
+}
+
+Renderer.prototype.refreshCoords = function(env, coords) {
+    var cellObject = env.get(coords);
+    var cellElement = document.getElementById(this.coordsToId(coords));
+    this.styleCell(cellElement, cellObject)
+    this.positionCell(cellElement, coords);
+    return this;
 }
 
 Renderer.prototype.rescale = function() {
