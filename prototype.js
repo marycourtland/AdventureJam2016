@@ -3,6 +3,7 @@ var Sprite = require('./sprite');
 var Character = require('./character')
 var SpriteData = require('./sprite-data');
 var Utils = require('./utils');
+var Walker = require('./walker');
  
 var Settings = window.Settings;
 
@@ -12,7 +13,7 @@ game.cellDims = Settings.cellDims;
 
 window.game = game;
 
-var player; 
+var player, wizard;
 
 function initGame() {
     boardElement = document.getElementById('game');
@@ -31,10 +32,52 @@ function initGame() {
         sprite: 'player'
     })
 
+    wizard = new Character({
+        map: Map,
+        id: 'wizard',
+        sprite: 'wizard'
+    })
+
+
+
     // ugh, TODO clean this up
     player.sprite.scaleTo(game.cellDims).place(charElement);
     player.moveTo(Map.center)
     window.pl = player;
+
+    wizard.sprite.scaleTo(game.cellDims).place(charElement);
+    wizard.moveTo(Map.env.randomCoords());
+    window.wizard = wizard;
+
+    // start magic where the wizard is
+    Map.diamondClump(wizard.coords, Map.species.magic)
+
+
+    // have the wizard amble randomly
+    wizard.getSomewhatRandomDir = function() {
+        // 33% chance to walk in the same direction as last step
+        if (!!this.lastStep && Math.random() < 1/3) {
+            return this.lastStep;
+        }
+        return Utils.dirs[Utils.randomChoice(Utils.dirs)];
+    }
+
+    wizard.walker = new Walker(wizard,
+        function() {
+            return wizard.getSomewhatRandomDir();
+        },
+        function onStep(dir) {
+            wizard.faceDirection(dir);
+            wizard.refresh();
+
+            // make sure the wizard trails magic
+            Map.set(wizard.coords, Map.species.magic);
+            Map.refreshCell(wizard.coords);
+
+            wizard.lastStep = dir;
+        }
+    )
+    wizard.walker.start();
 
     bindEvents();
     iterateMap();
@@ -81,6 +124,7 @@ function refreshCamera() {
     if (!Map.isInWindow(player.coords)) {
         Map.recenter(player.coords);
         player.refresh();
+        wizard.refresh();
     }
 }
 
@@ -93,6 +137,7 @@ window.iterateMap = function() {
 
     if (!Settings.randomizeCellIteration) {
         Map.refresh();
+        if (window.doCounts) window.doCounts();
     }
     else {
         // Pick random times to show the cell update

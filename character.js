@@ -49,11 +49,9 @@ Character.prototype.move = function(diff) {
 
 
 Character.prototype.faceDirection = function(dir) {
-    if (!(dir in Utils.dirs)) { return this; }
-    var dirCoords = Utils.dirs[dir];
     var scaledDir = {
-        x: dirCoords.x / (dirCoords.x === 0 ? 1 : Math.abs(dirCoords.x)),
-        y: dirCoords.y / (dirCoords.y === 0 ? 1 : Math.abs(dirCoords.y))
+        x: dir.x / (dir.x === 0 ? 1 : Math.abs(dir.x)),
+        y: dir.y / (dir.y === 0 ? 1 : Math.abs(dir.y))
     };
 
     var frame;

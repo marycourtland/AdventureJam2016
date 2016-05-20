@@ -52,6 +52,7 @@ a {
   position: absolute;
   font-family: monospace;
   font-size: 12px;
+  transition: background-color 0.5s linear;
 }
 
 .sprite {
@@ -63,6 +64,11 @@ a {
 /* shadow border animated */
 
 #game-shadow {
+  border-radius: 250px;
+  box-shadow: inset 0 0 8em black;
+}
+
+#game-shadow-animated {
   border-radius: 250px;
 
   /* Use steps(20) to conserve CPU */
