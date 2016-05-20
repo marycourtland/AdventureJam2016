@@ -50,11 +50,9 @@ Character.prototype.move = function(diff) {
 
 
 Character.prototype.faceDirection = function(dir) {
-    if (!(dir in Utils.dirs)) { return this; }
-    var dirCoords = Utils.dirs[dir];
     var scaledDir = {
-        x: dirCoords.x / (dirCoords.x === 0 ? 1 : Math.abs(dirCoords.x)),
-        y: dirCoords.y / (dirCoords.y === 0 ? 1 : Math.abs(dirCoords.y))
+        x: dir.x / (dir.x === 0 ? 1 : Math.abs(dir.x)),
+        y: dir.y / (dir.y === 0 ? 1 : Math.abs(dir.y))
     };
 
     var frame;
@@ -477,15 +475,17 @@ Map.generate = function() {
     })
 
 
-    //self.sow(self.species.magic, 1/20)
-
     self.sow(self.species.grass, 1/10);
     self.sow(self.species.flowers, 1/50)
     self.sow(self.species.trees, 1/30);
 
     self.env.advance(4);
 
-    self.clump(self.env.randomCoords(), [
+    self.env.advance(1);
+}
+
+Map.diamondClump = function(coords, species) {
+    this.clump(coords, [
         {x:  0, y:  0},
         {x:  1, y:  1},
         {x: -1, y:  1},
@@ -495,9 +495,7 @@ Map.generate = function() {
         {x:  0, y:  1},
         {x: -1, y:  0},
         {x:  1, y:  0},
-    ], self.species.magic)
-
-    self.env.advance(1);
+    ], species)
 }
 
 // randomly set cells as the species
@@ -526,6 +524,10 @@ Map.clump = function(center, coordClump, species) {
     })
 
     return this
+}
+
+Map.set = function(coords, species) {
+    this.env.set(coords, species);
 }
 
 // iterates over a coordmap
@@ -558,6 +560,7 @@ Map.isInView = function(coords) {
 // RENDERING
 Map.render = function() { this.renderer.render(this.env); return this; }
 Map.refresh = function() { this.renderer.refresh(this.env); return this; }
+Map.refreshFull = function() { this.renderer.refresh(this.env, true); return this; }
 
 Map.refreshCell = function(coords, forceRefresh) {
     if (!forceRefresh && !this.isInView(coords)) return this;
@@ -570,7 +573,7 @@ Map.zoomIn = function() {
     this.dims.x *= Map.zoomFactor;
     this.dims.y *= Map.zoomFactor;
     this.window /= Map.zoomFactor;
-    this.refresh();
+    this.refreshFull();
     return this;
 }
 
@@ -578,14 +581,14 @@ Map.zoomOut = function() {
     this.dims.x /= Map.zoomFactor;
     this.dims.y /= Map.zoomFactor;
     this.window *= Map.zoomFactor;
-    this.refresh();
+    this.refreshFull();
     return this;
 }
 
 Map.recenter = function(coords) {
     this.center.x = coords.x;
     this.center.y = coords.y;
-    this.refresh();
+    this.refreshFull();
     return this;
 }
 
@@ -974,6 +977,7 @@ var Sprite = require('./sprite');
 var Character = require('./character')
 var SpriteData = require('./sprite-data');
 var Utils = require('./utils');
+var Walker = require('./walker');
  
 var Settings = window.Settings;
 
@@ -983,7 +987,7 @@ game.cellDims = Settings.cellDims;
 
 window.game = game;
 
-var player; 
+var player, wizard;
 
 function initGame() {
     boardElement = document.getElementById('game');
@@ -1002,10 +1006,52 @@ function initGame() {
         sprite: 'player'
     })
 
+    wizard = new Character({
+        map: Map,
+        id: 'wizard',
+        sprite: 'wizard'
+    })
+
+
+
     // ugh, TODO clean this up
     player.sprite.scaleTo(game.cellDims).place(charElement);
     player.moveTo(Map.center)
     window.pl = player;
+
+    wizard.sprite.scaleTo(game.cellDims).place(charElement);
+    wizard.moveTo(Map.env.randomCoords());
+    window.wizard = wizard;
+
+    // start magic where the wizard is
+    Map.diamondClump(wizard.coords, Map.species.magic)
+
+
+    // have the wizard amble randomly
+    wizard.getSomewhatRandomDir = function() {
+        // 33% chance to walk in the same direction as last step
+        if (!!this.lastStep && Math.random() < 1/3) {
+            return this.lastStep;
+        }
+        return Utils.dirs[Utils.randomChoice(Utils.dirs)];
+    }
+
+    wizard.walker = new Walker(wizard,
+        function() {
+            return wizard.getSomewhatRandomDir();
+        },
+        function onStep(dir) {
+            wizard.faceDirection(dir);
+            wizard.refresh();
+
+            // make sure the wizard trails magic
+            Map.set(wizard.coords, Map.species.magic);
+            Map.refreshCell(wizard.coords);
+
+            wizard.lastStep = dir;
+        }
+    )
+    wizard.walker.start();
 
     bindEvents();
     iterateMap();
@@ -1052,6 +1098,7 @@ function refreshCamera() {
     if (!Map.isInWindow(player.coords)) {
         Map.recenter(player.coords);
         player.refresh();
+        wizard.refresh();
     }
 }
 
@@ -1064,6 +1111,7 @@ window.iterateMap = function() {
 
     if (!Settings.randomizeCellIteration) {
         Map.refresh();
+        if (window.doCounts) window.doCounts();
     }
     else {
         // Pick random times to show the cell update
@@ -1087,12 +1135,26 @@ window.iterateMap = function() {
 window.UI = require('./ui');
 window.onload = UI.infoWrap('loading...', initGame);
 
-},{"./character":1,"./map":7,"./sprite":15,"./sprite-data":14,"./ui":16,"./utils":17}],14:[function(require,module,exports){
+},{"./character":1,"./map":7,"./sprite":15,"./sprite-data":14,"./ui":16,"./utils":17,"./walker":18}],14:[function(require,module,exports){
 module.exports = SpriteData = {};
 
 SpriteData.player = {
     name: 'player',
     url: 'images/player.png',
+    frame_size: {x: 80,  y:180},
+    frame_origin: {x: 40, y:90},
+
+    frames: {
+        'n': {x: 0, y:0},
+        's': {x: 1, y:0},
+        'w': {x: 2, y:0},
+        'e': {x: 3, y:0},
+    }
+}
+
+SpriteData.wizard = {
+    name: 'wizard',
+    url: 'images/wizard.png',
     frame_size: {x: 80,  y:180},
     frame_origin: {x: 40, y:90},
 
@@ -1285,5 +1347,52 @@ Utils.dirs = {
     'e': {x: 1, y:0}
 }
 
+Utils.randomChoice = function(array) {
+    if (typeof array === 'object') array = Object.keys(array);
+    return array[Math.floor(Math.random() * array.length)];
+}
+
+},{}],18:[function(require,module,exports){
+module.exports = Walker = function(char, getNextDir, onStep) {
+    this.char = char;
+    this.timeout = null;
+    this.walking = false;
+    this.getNextDir = getNextDir;
+    this.onStep = typeof onStep === 'function' ? onStep : function() {};
+}
+
+Walker.prototype = {};
+
+Walker.prototype.timeTillNextStep = function() {
+    // 3-4 seconds, but once in a while stop for a bit
+    var base = 3000;
+    if (Math.random() < 1/10) base = 8000;
+    return base +  Math.random() * 1000;
+}
+
+Walker.prototype.start = function() {
+    this.walking = true;
+    this.step();
+}
+
+Walker.prototype.stop = function() {
+    window.clearTimeout(this.timeout);
+    this.timeout = null;
+    this.walking = false;
+}
+
+Walker.prototype.step = function() {
+    if (!this.walking) return;
+    
+    var dir = this.getNextDir()
+    this.char.move(dir);
+    this.onStep(dir);
+
+    var self = this;
+    window.clearTimeout(this.timeout);
+    this.timeout = window.setTimeout(function() {
+        self.step();
+    }, this.timeTillNextStep());
+}
 
 },{}]},{},[13]);
