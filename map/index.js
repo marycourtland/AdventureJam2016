@@ -103,15 +103,18 @@ Map.forEach = function(fn) {
     return this;
 }
 
-Map.advance = function() {
-    this.env.advance();
+Map.advance = function(n) {
+    if (typeof n === 'undefined') n = 1;
+    this.env.advance(n);
     return this;
 }
 
 // MARGINS / CAMERA
 Map.isInWindow = function(coords) {
-    // Right now there's a circular window
-    var distance = Math.sqrt(Math.pow((coords.x - this.center.x), 2) + Math.pow((coords.y - this.center.y), 2));
+    var distance = Math.max(
+        Math.abs(coords.x - this.center.x),
+        Math.abs(coords.y - this.center.y)
+    )
     return distance < this.window;
 }
 

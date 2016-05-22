@@ -7,7 +7,7 @@ module.exports = speciesData = [
     { id: 'character', symbol: '&#9786;' },
     { id: 'alien',     symbol: '&#128565;' },
 
-    { id: 'magic',     symbol: '&#8960;',      color: '#923B9E',
+    { id: 'magic',     symbol: '&#8960;',      color: '#4C24A3',
         rules: {
             default: GrowthRules.magic
         }

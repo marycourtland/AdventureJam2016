@@ -1,11 +1,10 @@
 var Map = require('./map');
-var Sprite = require('./sprite');
-var Character = require('./character')
-var SpriteData = require('./sprite-data');
-var Utils = require('./utils');
-var Walker = require('./walker');
- 
 var Settings = window.Settings;
+var Character = require('./character');
+var Utils = require('./utils');
+var Walking = require('./character/walking');
+var ToolChest = require('./items');
+window.TC = ToolChest;
 
 var game = {};
 game.size = Settings.gameSize; 
@@ -18,11 +17,12 @@ var player, wizard;
 function initGame() {
     boardElement = document.getElementById('game');
     charElement = document.getElementById('game-characters')
+    inventoryElement = document.getElementById('game-inventory')
 
     Map.init({
         size: game.size,
         dims: game.cellDims,
-        window: 7,
+        window: 8,
         html: boardElement
     });
 
@@ -38,16 +38,33 @@ function initGame() {
         sprite: 'wizard'
     })
 
-
-
     // ugh, TODO clean this up
+    wizard.sprite.scaleTo(game.cellDims).place(charElement);
+    wizard.moveTo(Map.env.randomCoords());
+    window.wizard = wizard;
+
     player.sprite.scaleTo(game.cellDims).place(charElement);
     player.moveTo(Map.center)
     window.pl = player;
 
-    wizard.sprite.scaleTo(game.cellDims).place(charElement);
-    wizard.moveTo(Map.env.randomCoords());
-    window.wizard = wizard;
+    // Player initial inventory
+    player.gets(ToolChest.make(ToolChest.types.neutralizer))
+    player.gets(ToolChest.make(ToolChest.types.neutralizer))
+    player.gets(ToolChest.make(ToolChest.types.neutralizer))
+    player.gets(ToolChest.make(ToolChest.types.neutralizer))
+    player.gets(ToolChest.make(ToolChest.types.neutralizer))
+    player.gets(ToolChest.make(ToolChest.types.bomb))
+    player.gets(ToolChest.make(ToolChest.types.bomb))
+    player.gets(ToolChest.make(ToolChest.types.bomb))
+    player.gets(ToolChest.make(ToolChest.types.camera))
+    player.gets(ToolChest.make(ToolChest.types.camera))
+    player.gets(ToolChest.make(ToolChest.types.camera))
+    player.gets(ToolChest.make(ToolChest.types.detector))
+    player.gets(ToolChest.make(ToolChest.types.detector))
+    player.gets(ToolChest.make(ToolChest.types.detector))
+
+    player.inventory.rendersTo(inventoryElement);
+
 
     // start magic where the wizard is
     Map.diamondClump(wizard.coords, Map.species.magic)
@@ -62,7 +79,7 @@ function initGame() {
         return Utils.dirs[Utils.randomChoice(Utils.dirs)];
     }
 
-    wizard.walker = new Walker(wizard,
+    wizard.walk = new Walking(wizard,
         function() {
             return wizard.getSomewhatRandomDir();
         },
@@ -77,7 +94,7 @@ function initGame() {
             wizard.lastStep = dir;
         }
     )
-    wizard.walker.start();
+    wizard.walk.start();
 
     bindEvents();
     iterateMap();
@@ -113,7 +130,7 @@ function bindEvents() {
         }
     }
 
-    window.addEventListener('keyup', function(event) {
+    window.addEventListener('keydown', function(event) {
         var keycode = event.fake || window.event ? event.keyCode : event.which;
         if (keycode in keyboardCallbacks) keyboardCallbacks[keycode]();
     });
