@@ -1,6 +1,7 @@
 var Sprite = require('./sprite');
-var SpriteData = require('./sprite-data');
-var Utils = require('./utils');
+var SpriteData = require('./data/sprites');
+var Inventory = require('./inventory');
+var Utils = require('../utils');
 
 module.exports = Character = function(params) {
     params.id = params.id || '';
@@ -13,10 +14,13 @@ module.exports = Character = function(params) {
     this.sprite = new Sprite(SpriteData[params.sprite]).setFrame(Object.keys(SpriteData[params.sprite].frames)[0]);
     this.coords = {x:0, y:0};
 
+    this.inventory = new Inventory(this);
 }
 
 Character.prototype = {};
 
+
+// ============= MOVEMENT / RENDERING
 
 Character.prototype.moveTo = function(coords) {
     this.coords.x = coords.x;
@@ -69,4 +73,16 @@ Character.prototype.faceDirection = function(dir) {
 Character.prototype.refresh = function() {
     this.moveTo(this.coords);
     this.sprite.refreshPosition();
+}
+
+
+// ============================== ITEMS / INVENTORY
+
+Character.prototype.gets = function(item) {
+    this.inventory.addItem(item);
+}
+
+Character.prototype.use = function(item, coords) {
+    this.inventory.removeItem(item);
+    item.useAt(coords);
 }

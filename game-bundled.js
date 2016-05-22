@@ -1,7 +1,39 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
+module.exports = SpriteData = {};
+
+SpriteData.player = {
+    name: 'player',
+    url: 'images/player.png',
+    frame_size: {x: 80,  y:180},
+    frame_origin: {x: 40, y:90},
+
+    frames: {
+        'n': {x: 0, y:0},
+        's': {x: 1, y:0},
+        'w': {x: 2, y:0},
+        'e': {x: 3, y:0},
+    }
+}
+
+SpriteData.wizard = {
+    name: 'wizard',
+    url: 'images/wizard.png',
+    frame_size: {x: 80,  y:180},
+    frame_origin: {x: 40, y:90},
+
+    frames: {
+        'n': {x: 0, y:0},
+        's': {x: 1, y:0},
+        'w': {x: 2, y:0},
+        'e': {x: 3, y:0},
+    }
+}
+
+},{}],2:[function(require,module,exports){
 var Sprite = require('./sprite');
-var SpriteData = require('./sprite-data');
-var Utils = require('./utils');
+var SpriteData = require('./data/sprites');
+var Inventory = require('./inventory');
+var Utils = require('../utils');
 
 module.exports = Character = function(params) {
     params.id = params.id || '';
@@ -14,10 +46,13 @@ module.exports = Character = function(params) {
     this.sprite = new Sprite(SpriteData[params.sprite]).setFrame(Object.keys(SpriteData[params.sprite].frames)[0]);
     this.coords = {x:0, y:0};
 
+    this.inventory = new Inventory(this);
 }
 
 Character.prototype = {};
 
+
+// ============= MOVEMENT / RENDERING
 
 Character.prototype.moveTo = function(coords) {
     this.coords.x = coords.x;
@@ -72,7 +107,338 @@ Character.prototype.refresh = function() {
     this.sprite.refreshPosition();
 }
 
-},{"./sprite":15,"./sprite-data":14,"./utils":17}],2:[function(require,module,exports){
+
+// ============================== ITEMS / INVENTORY
+
+Character.prototype.gets = function(item) {
+    this.inventory.addItem(item);
+}
+
+Character.prototype.use = function(item, coords) {
+    this.inventory.removeItem(item);
+    item.useAt(coords);
+}
+
+},{"../utils":26,"./data/sprites":1,"./inventory":3,"./sprite":4}],3:[function(require,module,exports){
+module.exports = Inventory = function(char) {
+    this.char = char;
+    this.items = {};
+}
+
+Inventory.prototype = {};
+
+
+Inventory.prototype.addItem = function(item) {
+    this.items[item.id] = item;
+}
+
+Inventory.prototype.removeItem = function(item) {
+    delete this.items[item.id];
+}
+
+// RENDERING
+// TODO: this could be its own renderer
+
+// Rendering initializer
+Inventory.prototype.rendersTo = function(html) {
+    this.html = html;
+    this.assignItemsToSlots();
+    this.refresh();
+}
+
+Inventory.prototype.assignItemsToSlots = function() {
+    var slotHtmls = this.html.getElementsByClassName('slot');
+
+    var nextSlot = 0;
+    for (var itemId in this.items) {
+        // Put it in the next slot
+        this.items[itemId].rendersTo(slotHtmls[nextSlot]);
+        nextSlot += 1;
+    }
+}
+
+Inventory.prototype.refresh = function() {
+    if (!this.html) return;
+
+    for (var itemId in this.items) {
+        this.items[itemId].refresh();
+    }
+}
+
+},{}],4:[function(require,module,exports){
+// warning, messy code
+
+module.exports = Sprite = function(data) {
+    this.data = data;
+    this.scale = 1;
+
+    // determine total image size
+    this.size = {x:0, y:0};
+    for (var frame in this.data.frames) {
+        var f = this.data.frames[frame];
+        this.size.x = Math.max(this.size.x, f.x);
+        this.size.y = Math.max(this.size.y, f.y);
+    }
+    this.size.x += 1;
+    this.size.y += 1;
+    this.size.x *= this.data.frame_size.x;
+    this.size.y *= this.data.frame_size.y;
+
+    // position of sprite in the game
+    this.position = {x:0, y:0}
+
+    this.init();
+}
+
+Sprite.prototype = {};
+
+Sprite.prototype.init = function() {
+    this.html = document.createElement('div');
+    this.html.setAttribute('id', 'sprite-' + this.data.name);
+    this.html.setAttribute('class', 'sprite');
+    this.html.style.backgroundImage = 'url("' + this.data.url + '")';
+    this.frame = Object.keys(this.data.frames)[0];
+    this.refresh();
+    return this;
+}
+
+
+Sprite.prototype.refresh = function() {
+    this.refreshScale();
+    this.refreshFrame();
+    this.refreshPosition();
+    return this;
+}
+
+Sprite.prototype.refreshScale = function() {
+    // size of the background, including all frames
+    var bgSize = {
+        x: this.size.x * this.scale,
+        y: this.size.y * this.scale
+    }
+
+    // size of the sprite's html element (width, height)
+    var spriteSize = {
+        x: this.data.frame_size.x * this.scale,
+        y: this.data.frame_size.y * this.scale
+    }
+
+
+    // set html
+    this.html.style.backgroundSize = bgSize.x + 'px ' + bgSize.y + 'px';
+
+    this.html.style.width = spriteSize.x + 'px';
+    this.html.style.height = spriteSize.y + 'px';
+    
+    return this;
+}
+
+Sprite.prototype.refreshFrame = function() {
+    // position of the background (to get the proper frame)
+    var bgPos = {
+        x: -this.data.frame_size.x * this.data.frames[this.frame].x * this.scale,
+        y: -this.data.frame_size.y * this.data.frames[this.frame].y * this.scale
+    }
+
+    this.html.style.backgroundPosition = bgPos.x + 'px ' + bgPos.y + 'px';
+
+    return this;
+}
+
+Sprite.prototype.refreshPosition = function() {
+
+    // adjust the sprite until its origin is lined up with its position
+    var posOffset = {
+        x: -this.data.frame_origin.x * this.scale,
+        y: -this.data.frame_origin.y * this.scale
+    }
+
+    this.html.style.left = (posOffset.x + this.position.x) + 'px';
+    this.html.style.top = (posOffset.y + this.position.y) + 'px';
+
+    return this;
+}
+
+Sprite.prototype.setFrame = function(frame) {
+    console.assert(frame in this.data.frames, 'Sprite sheet does not contain frame "' + frame + '"')
+    if (this.frame === frame) return this; // no need to redo stuff
+    this.frame = frame;
+    this.refreshFrame();
+    return this;
+}
+
+Sprite.prototype.scaleBy = function(factor) {
+    this.scale *= factor;
+    this.refreshScale();
+    return this;
+}
+
+Sprite.prototype.scaleTo = function(size) {
+    // scales by size.y, since scale is scalar
+    this.scale = size.y / this.data.frame_size.y ;
+    this.refreshScale();
+    return this;
+}
+
+Sprite.prototype.place = function(container) {
+    container.appendChild(this.html);
+    return this;
+}
+
+Sprite.prototype.move = function(change) {
+    this.position.x += change.x;
+    this.position.y += change.y;
+    this.refreshPosition();
+    return this;
+}
+
+Sprite.prototype.moveTo = function(position) {
+    this.position.x = position.x;
+    this.position.y = position.y;
+    this.refreshPosition();
+    return this;
+}
+
+},{}],5:[function(require,module,exports){
+module.exports = Walker = function(char, getNextDir, onStep) {
+    this.char = char;
+    this.timeout = null;
+    this.walking = false;
+    this.getNextDir = getNextDir;
+    this.onStep = typeof onStep === 'function' ? onStep : function() {};
+}
+
+Walker.prototype = {};
+
+Walker.prototype.timeTillNextStep = function() {
+    // 3-4 seconds, but once in a while stop for a bit
+    var base = 3000;
+    if (Math.random() < 1/10) base = 8000;
+    return base +  Math.random() * 1000;
+}
+
+Walker.prototype.start = function() {
+    this.walking = true;
+    this.step();
+}
+
+Walker.prototype.stop = function() {
+    window.clearTimeout(this.timeout);
+    this.timeout = null;
+    this.walking = false;
+}
+
+Walker.prototype.step = function() {
+    if (!this.walking) return;
+    
+    var dir = this.getNextDir()
+    this.char.move(dir);
+    this.onStep(dir);
+
+    var self = this;
+    window.clearTimeout(this.timeout);
+    this.timeout = window.setTimeout(function() {
+        self.step();
+    }, this.timeTillNextStep());
+}
+
+},{}],6:[function(require,module,exports){
+// Empty placeholder object. TODO
+
+module.exports = Bomb = {};
+Bomb.id = 'bomb';
+
+},{}],7:[function(require,module,exports){
+// Empty placeholder object. TODO
+
+module.exports = Box = {};
+Box.id = 'box';
+
+},{}],8:[function(require,module,exports){
+// Empty placeholder object. TODO
+
+module.exports = Camera= {};
+Camera.id = 'camera';
+
+},{}],9:[function(require,module,exports){
+// Empty placeholder object. TODO
+
+module.exports = Detector = {};
+Detector.id = 'detector';
+
+},{}],10:[function(require,module,exports){
+// this is sort of a manager object
+// Usage:
+// var box_instance = ToolChest.make(ToolChest.types.box);
+
+module.exports = ToolChest = {};
+
+// todo: put these in their own directory and auto discover them
+var typeObjects = [
+    require('./box.js'), // purposeless item for testing
+    require('./detector.js'),
+    require('./camera.js'),
+    require('./neutralizer.js'),
+    require('./bomb.js')
+]
+
+var typeTemplate = require('./type-template');
+
+// Initialize types
+
+ToolChest.types = {};
+
+typeObjects.forEach(function(type) {
+    console.assert(!!type.id, 'A type has no id'); // double check
+    ToolChest.types[type.id] = type;
+    type.__proto__ = typeTemplate;
+})
+
+// constructor
+ToolChest.Item = function(type) {
+    console.assert(type.id in ToolChest.types, 'Unrecognized item type:', type.id)
+    this.id = type.id + '_' + ToolChest.nextID();
+    this.type_id = type.id;
+    this.__proto__ = type;
+}
+
+// shortcut constructor
+ToolChest.make = function(type) { return new ToolChest.Item(type); }
+
+
+ToolChest._next_id = 0;
+ToolChest.nextID = function() { return this._next_id++; }
+
+},{"./bomb.js":6,"./box.js":7,"./camera.js":8,"./detector.js":9,"./neutralizer.js":11,"./type-template":12}],11:[function(require,module,exports){
+// Empty placeholder object. TODO
+
+module.exports = Neutralizer = {};
+Neutralizer.id = 'neutralizer';
+
+},{}],12:[function(require,module,exports){
+// Methods that should be callable for each item type.
+module.exports = TypeTemplate = {};
+
+// Should be implemented differently for each item
+TypeTemplate.useAt = function(coords) {
+    console.log('Using ' + this.id + ' at ' + coords);
+}
+
+// RENDERING
+
+TypeTemplate.rendersTo = function(html) {
+    this.html = html;
+    this.html.dataset.itemId = this.id;
+    this.html.dataset.itemType = this.type_id;
+}
+
+TypeTemplate.refresh = function() {
+    if (!this.html) return;
+    // TODO: IS THIS METHOD EVEN NEEDED ???
+}
+
+
+},{}],13:[function(require,module,exports){
 // This is the procedure which executes the advancing of the environment species
 // from one iteration to the next.
 //
@@ -95,7 +461,7 @@ module.exports = Advancerator = function(env) {
     })
 }
 
-},{}],3:[function(require,module,exports){
+},{}],14:[function(require,module,exports){
 // A cell (location on the grid) can have multiple species living in it.
 // But one of them is dominant (which will be displayed)
 //
@@ -200,7 +566,7 @@ Cell.prototype.add = function(species) {
 
 
 
-},{"./species-battle":10}],4:[function(require,module,exports){
+},{"./species-battle":21}],15:[function(require,module,exports){
 module.exports = GrowthRules = {
     magic: {
         stateMap: {
@@ -269,7 +635,7 @@ module.exports = GrowthRules = {
     }
 }
 
-},{}],5:[function(require,module,exports){
+},{}],16:[function(require,module,exports){
 var GrowthRules = require('./growth-rules')
 
 // Conditional growth rules are sorted by priority, low > high.
@@ -279,7 +645,7 @@ module.exports = speciesData = [
     { id: 'character', symbol: '&#9786;' },
     { id: 'alien',     symbol: '&#128565;' },
 
-    { id: 'magic',     symbol: '&#8960;',      color: '#923B9E',
+    { id: 'magic',     symbol: '&#8960;',      color: '#4C24A3',
         rules: {
             default: GrowthRules.magic
         }
@@ -340,7 +706,7 @@ module.exports = speciesData = [
 
 ]
 
-},{"./growth-rules":4}],6:[function(require,module,exports){
+},{"./growth-rules":15}],17:[function(require,module,exports){
 // Example:
 // env = new Env({x:30, y:30});
 
@@ -433,7 +799,7 @@ Env.prototype.randomCoords = function() {
     }
 }
 
-},{"./advancerator.js":2,"./cell.js":3}],7:[function(require,module,exports){
+},{"./advancerator.js":13,"./cell.js":14}],18:[function(require,module,exports){
 var Env = require('./environment');
 var Species= require('./species');
 var Renderer = require('./renderer')
@@ -539,15 +905,18 @@ Map.forEach = function(fn) {
     return this;
 }
 
-Map.advance = function() {
-    this.env.advance();
+Map.advance = function(n) {
+    if (typeof n === 'undefined') n = 1;
+    this.env.advance(n);
     return this;
 }
 
 // MARGINS / CAMERA
 Map.isInWindow = function(coords) {
-    // Right now there's a circular window
-    var distance = Math.sqrt(Math.pow((coords.x - this.center.x), 2) + Math.pow((coords.y - this.center.y), 2));
+    var distance = Math.max(
+        Math.abs(coords.x - this.center.x),
+        Math.abs(coords.y - this.center.y)
+    )
     return distance < this.window;
 }
 
@@ -601,7 +970,7 @@ Map.getOffset = function() {
 // clump all this stuff together in a renderer
 Map.renderer = require('./renderer')
 
-},{"./data/species":5,"./environment":6,"./renderer":8,"./species":12}],8:[function(require,module,exports){
+},{"./data/species":16,"./environment":17,"./renderer":19,"./species":23}],19:[function(require,module,exports){
 module.exports = Renderer = function(html, dims, center) {
     // Direct references. So the parent should not overwrite them.
     this.html = html;
@@ -736,7 +1105,7 @@ Renderer.prototype.isInView = function(coords) {
         && coords.y < bbox.y2;
 }
 
-},{}],9:[function(require,module,exports){
+},{}],20:[function(require,module,exports){
 // EXAMPLE:
 //
 // var ruleset = new RuleSet({
@@ -820,7 +1189,7 @@ function indexWeights(deepArray) {
     return output;
 }
 
-},{}],10:[function(require,module,exports){
+},{}],21:[function(require,module,exports){
 // This module is for deciding the winning species in a cell!
 // 
 // For now, it's just 'which species is higher in the pecking order'
@@ -847,7 +1216,7 @@ module.exports = SpeciesBattle = {
     }
 }
 
-},{}],11:[function(require,module,exports){
+},{}],22:[function(require,module,exports){
 // THE POINT OF THIS MODULE IS....
 //
 //    ... To take a cell object and decide whether it has a species in it.
@@ -865,7 +1234,7 @@ module.exports = SpeciesMask = function(species_id) {
     }
 }
 
-},{}],12:[function(require,module,exports){
+},{}],23:[function(require,module,exports){
 var RuleSet = require('./ruleset');
 var SpeciesMask = require('./species-mask');
 
@@ -971,15 +1340,14 @@ function coordmapAvg(coordmap) {
     return coordmapSum(coordmap) / coordmap.length;
 }
 
-},{"./ruleset":9,"./species-mask":11}],13:[function(require,module,exports){
+},{"./ruleset":20,"./species-mask":22}],24:[function(require,module,exports){
 var Map = require('./map');
-var Sprite = require('./sprite');
-var Character = require('./character')
-var SpriteData = require('./sprite-data');
-var Utils = require('./utils');
-var Walker = require('./walker');
- 
 var Settings = window.Settings;
+var Character = require('./character');
+var Utils = require('./utils');
+var Walking = require('./character/walking');
+var ToolChest = require('./items');
+window.TC = ToolChest;
 
 var game = {};
 game.size = Settings.gameSize; 
@@ -992,11 +1360,12 @@ var player, wizard;
 function initGame() {
     boardElement = document.getElementById('game');
     charElement = document.getElementById('game-characters')
+    inventoryElement = document.getElementById('game-inventory')
 
     Map.init({
         size: game.size,
         dims: game.cellDims,
-        window: 7,
+        window: 8,
         html: boardElement
     });
 
@@ -1012,16 +1381,33 @@ function initGame() {
         sprite: 'wizard'
     })
 
-
-
     // ugh, TODO clean this up
+    wizard.sprite.scaleTo(game.cellDims).place(charElement);
+    wizard.moveTo(Map.env.randomCoords());
+    window.wizard = wizard;
+
     player.sprite.scaleTo(game.cellDims).place(charElement);
     player.moveTo(Map.center)
     window.pl = player;
 
-    wizard.sprite.scaleTo(game.cellDims).place(charElement);
-    wizard.moveTo(Map.env.randomCoords());
-    window.wizard = wizard;
+    // Player initial inventory
+    player.gets(ToolChest.make(ToolChest.types.neutralizer))
+    player.gets(ToolChest.make(ToolChest.types.neutralizer))
+    player.gets(ToolChest.make(ToolChest.types.neutralizer))
+    player.gets(ToolChest.make(ToolChest.types.neutralizer))
+    player.gets(ToolChest.make(ToolChest.types.neutralizer))
+    player.gets(ToolChest.make(ToolChest.types.bomb))
+    player.gets(ToolChest.make(ToolChest.types.bomb))
+    player.gets(ToolChest.make(ToolChest.types.bomb))
+    player.gets(ToolChest.make(ToolChest.types.camera))
+    player.gets(ToolChest.make(ToolChest.types.camera))
+    player.gets(ToolChest.make(ToolChest.types.camera))
+    player.gets(ToolChest.make(ToolChest.types.detector))
+    player.gets(ToolChest.make(ToolChest.types.detector))
+    player.gets(ToolChest.make(ToolChest.types.detector))
+
+    player.inventory.rendersTo(inventoryElement);
+
 
     // start magic where the wizard is
     Map.diamondClump(wizard.coords, Map.species.magic)
@@ -1036,7 +1422,7 @@ function initGame() {
         return Utils.dirs[Utils.randomChoice(Utils.dirs)];
     }
 
-    wizard.walker = new Walker(wizard,
+    wizard.walk = new Walking(wizard,
         function() {
             return wizard.getSomewhatRandomDir();
         },
@@ -1051,7 +1437,7 @@ function initGame() {
             wizard.lastStep = dir;
         }
     )
-    wizard.walker.start();
+    wizard.walk.start();
 
     bindEvents();
     iterateMap();
@@ -1087,7 +1473,7 @@ function bindEvents() {
         }
     }
 
-    window.addEventListener('keyup', function(event) {
+    window.addEventListener('keydown', function(event) {
         var keycode = event.fake || window.event ? event.keyCode : event.which;
         if (keycode in keyboardCallbacks) keyboardCallbacks[keycode]();
     });
@@ -1135,172 +1521,7 @@ window.iterateMap = function() {
 window.UI = require('./ui');
 window.onload = UI.infoWrap('loading...', initGame);
 
-},{"./character":1,"./map":7,"./sprite":15,"./sprite-data":14,"./ui":16,"./utils":17,"./walker":18}],14:[function(require,module,exports){
-module.exports = SpriteData = {};
-
-SpriteData.player = {
-    name: 'player',
-    url: 'images/player.png',
-    frame_size: {x: 80,  y:180},
-    frame_origin: {x: 40, y:90},
-
-    frames: {
-        'n': {x: 0, y:0},
-        's': {x: 1, y:0},
-        'w': {x: 2, y:0},
-        'e': {x: 3, y:0},
-    }
-}
-
-SpriteData.wizard = {
-    name: 'wizard',
-    url: 'images/wizard.png',
-    frame_size: {x: 80,  y:180},
-    frame_origin: {x: 40, y:90},
-
-    frames: {
-        'n': {x: 0, y:0},
-        's': {x: 1, y:0},
-        'w': {x: 2, y:0},
-        'e': {x: 3, y:0},
-    }
-}
-
-},{}],15:[function(require,module,exports){
-// warning, messy code
-
-module.exports = Sprite = function(data) {
-    this.data = data;
-    this.scale = 1;
-
-    // determine total image size
-    this.size = {x:0, y:0};
-    for (var frame in this.data.frames) {
-        var f = this.data.frames[frame];
-        this.size.x = Math.max(this.size.x, f.x);
-        this.size.y = Math.max(this.size.y, f.y);
-    }
-    this.size.x += 1;
-    this.size.y += 1;
-    this.size.x *= this.data.frame_size.x;
-    this.size.y *= this.data.frame_size.y;
-
-    // position of sprite in the game
-    this.position = {x:0, y:0}
-
-    this.init();
-}
-
-Sprite.prototype = {};
-
-Sprite.prototype.init = function() {
-    this.html = document.createElement('div');
-    this.html.setAttribute('id', 'sprite-' + this.data.name);
-    this.html.setAttribute('class', 'sprite');
-    this.html.style.backgroundImage = 'url("' + this.data.url + '")';
-    this.frame = Object.keys(this.data.frames)[0];
-    this.refresh();
-    return this;
-}
-
-
-Sprite.prototype.refresh = function() {
-    this.refreshScale();
-    this.refreshFrame();
-    this.refreshPosition();
-    return this;
-}
-
-Sprite.prototype.refreshScale = function() {
-    // size of the background, including all frames
-    var bgSize = {
-        x: this.size.x * this.scale,
-        y: this.size.y * this.scale
-    }
-
-    // size of the sprite's html element (width, height)
-    var spriteSize = {
-        x: this.data.frame_size.x * this.scale,
-        y: this.data.frame_size.y * this.scale
-    }
-
-
-    // set html
-    this.html.style.backgroundSize = bgSize.x + 'px ' + bgSize.y + 'px';
-
-    this.html.style.width = spriteSize.x + 'px';
-    this.html.style.height = spriteSize.y + 'px';
-    
-    return this;
-}
-
-Sprite.prototype.refreshFrame = function() {
-    // position of the background (to get the proper frame)
-    var bgPos = {
-        x: -this.data.frame_size.x * this.data.frames[this.frame].x * this.scale,
-        y: -this.data.frame_size.y * this.data.frames[this.frame].y * this.scale
-    }
-
-    this.html.style.backgroundPosition = bgPos.x + 'px ' + bgPos.y + 'px';
-
-    return this;
-}
-
-Sprite.prototype.refreshPosition = function() {
-
-    // adjust the sprite until its origin is lined up with its position
-    var posOffset = {
-        x: -this.data.frame_origin.x * this.scale,
-        y: -this.data.frame_origin.y * this.scale
-    }
-
-    this.html.style.left = (posOffset.x + this.position.x) + 'px';
-    this.html.style.top = (posOffset.y + this.position.y) + 'px';
-
-    return this;
-}
-
-Sprite.prototype.setFrame = function(frame) {
-    console.assert(frame in this.data.frames, 'Sprite sheet does not contain frame "' + frame + '"')
-    if (this.frame === frame) return this; // no need to redo stuff
-    this.frame = frame;
-    this.refreshFrame();
-    return this;
-}
-
-Sprite.prototype.scaleBy = function(factor) {
-    this.scale *= factor;
-    this.refreshScale();
-    return this;
-}
-
-Sprite.prototype.scaleTo = function(size) {
-    // scales by size.y, since scale is scalar
-    this.scale = size.y / this.data.frame_size.y ;
-    this.refreshScale();
-    return this;
-}
-
-Sprite.prototype.place = function(container) {
-    container.appendChild(this.html);
-    return this;
-}
-
-Sprite.prototype.move = function(change) {
-    this.position.x += change.x;
-    this.position.y += change.y;
-    this.refreshPosition();
-    return this;
-}
-
-Sprite.prototype.moveTo = function(position) {
-    this.position.x = position.x;
-    this.position.y = position.y;
-    this.refreshPosition();
-    return this;
-}
-
-},{}],16:[function(require,module,exports){
+},{"./character":2,"./character/walking":5,"./items":10,"./map":18,"./ui":25,"./utils":26}],25:[function(require,module,exports){
 // UI/HUD
 
 module.exports = UI = {};
@@ -1337,7 +1558,7 @@ UI.zoomOut = UI.infoWrap('zooming...', function() { Map.zoomOut(); })
 UI.zoomIn = UI.infoWrap('zooming...', function() { Map.zoomIn(); })
 
 
-},{}],17:[function(require,module,exports){
+},{}],26:[function(require,module,exports){
 module.exports = Utils = {};
 
 Utils.dirs = { 
@@ -1352,47 +1573,4 @@ Utils.randomChoice = function(array) {
     return array[Math.floor(Math.random() * array.length)];
 }
 
-},{}],18:[function(require,module,exports){
-module.exports = Walker = function(char, getNextDir, onStep) {
-    this.char = char;
-    this.timeout = null;
-    this.walking = false;
-    this.getNextDir = getNextDir;
-    this.onStep = typeof onStep === 'function' ? onStep : function() {};
-}
-
-Walker.prototype = {};
-
-Walker.prototype.timeTillNextStep = function() {
-    // 3-4 seconds, but once in a while stop for a bit
-    var base = 3000;
-    if (Math.random() < 1/10) base = 8000;
-    return base +  Math.random() * 1000;
-}
-
-Walker.prototype.start = function() {
-    this.walking = true;
-    this.step();
-}
-
-Walker.prototype.stop = function() {
-    window.clearTimeout(this.timeout);
-    this.timeout = null;
-    this.walking = false;
-}
-
-Walker.prototype.step = function() {
-    if (!this.walking) return;
-    
-    var dir = this.getNextDir()
-    this.char.move(dir);
-    this.onStep(dir);
-
-    var self = this;
-    window.clearTimeout(this.timeout);
-    this.timeout = window.setTimeout(function() {
-        self.step();
-    }, this.timeTillNextStep());
-}
-
-},{}]},{},[13]);
+},{}]},{},[24]);
