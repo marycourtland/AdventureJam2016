@@ -9,7 +9,7 @@ module.exports = Character = function(params) {
 
     console.assert(params.sprite in SpriteData, "spriteId doesn't exist: " + params.sprite);
 
-    this.map= params.map;
+    this.map = params.map;
     this.id = params.id;
     this.sprite = new Sprite(SpriteData[params.sprite]).setFrame(Object.keys(SpriteData[params.sprite].frames)[0]);
     this.coords = {x:0, y:0};
@@ -83,6 +83,7 @@ Character.prototype.gets = function(item) {
 }
 
 Character.prototype.use = function(item, coords) {
+    if (!this.inventory.has(item.id)) return;
     this.inventory.removeItem(item);
     item.useAt(coords);
 }

@@ -3,7 +3,17 @@ module.exports = TypeTemplate = {};
 
 // Should be implemented differently for each item
 TypeTemplate.useAt = function(coords) {
-    console.log('Using ' + this.id + ' at ' + coords);
+    console.log('Placeholder: using ' + this.id + ' at ' + coords);
+}
+
+TypeTemplate.select = function() {
+    this.selected = true;
+    this.refresh();
+}
+
+TypeTemplate.deselect = function() {
+    this.selected = false;
+    this.refresh();
 }
 
 // RENDERING
@@ -16,6 +26,9 @@ TypeTemplate.rendersTo = function(html) {
 
 TypeTemplate.refresh = function() {
     if (!this.html) return;
-    // TODO: IS THIS METHOD EVEN NEEDED ???
+    
+    // handle a selected thing
+    this.html.className = this.html.className.replace(/selected /g, '');
+    if (this.selected) this.html.className += ' selected ';
 }
 

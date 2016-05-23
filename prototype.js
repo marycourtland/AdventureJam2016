@@ -1,168 +1,71 @@
-var Map = require('./map');
 var Settings = window.Settings;
-var Character = require('./character');
-var Utils = require('./utils');
-var Walking = require('./character/walking');
 var ToolChest = require('./items');
+var Utils = require('./utils');
+var Controls = require('./controls');
+var Wizard = require('./wizard');
+var Player = require('./player');
 window.TC = ToolChest;
 
 var game = {};
+game.map = require('./map');
+game.state = require('./state');
 game.size = Settings.gameSize; 
 game.cellDims = Settings.cellDims;
 
 window.game = game;
 
-var player, wizard;
-
 function initGame() {
-    boardElement = document.getElementById('game');
-    charElement = document.getElementById('game-characters')
-    inventoryElement = document.getElementById('game-inventory')
+    game.html = {
+        board: document.getElementById('game'),
+        characters: document.getElementById('game-characters'),
+        inventory: document.getElementById('game-inventory'),
+        mouseOverlay: document.getElementById('mouse-overlay')
+    }
 
-    Map.init({
+    game.map.init({
         size: game.size,
         dims: game.cellDims,
         window: 8,
-        html: boardElement
+        html: game.html.board
     });
 
-    player = new Character({
-        map: Map,
-        id: 'player',
-        sprite: 'player'
-    })
+    // Characters
+    // TODO: separate character rendering and then don't pass charElement in here
+    game.wizard = Wizard(game, game.map);
+    game.player = Player(game, game.map);
 
-    wizard = new Character({
-        map: Map,
-        id: 'wizard',
-        sprite: 'wizard'
-    })
+    game.state.init(game);
+    Controls.init(game);
 
-    // ugh, TODO clean this up
-    wizard.sprite.scaleTo(game.cellDims).place(charElement);
-    wizard.moveTo(Map.env.randomCoords());
-    window.wizard = wizard;
-
-    player.sprite.scaleTo(game.cellDims).place(charElement);
-    player.moveTo(Map.center)
-    window.pl = player;
-
-    // Player initial inventory
-    player.gets(ToolChest.make(ToolChest.types.neutralizer))
-    player.gets(ToolChest.make(ToolChest.types.neutralizer))
-    player.gets(ToolChest.make(ToolChest.types.neutralizer))
-    player.gets(ToolChest.make(ToolChest.types.neutralizer))
-    player.gets(ToolChest.make(ToolChest.types.neutralizer))
-    player.gets(ToolChest.make(ToolChest.types.bomb))
-    player.gets(ToolChest.make(ToolChest.types.bomb))
-    player.gets(ToolChest.make(ToolChest.types.bomb))
-    player.gets(ToolChest.make(ToolChest.types.camera))
-    player.gets(ToolChest.make(ToolChest.types.camera))
-    player.gets(ToolChest.make(ToolChest.types.camera))
-    player.gets(ToolChest.make(ToolChest.types.detector))
-    player.gets(ToolChest.make(ToolChest.types.detector))
-    player.gets(ToolChest.make(ToolChest.types.detector))
-
-    player.inventory.rendersTo(inventoryElement);
-
-
-    // start magic where the wizard is
-    Map.diamondClump(wizard.coords, Map.species.magic)
-
-
-    // have the wizard amble randomly
-    wizard.getSomewhatRandomDir = function() {
-        // 33% chance to walk in the same direction as last step
-        if (!!this.lastStep && Math.random() < 1/3) {
-            return this.lastStep;
-        }
-        return Utils.dirs[Utils.randomChoice(Utils.dirs)];
-    }
-
-    wizard.walk = new Walking(wizard,
-        function() {
-            return wizard.getSomewhatRandomDir();
-        },
-        function onStep(dir) {
-            wizard.faceDirection(dir);
-            wizard.refresh();
-
-            // make sure the wizard trails magic
-            Map.set(wizard.coords, Map.species.magic);
-            Map.refreshCell(wizard.coords);
-
-            wizard.lastStep = dir;
-        }
-    )
-    wizard.walk.start();
-
-    bindEvents();
-    iterateMap();
+    game.iterateMap();
 }
 
-function bindEvents() {
-    var mouseOverlay = document.getElementById('mouse-overlay');
-
-    mouseOverlay.onclick = function() {
-        Map.advance();
-        Map.refresh();
-    }
-
-    var keyboardCallbacks = {
-        37: function goLeft(evt) {
-            player.move(Utils.dirs['w']);
-            refreshCamera();
-        },
-
-        39: function goRight(evt) {
-            player.move(Utils.dirs['e']);
-            refreshCamera();
-        },
-
-        38: function goUp(evt) {
-            player.move(Utils.dirs['n']);
-            refreshCamera();
-        },
-
-        40: function goDown(evt) {
-            player.move(Utils.dirs['s']);
-            refreshCamera();
-        }
-    }
-
-    window.addEventListener('keydown', function(event) {
-        var keycode = event.fake || window.event ? event.keyCode : event.which;
-        if (keycode in keyboardCallbacks) keyboardCallbacks[keycode]();
-    });
-
-}
-
-function refreshCamera() {
-    if (!Map.isInWindow(player.coords)) {
-        Map.recenter(player.coords);
-        player.refresh();
-        wizard.refresh();
+game.refreshView = function() {
+    if (!game.map.isInWindow(game.player.coords)) {
+        game.map.recenter(game.player.coords);
+        game.player.refresh();
+        game.wizard.refresh();
     }
 }
 
 // TODO: maybe things would be nicer if this was demoted to a worker
 game.iterationTimeout = null;
-window.iterateMap = function() {
+game.iterateMap = function() {
     if (Settings.mapIterationTimeout <= 0) return;
 
-    Map.advance();
+    game.map.advance();
 
     if (!Settings.randomizeCellIteration) {
-        Map.refresh();
+        game.map.refresh();
         if (window.doCounts) window.doCounts();
     }
     else {
         // Pick random times to show the cell update
         // TODO: the isInView call might be outdated if we change views
-        Map.forEach(function(coords, cell) {
-            if (!Map.isInView(coords)) return;
+        game.map.forEach(function(coords, cell) {
+            if (!game.map.isInView(coords)) return;
             setTimeout(function() {
-                Map.refreshCell(coords);
+                game.map.refreshCell(coords);
             }, Math.random() * Settings.mapIterationTimeout);
         })
     }
@@ -170,7 +73,7 @@ window.iterateMap = function() {
     // Schedule another map iteration
     clearTimeout(game.iterationTimeout);
     game.iterationTimeout = setTimeout(function() {
-        iterateMap();
+        game.iterateMap();
     }, Settings.mapIterationTimeout)
 }
 

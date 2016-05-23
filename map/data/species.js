@@ -4,8 +4,8 @@ var GrowthRules = require('./growth-rules')
 
 module.exports = speciesData = [
     { id: 'blank',     symbol: '~',             color: '#5F4F29'},
-    { id: 'character', symbol: '&#9786;' },
-    { id: 'alien',     symbol: '&#128565;' },
+
+    { id: 'neutralized', symbol: 'x',          color: '#422121'},
 
     { id: 'magic',     symbol: '&#8960;',      color: '#4C24A3',
         rules: {

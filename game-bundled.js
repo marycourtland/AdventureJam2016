@@ -41,7 +41,7 @@ module.exports = Character = function(params) {
 
     console.assert(params.sprite in SpriteData, "spriteId doesn't exist: " + params.sprite);
 
-    this.map= params.map;
+    this.map = params.map;
     this.id = params.id;
     this.sprite = new Sprite(SpriteData[params.sprite]).setFrame(Object.keys(SpriteData[params.sprite].frames)[0]);
     this.coords = {x:0, y:0};
@@ -115,25 +115,36 @@ Character.prototype.gets = function(item) {
 }
 
 Character.prototype.use = function(item, coords) {
+    if (!this.inventory.has(item.id)) return;
     this.inventory.removeItem(item);
     item.useAt(coords);
 }
 
-},{"../utils":26,"./data/sprites":1,"./inventory":3,"./sprite":4}],3:[function(require,module,exports){
+},{"../utils":29,"./data/sprites":1,"./inventory":3,"./sprite":4}],3:[function(require,module,exports){
 module.exports = Inventory = function(char) {
     this.char = char;
     this.items = {};
+    this.numSlots = 20;
 }
 
 Inventory.prototype = {};
 
+Inventory.prototype.has = function(itemId) {
+    return itemId in this.items;
+}
 
 Inventory.prototype.addItem = function(item) {
     this.items[item.id] = item;
+    item.refresh();
 }
 
 Inventory.prototype.removeItem = function(item) {
     delete this.items[item.id];
+    
+    // This will put all the rest of the items in different places.
+    // TODO: maintain a static slot > item mapping
+    this.assignItemsToSlots();
+    this.refresh();
 }
 
 // RENDERING
@@ -155,6 +166,18 @@ Inventory.prototype.assignItemsToSlots = function() {
         this.items[itemId].rendersTo(slotHtmls[nextSlot]);
         nextSlot += 1;
     }
+    
+    if (nextSlot < this.numSlots) {
+        for (var i = nextSlot; i < this.numSlots; i++) {
+            clearSlot(slotHtmls[i]);
+        }
+    }
+}
+
+// UGH. TODO: this needs to go elsewhere
+function clearSlot(slotHtml) {
+    delete slotHtml.dataset.itemId;
+    delete slotHtml.dataset.itemType;
 }
 
 Inventory.prototype.refresh = function() {
@@ -343,30 +366,120 @@ Walker.prototype.step = function() {
 }
 
 },{}],6:[function(require,module,exports){
-// Empty placeholder object. TODO
+module.exports = Controls = {};
 
+var game;
+
+Controls.init = function(gameInstance) {
+    game = gameInstance;
+    this.bindEvents();
+}
+
+Controls.bindEvents = function() {
+    game.html.mouseOverlay.onclick = function(evt) {
+        evt.stopPropagation();
+        var offset = game.map.getOffset();
+        var mousePos = {
+            x: evt.clientX - offset.x - game.map.renderer.bbox.left,
+            y: evt.clientY - offset.y - game.map.renderer.bbox.top
+        }
+        var coords = game.map.getCoordsFromPixels(mousePos);
+        game.state.advance({coords: coords});
+    }
+
+    document.body.onclick = function() {
+        game.state.advance({});
+    }
+    
+    this.bindInventory();
+    this.bindMovement();
+}
+
+Controls.bindMovement = function() {
+    var keyboardCallbacks = {
+        37: Controls.handlers.left,
+        39: Controls.handlers.right,
+        38: Controls.handlers.up,
+        40: Controls.handlers.down
+    }
+
+    window.addEventListener('keydown', function(event) {
+        var keycode = event.fake || window.event ? event.keyCode : event.which;
+        if (keycode in keyboardCallbacks) keyboardCallbacks[keycode]();
+    });
+}
+
+Controls.bindInventory = function() {
+    var self = this;
+    var slots = Array.apply(Array, game.html.inventory.getElementsByClassName('slot'));
+    slots.forEach(function(slotHtml) {
+        slotHtml.onclick = function(evt) {
+            evt.stopPropagation();
+            self.handlers.inventory(slotHtml.dataset.itemId);
+        }
+    })
+}
+
+Controls.handlers = {};
+
+// INVENTORY
+
+Controls.handlers.inventory = function(itemId) {
+    game.state.advance({item: itemId});
+}
+
+
+// MOVEMENT
+
+Controls.handlers.left = function() {
+    game.player.move(Utils.dirs['w']);
+    game.refreshView();
+},
+
+Controls.handlers.right = function() {
+    game.player.move(Utils.dirs['e']);
+    game.refreshView();
+},
+
+Controls.handlers.up = function() {
+    game.player.move(Utils.dirs['n']);
+    game.refreshView();
+},
+
+Controls.handlers.down = function() {
+    game.player.move(Utils.dirs['s']);
+    game.refreshView();
+}
+
+},{}],7:[function(require,module,exports){
 module.exports = Bomb = {};
 Bomb.id = 'bomb';
 
-},{}],7:[function(require,module,exports){
+Bomb.useAt = function(coords) {
+    var map = window.game.map;
+    Map.diamondClump(coords, map.species.neutralized);
+    Map.refresh();
+}
+
+},{}],8:[function(require,module,exports){
 // Empty placeholder object. TODO
 
 module.exports = Box = {};
 Box.id = 'box';
 
-},{}],8:[function(require,module,exports){
+},{}],9:[function(require,module,exports){
 // Empty placeholder object. TODO
 
 module.exports = Camera= {};
 Camera.id = 'camera';
 
-},{}],9:[function(require,module,exports){
+},{}],10:[function(require,module,exports){
 // Empty placeholder object. TODO
 
 module.exports = Detector = {};
 Detector.id = 'detector';
 
-},{}],10:[function(require,module,exports){
+},{}],11:[function(require,module,exports){
 // this is sort of a manager object
 // Usage:
 // var box_instance = ToolChest.make(ToolChest.types.box);
@@ -396,7 +509,10 @@ typeObjects.forEach(function(type) {
 
 // constructor
 ToolChest.Item = function(type) {
+    // Allow both strings and type objects to be passed in
+    if (typeof type === 'string') type = ToolChest.types[type];
     console.assert(type.id in ToolChest.types, 'Unrecognized item type:', type.id)
+
     this.id = type.id + '_' + ToolChest.nextID();
     this.type_id = type.id;
     this.__proto__ = type;
@@ -409,19 +525,34 @@ ToolChest.make = function(type) { return new ToolChest.Item(type); }
 ToolChest._next_id = 0;
 ToolChest.nextID = function() { return this._next_id++; }
 
-},{"./bomb.js":6,"./box.js":7,"./camera.js":8,"./detector.js":9,"./neutralizer.js":11,"./type-template":12}],11:[function(require,module,exports){
-// Empty placeholder object. TODO
-
+},{"./bomb.js":7,"./box.js":8,"./camera.js":9,"./detector.js":10,"./neutralizer.js":12,"./type-template":13}],12:[function(require,module,exports){
 module.exports = Neutralizer = {};
 Neutralizer.id = 'neutralizer';
 
-},{}],12:[function(require,module,exports){
+// TODO: do something other than accessing the global game instance
+Neutralizer.useAt = function(coords) {
+    var map = window.game.map;
+    map.set(coords, map.species.neutralized)
+    map.refreshCell(coords);
+}
+
+},{}],13:[function(require,module,exports){
 // Methods that should be callable for each item type.
 module.exports = TypeTemplate = {};
 
 // Should be implemented differently for each item
 TypeTemplate.useAt = function(coords) {
-    console.log('Using ' + this.id + ' at ' + coords);
+    console.log('Placeholder: using ' + this.id + ' at ' + coords);
+}
+
+TypeTemplate.select = function() {
+    this.selected = true;
+    this.refresh();
+}
+
+TypeTemplate.deselect = function() {
+    this.selected = false;
+    this.refresh();
 }
 
 // RENDERING
@@ -434,11 +565,14 @@ TypeTemplate.rendersTo = function(html) {
 
 TypeTemplate.refresh = function() {
     if (!this.html) return;
-    // TODO: IS THIS METHOD EVEN NEEDED ???
+    
+    // handle a selected thing
+    this.html.className = this.html.className.replace(/selected /g, '');
+    if (this.selected) this.html.className += ' selected ';
 }
 
 
-},{}],13:[function(require,module,exports){
+},{}],14:[function(require,module,exports){
 // This is the procedure which executes the advancing of the environment species
 // from one iteration to the next.
 //
@@ -461,7 +595,7 @@ module.exports = Advancerator = function(env) {
     })
 }
 
-},{}],14:[function(require,module,exports){
+},{}],15:[function(require,module,exports){
 // A cell (location on the grid) can have multiple species living in it.
 // But one of them is dominant (which will be displayed)
 //
@@ -566,7 +700,7 @@ Cell.prototype.add = function(species) {
 
 
 
-},{"./species-battle":21}],15:[function(require,module,exports){
+},{"./species-battle":22}],16:[function(require,module,exports){
 module.exports = GrowthRules = {
     magic: {
         stateMap: {
@@ -635,15 +769,15 @@ module.exports = GrowthRules = {
     }
 }
 
-},{}],16:[function(require,module,exports){
+},{}],17:[function(require,module,exports){
 var GrowthRules = require('./growth-rules')
 
 // Conditional growth rules are sorted by priority, low > high.
 
 module.exports = speciesData = [
     { id: 'blank',     symbol: '~',             color: '#5F4F29'},
-    { id: 'character', symbol: '&#9786;' },
-    { id: 'alien',     symbol: '&#128565;' },
+
+    { id: 'neutralized', symbol: 'x',          color: '#422121'},
 
     { id: 'magic',     symbol: '&#8960;',      color: '#4C24A3',
         rules: {
@@ -706,7 +840,7 @@ module.exports = speciesData = [
 
 ]
 
-},{"./growth-rules":15}],17:[function(require,module,exports){
+},{"./growth-rules":16}],18:[function(require,module,exports){
 // Example:
 // env = new Env({x:30, y:30});
 
@@ -799,7 +933,7 @@ Env.prototype.randomCoords = function() {
     }
 }
 
-},{"./advancerator.js":13,"./cell.js":14}],18:[function(require,module,exports){
+},{"./advancerator.js":14,"./cell.js":15}],19:[function(require,module,exports){
 var Env = require('./environment');
 var Species= require('./species');
 var Renderer = require('./renderer')
@@ -851,7 +985,7 @@ Map.generate = function() {
 }
 
 Map.diamondClump = function(coords, species) {
-    this.clump(coords, [
+    return this.clump(coords, [
         {x:  0, y:  0},
         {x:  1, y:  1},
         {x: -1, y:  1},
@@ -966,11 +1100,18 @@ Map.getOffset = function() {
     return this.renderer.getPixelOffset();
 }
 
+// more ugh. Pixels should be relative to the top left corner of the map itself, not the html element
+Map.getCoordsFromPixels = function(pixels) {
+    return {
+        x: Math.floor(pixels.x / this.dims.x),
+        y: Math.floor(pixels.y / this.dims.y),
+    }
+}
 
 // clump all this stuff together in a renderer
 Map.renderer = require('./renderer')
 
-},{"./data/species":16,"./environment":17,"./renderer":19,"./species":23}],19:[function(require,module,exports){
+},{"./data/species":17,"./environment":18,"./renderer":20,"./species":24}],20:[function(require,module,exports){
 module.exports = Renderer = function(html, dims, center) {
     // Direct references. So the parent should not overwrite them.
     this.html = html;
@@ -1105,7 +1246,7 @@ Renderer.prototype.isInView = function(coords) {
         && coords.y < bbox.y2;
 }
 
-},{}],20:[function(require,module,exports){
+},{}],21:[function(require,module,exports){
 // EXAMPLE:
 //
 // var ruleset = new RuleSet({
@@ -1189,7 +1330,7 @@ function indexWeights(deepArray) {
     return output;
 }
 
-},{}],21:[function(require,module,exports){
+},{}],22:[function(require,module,exports){
 // This module is for deciding the winning species in a cell!
 // 
 // For now, it's just 'which species is higher in the pecking order'
@@ -1202,6 +1343,7 @@ module.exports = SpeciesBattle = {
         'flowers',
         'trees',
         'magic',
+        'neutralized'
     ],
 
     decide: function(ids) {
@@ -1216,7 +1358,7 @@ module.exports = SpeciesBattle = {
     }
 }
 
-},{}],22:[function(require,module,exports){
+},{}],23:[function(require,module,exports){
 // THE POINT OF THIS MODULE IS....
 //
 //    ... To take a cell object and decide whether it has a species in it.
@@ -1234,7 +1376,7 @@ module.exports = SpeciesMask = function(species_id) {
     }
 }
 
-},{}],23:[function(require,module,exports){
+},{}],24:[function(require,module,exports){
 var RuleSet = require('./ruleset');
 var SpeciesMask = require('./species-mask');
 
@@ -1340,172 +1482,114 @@ function coordmapAvg(coordmap) {
     return coordmapSum(coordmap) / coordmap.length;
 }
 
-},{"./ruleset":20,"./species-mask":22}],24:[function(require,module,exports){
-var Map = require('./map');
-var Settings = window.Settings;
+},{"./ruleset":21,"./species-mask":23}],25:[function(require,module,exports){
 var Character = require('./character');
-var Utils = require('./utils');
-var Walking = require('./character/walking');
 var ToolChest = require('./items');
+
+module.exports = Player = function(game) {
+    var player = new Character({
+        map: game.map,
+        id: 'player',
+        sprite: 'player' 
+    });
+
+    // ugh, TODO clean this up
+    player.sprite.scaleTo(game.cellDims).place(game.html.characters);
+    player.moveTo(game.map.center);
+
+    // temporary
+    window.player = player;;
+
+    // Starting inventory
+    initInventory(player, {
+        neutralizer: 5,
+        bomb: 3,
+        camera: 3,
+        detector: 3
+    })
+
+    player.inventory.rendersTo(game.html.inventory);
+
+    return player;
+}
+
+function initInventory(player, inventoryCounts) {
+    for (var itemType in inventoryCounts) {
+        for (var i = 0; i < inventoryCounts[itemType]; i++) {
+            player.gets(ToolChest.make(itemType));
+        }
+    }
+}
+
+},{"./character":2,"./items":11}],26:[function(require,module,exports){
+var Settings = window.Settings;
+var ToolChest = require('./items');
+var Utils = require('./utils');
+var Controls = require('./controls');
+var Wizard = require('./wizard');
+var Player = require('./player');
 window.TC = ToolChest;
 
 var game = {};
+game.map = require('./map');
+game.state = require('./state');
 game.size = Settings.gameSize; 
 game.cellDims = Settings.cellDims;
 
 window.game = game;
 
-var player, wizard;
-
 function initGame() {
-    boardElement = document.getElementById('game');
-    charElement = document.getElementById('game-characters')
-    inventoryElement = document.getElementById('game-inventory')
+    game.html = {
+        board: document.getElementById('game'),
+        characters: document.getElementById('game-characters'),
+        inventory: document.getElementById('game-inventory'),
+        mouseOverlay: document.getElementById('mouse-overlay')
+    }
 
-    Map.init({
+    game.map.init({
         size: game.size,
         dims: game.cellDims,
         window: 8,
-        html: boardElement
+        html: game.html.board
     });
 
-    player = new Character({
-        map: Map,
-        id: 'player',
-        sprite: 'player'
-    })
+    // Characters
+    // TODO: separate character rendering and then don't pass charElement in here
+    game.wizard = Wizard(game, game.map);
+    game.player = Player(game, game.map);
 
-    wizard = new Character({
-        map: Map,
-        id: 'wizard',
-        sprite: 'wizard'
-    })
+    game.state.init(game);
+    Controls.init(game);
 
-    // ugh, TODO clean this up
-    wizard.sprite.scaleTo(game.cellDims).place(charElement);
-    wizard.moveTo(Map.env.randomCoords());
-    window.wizard = wizard;
-
-    player.sprite.scaleTo(game.cellDims).place(charElement);
-    player.moveTo(Map.center)
-    window.pl = player;
-
-    // Player initial inventory
-    player.gets(ToolChest.make(ToolChest.types.neutralizer))
-    player.gets(ToolChest.make(ToolChest.types.neutralizer))
-    player.gets(ToolChest.make(ToolChest.types.neutralizer))
-    player.gets(ToolChest.make(ToolChest.types.neutralizer))
-    player.gets(ToolChest.make(ToolChest.types.neutralizer))
-    player.gets(ToolChest.make(ToolChest.types.bomb))
-    player.gets(ToolChest.make(ToolChest.types.bomb))
-    player.gets(ToolChest.make(ToolChest.types.bomb))
-    player.gets(ToolChest.make(ToolChest.types.camera))
-    player.gets(ToolChest.make(ToolChest.types.camera))
-    player.gets(ToolChest.make(ToolChest.types.camera))
-    player.gets(ToolChest.make(ToolChest.types.detector))
-    player.gets(ToolChest.make(ToolChest.types.detector))
-    player.gets(ToolChest.make(ToolChest.types.detector))
-
-    player.inventory.rendersTo(inventoryElement);
-
-
-    // start magic where the wizard is
-    Map.diamondClump(wizard.coords, Map.species.magic)
-
-
-    // have the wizard amble randomly
-    wizard.getSomewhatRandomDir = function() {
-        // 33% chance to walk in the same direction as last step
-        if (!!this.lastStep && Math.random() < 1/3) {
-            return this.lastStep;
-        }
-        return Utils.dirs[Utils.randomChoice(Utils.dirs)];
-    }
-
-    wizard.walk = new Walking(wizard,
-        function() {
-            return wizard.getSomewhatRandomDir();
-        },
-        function onStep(dir) {
-            wizard.faceDirection(dir);
-            wizard.refresh();
-
-            // make sure the wizard trails magic
-            Map.set(wizard.coords, Map.species.magic);
-            Map.refreshCell(wizard.coords);
-
-            wizard.lastStep = dir;
-        }
-    )
-    wizard.walk.start();
-
-    bindEvents();
-    iterateMap();
+    game.iterateMap();
 }
 
-function bindEvents() {
-    var mouseOverlay = document.getElementById('mouse-overlay');
-
-    mouseOverlay.onclick = function() {
-        Map.advance();
-        Map.refresh();
-    }
-
-    var keyboardCallbacks = {
-        37: function goLeft(evt) {
-            player.move(Utils.dirs['w']);
-            refreshCamera();
-        },
-
-        39: function goRight(evt) {
-            player.move(Utils.dirs['e']);
-            refreshCamera();
-        },
-
-        38: function goUp(evt) {
-            player.move(Utils.dirs['n']);
-            refreshCamera();
-        },
-
-        40: function goDown(evt) {
-            player.move(Utils.dirs['s']);
-            refreshCamera();
-        }
-    }
-
-    window.addEventListener('keydown', function(event) {
-        var keycode = event.fake || window.event ? event.keyCode : event.which;
-        if (keycode in keyboardCallbacks) keyboardCallbacks[keycode]();
-    });
-
-}
-
-function refreshCamera() {
-    if (!Map.isInWindow(player.coords)) {
-        Map.recenter(player.coords);
-        player.refresh();
-        wizard.refresh();
+game.refreshView = function() {
+    if (!game.map.isInWindow(game.player.coords)) {
+        game.map.recenter(game.player.coords);
+        game.player.refresh();
+        game.wizard.refresh();
     }
 }
 
 // TODO: maybe things would be nicer if this was demoted to a worker
 game.iterationTimeout = null;
-window.iterateMap = function() {
+game.iterateMap = function() {
     if (Settings.mapIterationTimeout <= 0) return;
 
-    Map.advance();
+    game.map.advance();
 
     if (!Settings.randomizeCellIteration) {
-        Map.refresh();
+        game.map.refresh();
         if (window.doCounts) window.doCounts();
     }
     else {
         // Pick random times to show the cell update
         // TODO: the isInView call might be outdated if we change views
-        Map.forEach(function(coords, cell) {
-            if (!Map.isInView(coords)) return;
+        game.map.forEach(function(coords, cell) {
+            if (!game.map.isInView(coords)) return;
             setTimeout(function() {
-                Map.refreshCell(coords);
+                game.map.refreshCell(coords);
             }, Math.random() * Settings.mapIterationTimeout);
         })
     }
@@ -1513,7 +1597,7 @@ window.iterateMap = function() {
     // Schedule another map iteration
     clearTimeout(game.iterationTimeout);
     game.iterationTimeout = setTimeout(function() {
-        iterateMap();
+        game.iterateMap();
     }, Settings.mapIterationTimeout)
 }
 
@@ -1521,7 +1605,82 @@ window.iterateMap = function() {
 window.UI = require('./ui');
 window.onload = UI.infoWrap('loading...', initGame);
 
-},{"./character":2,"./character/walking":5,"./items":10,"./map":18,"./ui":25,"./utils":26}],25:[function(require,module,exports){
+},{"./controls":6,"./items":11,"./map":19,"./player":25,"./state":27,"./ui":28,"./utils":29,"./wizard":30}],27:[function(require,module,exports){
+// Woohoo, the game state!
+
+module.exports = GameState = {};
+var game;
+var currentData = {}; // blah, some scope, so that different state nodes can communicate w/ each other
+
+GameState.init = function(gameInstance) {
+    game = gameInstance;
+    this.current = this.nodes.idle;
+}
+
+GameState.advance = function(transitionData) {
+    var next = this.current.getNext(transitionData);
+    if (!next) return; // staying in the same state 
+
+    this.current.finish();
+    this.current = next;
+    this.current.execute(transitionData);
+}
+
+
+// Individual states that the game can be in.
+// TODO: separate content into a data file
+GameState.nodes = {};
+
+// here is a template
+GameState.nodes.sample = {};
+GameState.nodes.sample.execute = function(data) {};
+GameState.nodes.sample.finish = function() {};
+GameState.nodes.sample.getNext = function(data) {};
+
+
+// IDLE STATE: when nothing is going on. Waiting for the player to click or something
+GameState.nodes.idle = {}
+GameState.nodes.idle.execute = function() {
+    currentData = {};
+};
+GameState.nodes.idle.finish = function() {};
+GameState.nodes.idle.getNext = function(data) {
+    // Clicked an inventory item
+    if (!!data.item) return GameState.nodes.itemSelected;
+}
+
+// ITEM SELECTED: player is about to use this item.
+GameState.nodes.itemSelected = {}
+GameState.nodes.itemSelected.execute = function(data) {
+    var item = game.player.inventory.items[data.item];
+    item.select();
+    currentData.item = item;
+}
+GameState.nodes.itemSelected.finish = function() {
+    currentData.item.deselect();
+    // keep the item around so it can be used
+}
+GameState.nodes.itemSelected.getNext = function(data) {
+    // If you click a cell, use the item on that cell
+    if (!!data.coords) return GameState.nodes.usingItem; 
+
+    // If you click somewhere else, then cancel this use
+    return GameState.nodes.idle;
+}
+
+// USING ITEM: you're using an item.
+// It should automatically advance to the idle state.
+GameState.nodes.usingItem = {};
+GameState.nodes.usingItem.execute = function(data) {
+    game.player.use(currentData.item, data.coords);
+    GameState.advance();
+}
+GameState.nodes.usingItem.finish = function() {
+    delete currentData.item;
+}
+GameState.nodes.usingItem.getNext = function(data) { return GameState.nodes.idle; }
+
+},{}],28:[function(require,module,exports){
 // UI/HUD
 
 module.exports = UI = {};
@@ -1558,7 +1717,7 @@ UI.zoomOut = UI.infoWrap('zooming...', function() { Map.zoomOut(); })
 UI.zoomIn = UI.infoWrap('zooming...', function() { Map.zoomIn(); })
 
 
-},{}],26:[function(require,module,exports){
+},{}],29:[function(require,module,exports){
 module.exports = Utils = {};
 
 Utils.dirs = { 
@@ -1573,4 +1732,54 @@ Utils.randomChoice = function(array) {
     return array[Math.floor(Math.random() * array.length)];
 }
 
-},{}]},{},[24]);
+},{}],30:[function(require,module,exports){
+var Character = require('./character');
+var Utils = require('./utils');
+var Walking = require('./character/walking');
+
+module.exports = Wizard = function(game) {
+    var wizard = new Character({
+        map: game.map,
+        id: 'wizard',
+        sprite: 'wizard' 
+    });
+
+    // ugh, TODO clean this up
+    wizard.sprite.scaleTo(game.cellDims).place(game.html.characters);
+    wizard.moveTo(game.map.env.randomCoords());
+    window.wizard = wizard;
+
+    // start magic where the wizard is
+    game.map.diamondClump(wizard.coords, game.map.species.magic)
+
+
+    // have the wizard amble randomly
+    wizard.getSomewhatRandomDir = function() {
+        // 33% chance to walk in the same direction as last step
+        if (!!this.lastStep && Math.random() < 1/3) {
+            return this.lastStep;
+        }
+        return Utils.dirs[Utils.randomChoice(Utils.dirs)];
+    }
+
+    wizard.walk = new Walking(wizard,
+        function() {
+            return wizard.getSomewhatRandomDir();
+        },
+        function onStep(dir) {
+            wizard.faceDirection(dir);
+            wizard.refresh();
+
+            // make sure the wizard trails magic
+            game.map.set(wizard.coords, Map.species.magic);
+            game.map.refreshCell(wizard.coords);
+
+            wizard.lastStep = dir;
+        }
+    )
+    wizard.walk.start();
+
+    return wizard;
+}
+
+},{"./character":2,"./character/walking":5,"./utils":29}]},{},[26]);

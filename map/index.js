@@ -49,7 +49,7 @@ Map.generate = function() {
 }
 
 Map.diamondClump = function(coords, species) {
-    this.clump(coords, [
+    return this.clump(coords, [
         {x:  0, y:  0},
         {x:  1, y:  1},
         {x: -1, y:  1},
@@ -164,6 +164,13 @@ Map.getOffset = function() {
     return this.renderer.getPixelOffset();
 }
 
+// more ugh. Pixels should be relative to the top left corner of the map itself, not the html element
+Map.getCoordsFromPixels = function(pixels) {
+    return {
+        x: Math.floor(pixels.x / this.dims.x),
+        y: Math.floor(pixels.y / this.dims.y),
+    }
+}
 
 // clump all this stuff together in a renderer
 Map.renderer = require('./renderer')

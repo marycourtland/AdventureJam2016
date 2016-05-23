@@ -1,7 +1,10 @@
-# AdventureJam2016
+# NEUTRALIZE
+(Working title)
 
-### [Play it here!](http://marycourtland.github.io/AdventureJam2016)
+### [Play the prototype here!](http://marycourtland.github.io/NeutralizeGame/prototype.html)
 
-It's a game for [Adventure Jam 2016](http://jams.gamejolt.io/adventurejam2016). Inspired by the classic 'Hunt the Wumpus'!
+It's a game. Features a dangerous exploratory hunt on a procedurally generated map.
+
+Inspired by the classic 'Hunt the Wumpus'!
 
 ### _Current status: under construction_
