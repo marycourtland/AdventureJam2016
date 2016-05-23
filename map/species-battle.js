@@ -10,6 +10,7 @@ module.exports = SpeciesBattle = {
         'flowers',
         'trees',
         'magic',
+        'neutralized'
     ],
 
     decide: function(ids) {

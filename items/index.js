@@ -27,7 +27,10 @@ typeObjects.forEach(function(type) {
 
 // constructor
 ToolChest.Item = function(type) {
+    // Allow both strings and type objects to be passed in
+    if (typeof type === 'string') type = ToolChest.types[type];
     console.assert(type.id in ToolChest.types, 'Unrecognized item type:', type.id)
+
     this.id = type.id + '_' + ToolChest.nextID();
     this.type_id = type.id;
     this.__proto__ = type;
