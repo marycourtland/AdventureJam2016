@@ -94,6 +94,11 @@ Map.set = function(coords, species) {
     this.env.set(coords, species);
 }
 
+Map.getCell = function(coords) {
+    return this.env.get(coords);
+}
+
+
 // iterates over a coordmap
 Map.forEach = function(fn) {
     var self = this;

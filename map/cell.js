@@ -16,6 +16,11 @@ module.exports = Cell = function(blank) {
     // the 'next' slot is just a holding pattern until the current iteration is finalized
     // use cell.next(species), then cell.flush() to set it
     this.nextSpecies = null;
+
+    // register callbacks when stuff happens
+    this.callbacks = {
+        change: {}
+    }
 };
 
 Cell.prototype = {};
@@ -36,6 +41,10 @@ Cell.prototype.getAge = function() {
 
 // sets the dominant species
 Cell.prototype.set = function(species) {
+    if (!!this.species && !!species && this.species.id !== species.id) {
+        this.emit('change', {species: species})
+    }
+
     this.species = species;
     this.add(species); // just in case it's not already set
 
@@ -100,4 +109,18 @@ Cell.prototype.add = function(species) {
     return this;
 }
 
+Cell.prototype.on = function(event, callback_id, callback) {
+    this.callbacks[event][callback_id] = callback; 
+}
 
+Cell.prototype.off = function(event, callback_id) {
+    delete this.callbacks[event][callback_id];
+}
+
+Cell.prototype.emit = function(event, data) {
+    if (event in this.callbacks && Object.keys(this.callbacks[event]).length > 0) {
+        for (var cb in this.callbacks[event]) {
+            this.callbacks[event][cb](data);
+        }
+    }
+}
