@@ -27,7 +27,16 @@ Character.prototype = {};
 
 // ============= MOVEMENT / RENDERING
 
+Character.prototype.canBeAt = function(coords) {
+    var cell = this.map.getCell(coords);
+    if (this === window.player) console.log(cell.species.id, cell.species.passable)
+    return cell.species.passable;
+}
+
 Character.prototype.moveTo = function(coords) {
+    // make sure we're allowed to move to this spot
+    if (!this.canBeAt(coords)) return this;
+
     this.coords.x = coords.x;
     this.coords.y = coords.y;
 
@@ -36,6 +45,7 @@ Character.prototype.moveTo = function(coords) {
         x: this.coords.x * this.map.dims.x,
         y: this.coords.y * this.map.dims.y,
     }
+
 
     var offset = this.map.getOffset();
     this.sprite.moveTo({x: pos.x + offset.x, y: pos.y + offset.y});

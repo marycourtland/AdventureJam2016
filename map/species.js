@@ -7,7 +7,7 @@ module.exports = Species = function(params) {
     this.color = params.color || 'black';
 
     // behavior
-    this.passable = params.passable || true;
+    this.passable = params.hasOwnProperty('passable') ? params.passable : true;
 
     this.initRules(params.rules);
 
