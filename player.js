@@ -21,7 +21,10 @@ module.exports = Player = function(game) {
     player.moveTo(game.map.center);
 
     // temporary
-    window.player = player;;
+    window.player = player;
+
+    // start some grass where the player is
+    game.map.diamondClump(player.coords, game.map.species.grass)
 
     // Starting inventory
     initInventory(player, {
