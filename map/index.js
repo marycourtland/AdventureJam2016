@@ -1,5 +1,5 @@
 var Env = require('./environment');
-var Species= require('./species');
+var Species = require('./species');
 var Renderer = require('./renderer')
 var SpeciesData = require('./data/species') 
 

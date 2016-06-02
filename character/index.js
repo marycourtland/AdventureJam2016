@@ -34,7 +34,7 @@ Character.prototype = {};
 
 Character.prototype.canBeAt = function(coords) {
     var cell = this.map.getCell(coords);
-    return cell.species.passable;
+    return !!cell && cell.species.passable;
 }
 
 Character.prototype.moveTo = function(coords) {
