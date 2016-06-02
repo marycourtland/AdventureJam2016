@@ -34,6 +34,7 @@ function initGame() {
     game.wizard = Wizard(game, game.map);
     game.player = Player(game, game.map);
 
+    game.refreshView();
     game.state.init(game);
     Controls.init(game);
 

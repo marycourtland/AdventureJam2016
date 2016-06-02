@@ -18,7 +18,7 @@ module.exports = Player = function(game) {
 
     // ugh, TODO clean this up
     player.sprite.scaleTo(game.cellDims).place(game.html.characters);
-    player.moveTo(game.map.center);
+    player.moveTo(Settings.playerStart);
 
     // temporary
     window.player = player;

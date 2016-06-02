@@ -14,9 +14,15 @@ module.exports = Wizard = function(game) {
         }
     });
 
+    // make sure wizard is beyond a certain point
+    var startingCoords = {x: -1, y: -1};
+    while (startingCoords.x < Settings.wizardMin.x && startingCoords.y < Settings.wizardMin.y) {
+        startingCoords = game.map.env.randomCoords();
+    }
+
     // ugh, TODO clean this up
     wizard.sprite.scaleTo(game.cellDims).place(game.html.characters);
-    wizard.moveTo(game.map.env.randomCoords());
+    wizard.moveTo(startingCoords);
     window.wizard = wizard;
 
     // start magic where the wizard is
