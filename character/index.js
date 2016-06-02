@@ -15,6 +15,11 @@ module.exports = Character = function(params) {
     this.coords = {x:0, y:0};
 
     this.inventory = new Inventory(this);
+    this.health = Settings.maxHealth;
+
+    // Callbacks
+    this.callbacks = {};
+    this.callbacks.onWalk = typeof params.onWalk === 'function' ? params.onWalk : function() {}
 }
 
 Character.prototype = {};
@@ -22,7 +27,16 @@ Character.prototype = {};
 
 // ============= MOVEMENT / RENDERING
 
+Character.prototype.canBeAt = function(coords) {
+    var cell = this.map.getCell(coords);
+    if (this === window.player) console.log(cell.species.id, cell.species.passable)
+    return cell.species.passable;
+}
+
 Character.prototype.moveTo = function(coords) {
+    // make sure we're allowed to move to this spot
+    if (!this.canBeAt(coords)) return this;
+
     this.coords.x = coords.x;
     this.coords.y = coords.y;
 
@@ -32,6 +46,7 @@ Character.prototype.moveTo = function(coords) {
         y: this.coords.y * this.map.dims.y,
     }
 
+
     var offset = this.map.getOffset();
     this.sprite.moveTo({x: pos.x + offset.x, y: pos.y + offset.y});
 
@@ -39,6 +54,9 @@ Character.prototype.moveTo = function(coords) {
     this.sprite.move({x: this.map.dims.x / 2, y: this.map.dims.y / 2});
 
     // TODO: make sure it doesn't go off the map... or handle that case or something
+
+    // Call callback
+    this.callbacks.onWalk(this.coords);
 
     return this;
 }
@@ -73,6 +91,24 @@ Character.prototype.faceDirection = function(dir) {
 Character.prototype.refresh = function() {
     this.moveTo(this.coords);
     this.sprite.refreshPosition();
+}
+
+// ============================== HEALTH ETC
+
+Character.prototype.ouch = function() {
+    if (this.health === 0) return; // can't go negative health
+
+    this.health -= 1;
+
+    // ugh
+    document.getElementById('player-health').textContent = this.health;
+
+    console.log('Ouch', this.health);
+    if (this.health === 0) this.die();
+}
+
+Character.prototype.die = function() {
+    console.log('Oops, dead.')
 }
 
 

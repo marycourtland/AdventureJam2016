@@ -47,6 +47,11 @@ module.exports = Character = function(params) {
     this.coords = {x:0, y:0};
 
     this.inventory = new Inventory(this);
+    this.health = Settings.maxHealth;
+
+    // Callbacks
+    this.callbacks = {};
+    this.callbacks.onWalk = typeof params.onWalk === 'function' ? params.onWalk : function() {}
 }
 
 Character.prototype = {};
@@ -54,7 +59,16 @@ Character.prototype = {};
 
 // ============= MOVEMENT / RENDERING
 
+Character.prototype.canBeAt = function(coords) {
+    var cell = this.map.getCell(coords);
+    if (this === window.player) console.log(cell.species.id, cell.species.passable)
+    return cell.species.passable;
+}
+
 Character.prototype.moveTo = function(coords) {
+    // make sure we're allowed to move to this spot
+    if (!this.canBeAt(coords)) return this;
+
     this.coords.x = coords.x;
     this.coords.y = coords.y;
 
@@ -64,6 +78,7 @@ Character.prototype.moveTo = function(coords) {
         y: this.coords.y * this.map.dims.y,
     }
 
+
     var offset = this.map.getOffset();
     this.sprite.moveTo({x: pos.x + offset.x, y: pos.y + offset.y});
 
@@ -71,6 +86,9 @@ Character.prototype.moveTo = function(coords) {
     this.sprite.move({x: this.map.dims.x / 2, y: this.map.dims.y / 2});
 
     // TODO: make sure it doesn't go off the map... or handle that case or something
+
+    // Call callback
+    this.callbacks.onWalk(this.coords);
 
     return this;
 }
@@ -105,6 +123,24 @@ Character.prototype.faceDirection = function(dir) {
 Character.prototype.refresh = function() {
     this.moveTo(this.coords);
     this.sprite.refreshPosition();
+}
+
+// ============================== HEALTH ETC
+
+Character.prototype.ouch = function() {
+    if (this.health === 0) return; // can't go negative health
+
+    this.health -= 1;
+
+    // ugh
+    document.getElementById('player-health').textContent = this.health;
+
+    console.log('Ouch', this.health);
+    if (this.health === 0) this.die();
+}
+
+Character.prototype.die = function() {
+    console.log('Oops, dead.')
 }
 
 
@@ -614,6 +650,11 @@ module.exports = Cell = function(blank) {
     // the 'next' slot is just a holding pattern until the current iteration is finalized
     // use cell.next(species), then cell.flush() to set it
     this.nextSpecies = null;
+
+    // register callbacks when stuff happens
+    this.callbacks = {
+        change: {}
+    }
 };
 
 Cell.prototype = {};
@@ -634,6 +675,10 @@ Cell.prototype.getAge = function() {
 
 // sets the dominant species
 Cell.prototype.set = function(species) {
+    if (!!this.species && !!species && this.species.id !== species.id) {
+        this.emit('change', {species: species})
+    }
+
     this.species = species;
     this.add(species); // just in case it's not already set
 
@@ -698,7 +743,21 @@ Cell.prototype.add = function(species) {
     return this;
 }
 
+Cell.prototype.on = function(event, callback_id, callback) {
+    this.callbacks[event][callback_id] = callback; 
+}
 
+Cell.prototype.off = function(event, callback_id) {
+    delete this.callbacks[event][callback_id];
+}
+
+Cell.prototype.emit = function(event, data) {
+    if (event in this.callbacks && Object.keys(this.callbacks[event]).length > 0) {
+        for (var cb in this.callbacks[event]) {
+            this.callbacks[event][cb](data);
+        }
+    }
+}
 
 },{"./species-battle":22}],16:[function(require,module,exports){
 module.exports = GrowthRules = {
@@ -1029,6 +1088,11 @@ Map.clump = function(center, coordClump, species) {
 Map.set = function(coords, species) {
     this.env.set(coords, species);
 }
+
+Map.getCell = function(coords) {
+    return this.env.get(coords);
+}
+
 
 // iterates over a coordmap
 Map.forEach = function(fn) {
@@ -1386,7 +1450,7 @@ module.exports = Species = function(params) {
     this.color = params.color || 'black';
 
     // behavior
-    this.passable = params.passable || true;
+    this.passable = params.hasOwnProperty('passable') ? params.passable : true;
 
     this.initRules(params.rules);
 
@@ -1486,12 +1550,33 @@ function coordmapAvg(coordmap) {
 var Character = require('./character');
 var ToolChest = require('./items');
 
+var CELL_CHANGE_EVT = 'check_cell_for_magic';
+
 module.exports = Player = function(game) {
     var player = new Character({
         map: game.map,
         id: 'player',
-        sprite: 'player' 
+        sprite: 'player',
+
+        // check whether player needs to lose health (from being on magic)
+        onWalk: function(coords) {
+            var newCell = player.map.getCell(coords);
+            if (newCell.species.id === 'magic') {
+                player.ouch();
+            } 
+            
+            // keep track of older cell
+            if (player.previousCell) player.previousCell.off('change', CELL_CHANGE_EVT);
+
+            player.previousCell = newCell;
+
+            newCell.on('change', CELL_CHANGE_EVT, function(data) {
+                if (data.species.id === 'magic') player.ouch();
+            })
+        }
     });
+
+    player.previousCell = null;
 
     // ugh, TODO clean this up
     player.sprite.scaleTo(game.cellDims).place(game.html.characters);
