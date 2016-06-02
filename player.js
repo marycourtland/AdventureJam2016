@@ -9,25 +9,12 @@ module.exports = Player = function(game) {
         id: 'player',
         sprite: 'player',
 
-        // check whether player needs to lose health (from being on magic)
-        onWalk: function(coords) {
-            var newCell = player.map.getCell(coords);
-            if (newCell.species.id === 'magic') {
+        speciesResponses: {
+            'magic': function() {
                 player.ouch();
-            } 
-            
-            // keep track of older cell
-            if (player.previousCell) player.previousCell.off('change', CELL_CHANGE_EVT);
-
-            player.previousCell = newCell;
-
-            newCell.on('change', CELL_CHANGE_EVT, function(data) {
-                if (data.species.id === 'magic') player.ouch();
-            })
-        }
+            }
+        },
     });
-
-    player.previousCell = null;
 
     // ugh, TODO clean this up
     player.sprite.scaleTo(game.cellDims).place(game.html.characters);

@@ -35,6 +35,8 @@ var SpriteData = require('./data/sprites');
 var Inventory = require('./inventory');
 var Utils = require('../utils');
 
+var CHAR_SPECIES_LISTENER_PREFIX = 'character-species-listener-';
+
 module.exports = Character = function(params) {
     params.id = params.id || '';
     params.sprite= params.sprite || '';
@@ -49,9 +51,12 @@ module.exports = Character = function(params) {
     this.inventory = new Inventory(this);
     this.health = Settings.maxHealth;
 
-    // Callbacks
-    this.callbacks = {};
-    this.callbacks.onWalk = typeof params.onWalk === 'function' ? params.onWalk : function() {}
+    // Responses to species. These specify what happens when the char either walks onto a new species, or the current cell changes.
+    this.speciesResponses = params.speciesResponses || {};
+    // sanity check
+    for (var species_id in this.speciesResponses) {
+        console.assert(typeof this.speciesResponses[species_id] === 'function');
+    }
 }
 
 Character.prototype = {};
@@ -61,34 +66,39 @@ Character.prototype = {};
 
 Character.prototype.canBeAt = function(coords) {
     var cell = this.map.getCell(coords);
-    if (this === window.player) console.log(cell.species.id, cell.species.passable)
-    return cell.species.passable;
+    return !!cell && cell.species.passable;
 }
 
 Character.prototype.moveTo = function(coords) {
     // make sure we're allowed to move to this spot
     if (!this.canBeAt(coords)) return this;
 
+    var oldCell = this.map.getCell(this.coords);
+
     this.coords.x = coords.x;
     this.coords.y = coords.y;
 
-    // move sprite
+    // move sprite (put it in the center of the tile)
     var pos = {
         x: this.coords.x * this.map.dims.x,
         y: this.coords.y * this.map.dims.y,
     }
-
-
     var offset = this.map.getOffset();
     this.sprite.moveTo({x: pos.x + offset.x, y: pos.y + offset.y});
-
-    // put the sprite in the center of the tile
     this.sprite.move({x: this.map.dims.x / 2, y: this.map.dims.y / 2});
 
     // TODO: make sure it doesn't go off the map... or handle that case or something
 
-    // Call callback
-    this.callbacks.onWalk(this.coords);
+    // Respond appropriately to whatever species is underfoot
+    // ** For now, doesn't pass anything to the response function 
+    var newCell = this.map.getCell(this.coords);
+    this.respondToSpecies(newCell.species);
+
+    var self = this;
+    oldCell.off('change', CHAR_SPECIES_LISTENER_PREFIX + this.id);
+    newCell.on('change', CHAR_SPECIES_LISTENER_PREFIX + this.id, function(data) {
+        self.respondToSpecies(data.species)
+    })
 
     return this;
 }
@@ -101,6 +111,11 @@ Character.prototype.move = function(diff) {
     return this;
 }
 
+Character.prototype.respondToSpecies = function(species) {
+    if (species.id in this.speciesResponses) {
+        this.speciesResponses[species.id]();
+    }
+}
 
 Character.prototype.faceDirection = function(dir) {
     var scaledDir = {
@@ -994,7 +1009,7 @@ Env.prototype.randomCoords = function() {
 
 },{"./advancerator.js":14,"./cell.js":15}],19:[function(require,module,exports){
 var Env = require('./environment');
-var Species= require('./species');
+var Species = require('./species');
 var Renderer = require('./renderer')
 var SpeciesData = require('./data/species') 
 
@@ -1558,25 +1573,12 @@ module.exports = Player = function(game) {
         id: 'player',
         sprite: 'player',
 
-        // check whether player needs to lose health (from being on magic)
-        onWalk: function(coords) {
-            var newCell = player.map.getCell(coords);
-            if (newCell.species.id === 'magic') {
+        speciesResponses: {
+            'magic': function() {
                 player.ouch();
-            } 
-            
-            // keep track of older cell
-            if (player.previousCell) player.previousCell.off('change', CELL_CHANGE_EVT);
-
-            player.previousCell = newCell;
-
-            newCell.on('change', CELL_CHANGE_EVT, function(data) {
-                if (data.species.id === 'magic') player.ouch();
-            })
-        }
+            }
+        },
     });
-
-    player.previousCell = null;
 
     // ugh, TODO clean this up
     player.sprite.scaleTo(game.cellDims).place(game.html.characters);
@@ -1657,33 +1659,74 @@ game.refreshView = function() {
     }
 }
 
-// TODO: maybe things would be nicer if this was demoted to a worker
-game.iterationTimeout = null;
-game.iterateMap = function() {
-    if (Settings.mapIterationTimeout <= 0) return;
+if (Settings.advanceAllCells) {
+    // TODO: maybe things would be nicer if this was demoted to a worker
+    game.iterationTimeout = null;
+    game.iterateMap = function() {
+        if (Settings.mapIterationTimeout <= 0) return;
 
-    game.map.advance();
+        game.map.advance();
 
-    if (!Settings.randomizeCellIteration) {
-        game.map.refresh();
-        if (window.doCounts) window.doCounts();
+        if (!Settings.randomizeCellIteration) {
+            game.map.refresh();
+            if (window.doCounts) window.doCounts();
+        }
+        else {
+            // Pick random times to show the cell update
+            // TODO: the isInView call might be outdated if we change views
+            game.map.forEach(function(coords, cell) {
+                if (!game.map.isInView(coords)) return;
+                setTimeout(function() {
+                    game.map.refreshCell(coords);
+                }, Math.random() * Settings.mapIterationTimeout);
+            })
+        }
+        
+        // Schedule another map iteration
+        clearTimeout(game.iterationTimeout);
+        game.iterationTimeout = setTimeout(function() {
+            game.iterateMap();
+        }, Settings.mapIterationTimeout)
     }
-    else {
-        // Pick random times to show the cell update
-        // TODO: the isInView call might be outdated if we change views
-        game.map.forEach(function(coords, cell) {
-            if (!game.map.isInView(coords)) return;
-            setTimeout(function() {
+}
+else {
+    // Advance each cell individually
+    // spin off its own little timer thingy
+    // ** THIS IS SUPER PROTOTYPE-Y
+    game.iterateMap = function() {
+        game.map.env.range().forEach(function(coords) {
+            var cell = game.map.getCell(coords);
+            cell.iterationTimeout = null;
+            cell.iterate = function() {
+                if (Settings.mapIterationTimeout <= 0) return;
+
+                cell.advance();
+
                 game.map.refreshCell(coords);
-            }, Math.random() * Settings.mapIterationTimeout);
+
+                // schedule another iteration
+                clearTimeout(cell.iterationTimeout);
+                cell.iterationTimeout = setTimeout(function() {
+                    cell.iterate();
+                }, getTimeout() )
+            }
+
+            function getTimeout() {
+                // adjust the settings a bit, randomly...
+                var scale = 1 + 0.5 * (Math.random() * 2 - 1);
+                return Settings.mapIterationTimeout * scale;
+            }
+
+            // single-cell replacement for Advancerator
+            cell.advance = function() {
+                var neighbors = game.map.env.neighbors(coords);
+                this.next(neighbors);
+                this.flush();
+            }
+
+            cell.iterate();
         })
     }
-    
-    // Schedule another map iteration
-    clearTimeout(game.iterationTimeout);
-    game.iterationTimeout = setTimeout(function() {
-        game.iterateMap();
-    }, Settings.mapIterationTimeout)
 }
 
 // UI/HUD
@@ -1826,7 +1869,12 @@ module.exports = Wizard = function(game) {
     var wizard = new Character({
         map: game.map,
         id: 'wizard',
-        sprite: 'wizard' 
+        sprite: 'wizard',
+        speciesResponses: {
+            'neutralized': function() {
+                wizard.ouch();
+            }
+        }
     });
 
     // ugh, TODO clean this up
@@ -1848,7 +1896,7 @@ module.exports = Wizard = function(game) {
     }
 
     wizard.walk = new Walking(wizard,
-        function() {
+        function getNextDir() {
             return wizard.getSomewhatRandomDir();
         },
         function onStep(dir) {

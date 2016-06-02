@@ -48,33 +48,74 @@ game.refreshView = function() {
     }
 }
 
-// TODO: maybe things would be nicer if this was demoted to a worker
-game.iterationTimeout = null;
-game.iterateMap = function() {
-    if (Settings.mapIterationTimeout <= 0) return;
+if (Settings.advanceAllCells) {
+    // TODO: maybe things would be nicer if this was demoted to a worker
+    game.iterationTimeout = null;
+    game.iterateMap = function() {
+        if (Settings.mapIterationTimeout <= 0) return;
 
-    game.map.advance();
+        game.map.advance();
 
-    if (!Settings.randomizeCellIteration) {
-        game.map.refresh();
-        if (window.doCounts) window.doCounts();
+        if (!Settings.randomizeCellIteration) {
+            game.map.refresh();
+            if (window.doCounts) window.doCounts();
+        }
+        else {
+            // Pick random times to show the cell update
+            // TODO: the isInView call might be outdated if we change views
+            game.map.forEach(function(coords, cell) {
+                if (!game.map.isInView(coords)) return;
+                setTimeout(function() {
+                    game.map.refreshCell(coords);
+                }, Math.random() * Settings.mapIterationTimeout);
+            })
+        }
+        
+        // Schedule another map iteration
+        clearTimeout(game.iterationTimeout);
+        game.iterationTimeout = setTimeout(function() {
+            game.iterateMap();
+        }, Settings.mapIterationTimeout)
     }
-    else {
-        // Pick random times to show the cell update
-        // TODO: the isInView call might be outdated if we change views
-        game.map.forEach(function(coords, cell) {
-            if (!game.map.isInView(coords)) return;
-            setTimeout(function() {
+}
+else {
+    // Advance each cell individually
+    // spin off its own little timer thingy
+    // ** THIS IS SUPER PROTOTYPE-Y
+    game.iterateMap = function() {
+        game.map.env.range().forEach(function(coords) {
+            var cell = game.map.getCell(coords);
+            cell.iterationTimeout = null;
+            cell.iterate = function() {
+                if (Settings.mapIterationTimeout <= 0) return;
+
+                cell.advance();
+
                 game.map.refreshCell(coords);
-            }, Math.random() * Settings.mapIterationTimeout);
+
+                // schedule another iteration
+                clearTimeout(cell.iterationTimeout);
+                cell.iterationTimeout = setTimeout(function() {
+                    cell.iterate();
+                }, getTimeout() )
+            }
+
+            function getTimeout() {
+                // adjust the settings a bit, randomly...
+                var scale = 1 + 0.5 * (Math.random() * 2 - 1);
+                return Settings.mapIterationTimeout * scale;
+            }
+
+            // single-cell replacement for Advancerator
+            cell.advance = function() {
+                var neighbors = game.map.env.neighbors(coords);
+                this.next(neighbors);
+                this.flush();
+            }
+
+            cell.iterate();
         })
     }
-    
-    // Schedule another map iteration
-    clearTimeout(game.iterationTimeout);
-    game.iterationTimeout = setTimeout(function() {
-        game.iterateMap();
-    }, Settings.mapIterationTimeout)
 }
 
 // UI/HUD

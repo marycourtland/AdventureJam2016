@@ -6,7 +6,12 @@ module.exports = Wizard = function(game) {
     var wizard = new Character({
         map: game.map,
         id: 'wizard',
-        sprite: 'wizard' 
+        sprite: 'wizard',
+        speciesResponses: {
+            'neutralized': function() {
+                wizard.ouch();
+            }
+        }
     });
 
     // ugh, TODO clean this up
@@ -28,7 +33,7 @@ module.exports = Wizard = function(game) {
     }
 
     wizard.walk = new Walking(wizard,
-        function() {
+        function getNextDir() {
             return wizard.getSomewhatRandomDir();
         },
         function onStep(dir) {
