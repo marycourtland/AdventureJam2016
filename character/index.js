@@ -3,6 +3,8 @@ var SpriteData = require('./data/sprites');
 var Inventory = require('./inventory');
 var Utils = require('../utils');
 
+var CHAR_SPECIES_LISTENER_PREFIX = 'character-species-listener-';
+
 module.exports = Character = function(params) {
     params.id = params.id || '';
     params.sprite= params.sprite || '';
@@ -17,9 +19,12 @@ module.exports = Character = function(params) {
     this.inventory = new Inventory(this);
     this.health = Settings.maxHealth;
 
-    // Callbacks
-    this.callbacks = {};
-    this.callbacks.onWalk = typeof params.onWalk === 'function' ? params.onWalk : function() {}
+    // Responses to species. These specify what happens when the char either walks onto a new species, or the current cell changes.
+    this.speciesResponses = params.speciesResponses || {};
+    // sanity check
+    for (var species_id in this.speciesResponses) {
+        console.assert(typeof this.speciesResponses[species_id] === 'function');
+    }
 }
 
 Character.prototype = {};
@@ -29,7 +34,6 @@ Character.prototype = {};
 
 Character.prototype.canBeAt = function(coords) {
     var cell = this.map.getCell(coords);
-    if (this === window.player) console.log(cell.species.id, cell.species.passable)
     return cell.species.passable;
 }
 
@@ -37,26 +41,32 @@ Character.prototype.moveTo = function(coords) {
     // make sure we're allowed to move to this spot
     if (!this.canBeAt(coords)) return this;
 
+    var oldCell = this.map.getCell(this.coords);
+
     this.coords.x = coords.x;
     this.coords.y = coords.y;
 
-    // move sprite
+    // move sprite (put it in the center of the tile)
     var pos = {
         x: this.coords.x * this.map.dims.x,
         y: this.coords.y * this.map.dims.y,
     }
-
-
     var offset = this.map.getOffset();
     this.sprite.moveTo({x: pos.x + offset.x, y: pos.y + offset.y});
-
-    // put the sprite in the center of the tile
     this.sprite.move({x: this.map.dims.x / 2, y: this.map.dims.y / 2});
 
     // TODO: make sure it doesn't go off the map... or handle that case or something
 
-    // Call callback
-    this.callbacks.onWalk(this.coords);
+    // Respond appropriately to whatever species is underfoot
+    // ** For now, doesn't pass anything to the response function 
+    var newCell = this.map.getCell(this.coords);
+    this.respondToSpecies(newCell.species);
+
+    var self = this;
+    oldCell.off('change', CHAR_SPECIES_LISTENER_PREFIX + this.id);
+    newCell.on('change', CHAR_SPECIES_LISTENER_PREFIX + this.id, function(data) {
+        self.respondToSpecies(data.species)
+    })
 
     return this;
 }
@@ -69,6 +79,11 @@ Character.prototype.move = function(diff) {
     return this;
 }
 
+Character.prototype.respondToSpecies = function(species) {
+    if (species.id in this.speciesResponses) {
+        this.speciesResponses[species.id]();
+    }
+}
 
 Character.prototype.faceDirection = function(dir) {
     var scaledDir = {
