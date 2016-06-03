@@ -508,8 +508,8 @@ Bomb.id = 'bomb';
 
 Bomb.useAt = function(coords) {
     var map = window.game.map;
-    Map.diamondClump(coords, map.species.neutralized);
-    Map.refresh();
+    map.diamondClump(coords, map.species.neutralized);
+    map.refresh();
 }
 
 },{}],8:[function(require,module,exports){
@@ -524,11 +524,23 @@ Box.id = 'box';
 module.exports = Camera= {};
 Camera.id = 'camera';
 
+Camera.useAt = function(coords) {
+    // Put the item in the spot...
+    var map = window.game.map;
+    map.placeItem(coords, this);
+
+}
+
 },{}],10:[function(require,module,exports){
 // Empty placeholder object. TODO
 
 module.exports = Detector = {};
 Detector.id = 'detector';
+
+Detector.useAt = function(coords) {
+    var map = window.game.map;
+    map.placeItem(coords, this);
+}
 
 },{}],11:[function(require,module,exports){
 // this is sort of a manager object
@@ -661,6 +673,7 @@ module.exports = Cell = function(blank) {
     this.register = {}; // indexed by id
     this.set(blank || '');
 
+    this.items = [];
 
     // the 'next' slot is just a holding pattern until the current iteration is finalized
     // use cell.next(species), then cell.flush() to set it
@@ -772,6 +785,12 @@ Cell.prototype.emit = function(event, data) {
             this.callbacks[event][cb](data);
         }
     }
+}
+
+// ITEMS
+
+Cell.prototype.addItem = function(coords, item) {
+    this.items.push(item);
 }
 
 },{"./species-battle":22}],16:[function(require,module,exports){
@@ -1138,6 +1157,14 @@ Map.isInView = function(coords) {
     return this.renderer.isInView(coords);
 }
 
+// ITEMS
+Map.placeItem = function(coords, item) {
+    var cell = this.env.get(coords);
+    cell.addItem(item);
+    // put it in the html
+    item.rendersTo(this.renderer.getCell(coords));
+}
+
 
 // RENDERING
 Map.render = function() { this.renderer.render(this.env); return this; }
@@ -1251,6 +1278,10 @@ Renderer.prototype.positionCell = function(cellElement, coords) {
     cellElement.style.left = position.x + 'px';
     cellElement.style.top = position.y + 'px';
     return cellElement;
+}
+
+Renderer.prototype.getCell = function(coords) {
+    return document.getElementById(this.coordsToId(coords));
 }
 
 Renderer.prototype.render = function(env) {
@@ -1582,10 +1613,13 @@ module.exports = Player = function(game) {
 
     // ugh, TODO clean this up
     player.sprite.scaleTo(game.cellDims).place(game.html.characters);
-    player.moveTo(game.map.center);
+    player.moveTo(Settings.playerStart);
 
     // temporary
-    window.player = player;;
+    window.player = player;
+
+    // start some grass where the player is
+    game.map.diamondClump(player.coords, game.map.species.grass)
 
     // Starting inventory
     initInventory(player, {
@@ -1645,6 +1679,7 @@ function initGame() {
     game.wizard = Wizard(game, game.map);
     game.player = Player(game, game.map);
 
+    game.refreshView();
     game.state.init(game);
     Controls.init(game);
 
@@ -1877,9 +1912,15 @@ module.exports = Wizard = function(game) {
         }
     });
 
+    // make sure wizard is beyond a certain point
+    var startingCoords = {x: -1, y: -1};
+    while (startingCoords.x < Settings.wizardMin.x && startingCoords.y < Settings.wizardMin.y) {
+        startingCoords = game.map.env.randomCoords();
+    }
+
     // ugh, TODO clean this up
     wizard.sprite.scaleTo(game.cellDims).place(game.html.characters);
-    wizard.moveTo(game.map.env.randomCoords());
+    wizard.moveTo(startingCoords);
     window.wizard = wizard;
 
     // start magic where the wizard is

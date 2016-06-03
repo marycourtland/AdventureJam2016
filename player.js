@@ -18,10 +18,13 @@ module.exports = Player = function(game) {
 
     // ugh, TODO clean this up
     player.sprite.scaleTo(game.cellDims).place(game.html.characters);
-    player.moveTo(game.map.center);
+    player.moveTo(Settings.playerStart);
 
     // temporary
-    window.player = player;;
+    window.player = player;
+
+    // start some grass where the player is
+    game.map.diamondClump(player.coords, game.map.species.grass)
 
     // Starting inventory
     initInventory(player, {

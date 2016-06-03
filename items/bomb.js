@@ -3,6 +3,6 @@ Bomb.id = 'bomb';
 
 Bomb.useAt = function(coords) {
     var map = window.game.map;
-    Map.diamondClump(coords, map.species.neutralized);
-    Map.refresh();
+    map.diamondClump(coords, map.species.neutralized);
+    map.refresh();
 }
