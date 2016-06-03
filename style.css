@@ -126,6 +126,9 @@ a {
     }
 
 /* Item types */
+[data-item-type] {
+    background-size: 100%;
+}
 [data-item-type='neutralizer'] { background-image: url('images/items/neutralizer.png'); }
 [data-item-type='bomb'] { background-image: url('images/items/bomb.png'); }
 [data-item-type='camera'] { background-image: url('images/items/camera.png'); }

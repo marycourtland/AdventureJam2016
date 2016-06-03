@@ -60,6 +60,10 @@ Renderer.prototype.positionCell = function(cellElement, coords) {
     return cellElement;
 }
 
+Renderer.prototype.getCell = function(coords) {
+    return document.getElementById(this.coordsToId(coords));
+}
+
 Renderer.prototype.render = function(env) {
     var self = this;
 

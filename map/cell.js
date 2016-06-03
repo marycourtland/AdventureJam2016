@@ -12,6 +12,7 @@ module.exports = Cell = function(blank) {
     this.register = {}; // indexed by id
     this.set(blank || '');
 
+    this.items = [];
 
     // the 'next' slot is just a holding pattern until the current iteration is finalized
     // use cell.next(species), then cell.flush() to set it
@@ -123,4 +124,10 @@ Cell.prototype.emit = function(event, data) {
             this.callbacks[event][cb](data);
         }
     }
+}
+
+// ITEMS
+
+Cell.prototype.addItem = function(coords, item) {
+    this.items.push(item);
 }

@@ -128,6 +128,14 @@ Map.isInView = function(coords) {
     return this.renderer.isInView(coords);
 }
 
+// ITEMS
+Map.placeItem = function(coords, item) {
+    var cell = this.env.get(coords);
+    cell.addItem(item);
+    // put it in the html
+    item.rendersTo(this.renderer.getCell(coords));
+}
+
 
 // RENDERING
 Map.render = function() { this.renderer.render(this.env); return this; }
