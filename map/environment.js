@@ -3,6 +3,7 @@
 
 var Cell = require('./cell.js')
 var Advancerator = require('./advancerator.js');
+var XY = require('../xy');
 
 module.exports = Env = function(size, blank_cell) {
     this.size = size;
@@ -16,7 +17,7 @@ Env.prototype.init = function(blank_cell) {
     for (var x = 0; x < this.size.x; x++) {
         this.cells.push([]);
         for (var y = 0; y < this.size.y; y++) {
-            this.cells[x][y] = new Cell(blank_cell);
+            this.cells[x][y] = new Cell(blank_cell, XY(x, y));
         }
     }
 

@@ -1,6 +1,6 @@
 var Env = require('./environment');
 var Species = require('./species');
-var Renderer = require('./renderer')
+//var Renderer = require('./renderer')
 var SpeciesData = require('./data/species') 
 
 module.exports = Map = {};
@@ -14,17 +14,14 @@ SpeciesData.forEach(function(s) {
 
 Map.init = function(params) {
     this.size = params.size;
-    this.dims = params.dims;
-    this.window = params.window; // what radius of tiles should comprise the camera window?
-
     this.center = {x: Math.floor(this.size.x/2), y: Math.floor(this.size.y/2)} // use Map.setCenter to change this
-
-    this.renderer = new Renderer(params.html, this.dims, this.center);
-
     this.env = new Env(this.size, this.species.blank);
 
-    this.generate();
-    this.render();
+    // Unused prototype stuff
+    //this.dims = params.dims;
+    //this.window = params.window; // what radius of tiles should comprise the camera window?
+    //this.renderer = new Renderer(params.html, this.dims, this.center);
+    //this.render();
 }
 
 
@@ -38,12 +35,11 @@ Map.generate = function() {
         self.env.get(coords).add(self.species.trees);
     })
 
-
     self.sow(self.species.grass, 1/10);
     self.sow(self.species.flowers, 1/50)
     self.sow(self.species.trees, 1/30);
 
-    self.env.advance(4);
+    self.env.advance(10);
 
     self.env.advance(1);
 }
@@ -114,6 +110,10 @@ Map.advance = function(n) {
     return this;
 }
 
+
+// UNUSED PROTOTYPE STUFF
+/*
+
 // MARGINS / CAMERA
 Map.isInWindow = function(coords) {
     var distance = Math.max(
@@ -131,6 +131,7 @@ Map.getDistanceFromWindowEdge = function(coords) {
         east: coords.x - (this.center.x + this.window)
     }
 }
+
 
 
 // Different than isInWindow. Uses the rectangular renderer view
@@ -206,3 +207,4 @@ Map.getCoordsFromPixels = function(pixels) {
 
 // clump all this stuff together in a renderer
 Map.renderer = require('./renderer')
+*/

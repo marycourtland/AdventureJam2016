@@ -47,6 +47,7 @@ a {
   }
 
 #hud {
+    margin: 1rem !important;
 }
 
   #hud > * {
@@ -58,7 +59,15 @@ a {
     margin-right: 0;
   }
 
+/* phaser game renders here */
+#game, #game-shadow {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: -1
+}
 
+/* prototype game renders here */
 #board-layers {
   display: block;
   width: 500px;
@@ -142,7 +151,10 @@ a {
 /* shadow border animated */
 
 #game-shadow {
-  box-shadow: inset 0 0 8em black;
+  box-shadow: inset 0 0 6em #283128;
+  z-index: 1;
+  width: 100%;
+  height: 100%
 }
 
 #game-shadow-animated {

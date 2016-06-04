@@ -7,8 +7,9 @@ window.Settings = {};
 Settings.advanceAllCells = false;
 
 // Game settings
-Settings.gameSize = {x: 70, y:70}; // cells
-Settings.cellDims = {x: 30, y:30}; // pixels per cell
+Settings.gameAnchor = [0.5, -0.5]
+Settings.gameSize = {x: 60, y:60}; // cells
+Settings.cellDims = {x: 38, y:38}; // pixels per cell (isometric)
 
 
 // Map iteration
