@@ -135,6 +135,8 @@ Character.prototype.gets = function(item) {
 
 Character.prototype.use = function(item, coords) {
     if (!this.inventory.has(item.id)) return;
+    if (Utils.distance(coords, this.coords) > item.usageRadius) return;
+
     this.inventory.removeItem(item);
     item.useAt(coords);
 }

@@ -20,3 +20,13 @@ Settings.randomizeCellIteration = true;
 Settings.maxHealth = 10;
 Settings.playerStart = {x: 10, y: 10}
 Settings.wizardMin = {x: 35, y: 35}
+
+
+// Items
+Settings.itemUsageRadii = {
+    // How far away from yourself can you place these items?
+    neutralizer: 6,
+    bomb: 3,
+    camera: 1.5,
+    detector: 1.5
+}
