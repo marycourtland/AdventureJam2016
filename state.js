@@ -65,7 +65,8 @@ GameState.nodes.itemSelected.getNext = function(data) {
 GameState.nodes.usingItem = {};
 GameState.nodes.usingItem.execute = function(data) {
     game.player.use(currentData.item, data.coords);
-    GameState.advance();
+
+    if (Settings.advanceAllCells) GameState.advance();
 }
 GameState.nodes.usingItem.finish = function() {
     delete currentData.item;

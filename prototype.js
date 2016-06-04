@@ -25,7 +25,7 @@ function initGame() {
     game.map.init({
         size: game.size,
         dims: game.cellDims,
-        window: 8,
+        window: 10,
         html: game.html.board
     });
 
@@ -44,6 +44,19 @@ function initGame() {
 game.refreshView = function() {
     if (!game.map.isInWindow(game.player.coords)) {
         game.map.recenter(game.player.coords);
+        game.player.refresh();
+        game.wizard.refresh();
+    }
+}
+
+game.refreshView2 = function() {
+    var d = Map.getDistanceFromWindowEdge(game.player.coords);
+    if (d.north > 0 || d.south > 0 || d.west > 0 || d.east > 0) {
+        //console.log('d:', d)
+        if (d.north > 0) game.map.shiftView({x:0, y:-d.north});
+        if (d.south > 0) game.map.shiftView({x:0, y: d.south});
+        if (d.west > 0) game.map.shiftView({x:-d.west, y:0});
+        if (d.east > 0) game.map.shiftView({x: d.east, y:0});
         game.player.refresh();
         game.wizard.refresh();
     }
