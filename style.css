@@ -19,6 +19,14 @@ a {
   color: inherit;
 }
 
+.panel {
+    background-color: #0C1416;
+    padding: 1rem;
+    border: 4px solid #9EBA8A;
+    border-width: 4px 15px;
+    border-radius: 3px;
+}
+
 #title {
   color: #CDE6BB;
   font: 40pt Stentiga;
@@ -27,12 +35,7 @@ a {
 }
 
   #title.panel {
-    background-color: #0C1416;
     width: 400px;
-    padding: 1rem;
-    border: 4px solid #9EBA8A;
-    border-width: 4px 15px;
-    border-radius: 3px;
   }
 
   /* experimental */
@@ -181,4 +184,29 @@ a {
   50% { box-shadow: inset 0 0 12em black; }
   70% { box-shadow: inset 0 0 10em black; }
   100% { box-shadow: inset 0 0 6em black; }
+}
+
+
+
+/* Experimental: fullscreen map */
+#board-layers {
+    position: absolute;
+    top: 0;
+    left: 0;
+    margin: 0;
+    border-width: 0;
+    z-index: -1;
+    width: 100%;
+    height: 100%;
+}
+
+.board-layer {
+    width: 100%;
+    height: 100%;
+}
+
+#game-inventory {
+    position: absolute;
+    bottom: 1rem;
+    right: 1rem;
 }

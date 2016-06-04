@@ -11,3 +11,10 @@ Utils.randomChoice = function(array) {
     if (typeof array === 'object') array = Object.keys(array);
     return array[Math.floor(Math.random() * array.length)];
 }
+
+Utils.distance = function(coords1, coords2) {
+    return Math.sqrt(
+        Math.pow(coords1.x - coords2.x, 2) +
+        Math.pow(coords1.y - coords2.y, 2)
+    )
+}

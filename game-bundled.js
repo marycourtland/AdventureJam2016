@@ -167,6 +167,8 @@ Character.prototype.gets = function(item) {
 
 Character.prototype.use = function(item, coords) {
     if (!this.inventory.has(item.id)) return;
+    if (Utils.distance(coords, this.coords) > item.usageRadius) return;
+
     this.inventory.removeItem(item);
     item.useAt(coords);
 }
@@ -579,6 +581,8 @@ ToolChest.Item = function(type) {
     this.id = type.id + '_' + ToolChest.nextID();
     this.type_id = type.id;
     this.__proto__ = type;
+
+    this.usageRadius = Settings.itemUsageRadii[type.id] || 1.5;
 }
 
 // shortcut constructor
@@ -1152,6 +1156,16 @@ Map.isInWindow = function(coords) {
     return distance < this.window;
 }
 
+Map.getDistanceFromWindowEdge = function(coords) {
+    return {
+        north: (this.center.y - this.window) - coords.y,
+        west: (this.center.x - this.window) - coords.x,
+        south: coords.y - (this.center.y + this.window),
+        east: coords.x - (this.center.x + this.window)
+    }
+}
+
+
 // Different than isInWindow. Uses the rectangular renderer view
 Map.isInView = function(coords) {
     return this.renderer.isInView(coords);
@@ -1200,6 +1214,15 @@ Map.recenter = function(coords) {
     this.refreshFull();
     return this;
 }
+
+Map.shiftView = function(dCoords) {
+    this.recenter({
+        x: this.center.x + dCoords.x,
+        y: this.center.y + dCoords.y
+    })
+    return this;
+}
+
 
 // ugh
 Map.getOffset = function() {
@@ -1670,7 +1693,7 @@ function initGame() {
     game.map.init({
         size: game.size,
         dims: game.cellDims,
-        window: 8,
+        window: 10,
         html: game.html.board
     });
 
@@ -1689,6 +1712,19 @@ function initGame() {
 game.refreshView = function() {
     if (!game.map.isInWindow(game.player.coords)) {
         game.map.recenter(game.player.coords);
+        game.player.refresh();
+        game.wizard.refresh();
+    }
+}
+
+game.refreshView2 = function() {
+    var d = Map.getDistanceFromWindowEdge(game.player.coords);
+    if (d.north > 0 || d.south > 0 || d.west > 0 || d.east > 0) {
+        //console.log('d:', d)
+        if (d.north > 0) game.map.shiftView({x:0, y:-d.north});
+        if (d.south > 0) game.map.shiftView({x:0, y: d.south});
+        if (d.west > 0) game.map.shiftView({x:-d.west, y:0});
+        if (d.east > 0) game.map.shiftView({x: d.east, y:0});
         game.player.refresh();
         game.wizard.refresh();
     }
@@ -1836,7 +1872,8 @@ GameState.nodes.itemSelected.getNext = function(data) {
 GameState.nodes.usingItem = {};
 GameState.nodes.usingItem.execute = function(data) {
     game.player.use(currentData.item, data.coords);
-    GameState.advance();
+
+    if (Settings.advanceAllCells) GameState.advance();
 }
 GameState.nodes.usingItem.finish = function() {
     delete currentData.item;
@@ -1893,6 +1930,13 @@ Utils.dirs = {
 Utils.randomChoice = function(array) {
     if (typeof array === 'object') array = Object.keys(array);
     return array[Math.floor(Math.random() * array.length)];
+}
+
+Utils.distance = function(coords1, coords2) {
+    return Math.sqrt(
+        Math.pow(coords1.x - coords2.x, 2) +
+        Math.pow(coords1.y - coords2.y, 2)
+    )
 }
 
 },{}],30:[function(require,module,exports){

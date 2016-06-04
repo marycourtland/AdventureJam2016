@@ -34,6 +34,8 @@ ToolChest.Item = function(type) {
     this.id = type.id + '_' + ToolChest.nextID();
     this.type_id = type.id;
     this.__proto__ = type;
+
+    this.usageRadius = Settings.itemUsageRadii[type.id] || 1.5;
 }
 
 // shortcut constructor

@@ -123,6 +123,16 @@ Map.isInWindow = function(coords) {
     return distance < this.window;
 }
 
+Map.getDistanceFromWindowEdge = function(coords) {
+    return {
+        north: (this.center.y - this.window) - coords.y,
+        west: (this.center.x - this.window) - coords.x,
+        south: coords.y - (this.center.y + this.window),
+        east: coords.x - (this.center.x + this.window)
+    }
+}
+
+
 // Different than isInWindow. Uses the rectangular renderer view
 Map.isInView = function(coords) {
     return this.renderer.isInView(coords);
@@ -171,6 +181,15 @@ Map.recenter = function(coords) {
     this.refreshFull();
     return this;
 }
+
+Map.shiftView = function(dCoords) {
+    this.recenter({
+        x: this.center.x + dCoords.x,
+        y: this.center.y + dCoords.y
+    })
+    return this;
+}
+
 
 // ugh
 Map.getOffset = function() {
