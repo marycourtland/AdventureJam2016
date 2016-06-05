@@ -30,18 +30,18 @@ Map.generate = function() {
 
     // register involved species with all of the cells
     self.env.range().forEach(function(coords) {
-        self.env.get(coords).add(self.species.magic)
-        self.env.get(coords).add(self.species.grass);
-        self.env.get(coords).add(self.species.trees);
+        var cell = self.env.get(coords);
+        cell.add(self.species.magic);
+        cell.add(self.species.grass);
+        cell.add(self.species.trees);
     })
 
     self.sow(self.species.grass, 1/10);
     self.sow(self.species.flowers, 1/50)
-    self.sow(self.species.trees, 1/30);
+    self.sow(self.species.trees, 1/20);
 
-    self.env.advance(10);
+    self.env.advance(3);
 
-    self.env.advance(1);
 }
 
 Map.diamondClump = function(coords, species) {

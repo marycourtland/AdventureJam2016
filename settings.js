@@ -8,13 +8,14 @@ Settings.advanceAllCells = false;
 
 // Game settings
 Settings.gameAnchor = [0.5, -0.5]
+//Settings.gameAnchor = [0.5,0.1]
 Settings.gameSize = {x: 60, y:60}; // cells
 Settings.cellDims = {x: 38, y:38}; // pixels per cell (isometric)
 
 
 // Map iteration
 // if the randomize switch is on, it only makes sense to do timeout at least 10sec, if not 20
-Settings.mapIterationTimeout    = 100000; // millis between map updates. Use 0 to disable automatic updates
+Settings.mapIterationTimeout    = 10000; // millis between map updates. Use 0 to disable automatic updates
 Settings.randomizeCellIteration = true;
 
 // Characters

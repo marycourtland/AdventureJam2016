@@ -77,7 +77,6 @@ Cell.prototype.set = function(species) {
 
 Cell.prototype.hideAllSpecies = function(species) {
     for (var id in this.register) {
-        if (!(this.register[id].visible)) return; // no need to redo the sprite thing
         this.register[id].visible = false;
         if (this.register[id].sprite) {
             this.register[id].sprite.visible = false;
@@ -159,7 +158,6 @@ Cell.prototype.createSprites = function() {
             sprite_id = Utils.randomChoice(sprite_id)
         }
         reg.sprite = game.addMapSprite(this.coords, sprite_id);
-
         
         reg.sprite.visible = reg.visible; 
     }

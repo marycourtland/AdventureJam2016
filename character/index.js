@@ -13,7 +13,7 @@ module.exports = Character = function(params) {
 
     this.map = params.map;
     this.id = params.id;
-    this.sprite = new Sprite(SpriteData[params.sprite]).setFrame(Object.keys(SpriteData[params.sprite].frames)[0]);
+    //this.sprite = new Sprite(SpriteData[params.sprite]).setFrame(Object.keys(SpriteData[params.sprite].frames)[0]);
     this.coords = {x:0, y:0};
 
     this.inventory = new Inventory(this);
