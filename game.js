@@ -134,7 +134,7 @@ function onTap(pointer, doubleTap) {
 
 
 // This is pretty temporary until I decide on input stuff
-var speed = 250;
+var speed = 500;
 var movementButtons = [
     {id: 'move-left',  vel: XY(-speed, 0)},
     {id: 'move-right', vel: XY(speed, 0)},
