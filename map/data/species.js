@@ -7,21 +7,23 @@ module.exports = speciesData = [
         id: 'blank',
         symbol: '~',
         color: '#5F4F29',
-        sprite: 'dirt'
+        sprite: {id: 'dirt'}
     },
-
     {
         id: 'neutralized',
         symbol: 'x',
         color: '#422121',
-        sprite: 'neutralized'
+        sprite: {id: 'neutralized'}
     },
 
     {
         id: 'magic',
         symbol: '&#8960;',
         color: '#4C24A3',
-        sprite: 'magic',
+        sprite: {
+            id: 'magic',
+            fade: true
+        },
         rules: {
             default: GrowthRules.magic
         }
@@ -31,7 +33,7 @@ module.exports = speciesData = [
         id: 'grass',
         symbol: '&#8756;',
         color: '#46CF46', 
-        sprite: 'grass',
+        sprite: {id: 'grass'},
         rules: {
             default: GrowthRules.plants,
             conditional: [
@@ -48,7 +50,10 @@ module.exports = speciesData = [
         id: 'flowers',
         symbol: '&#9880;',
         color: '#E46511',
-        sprite: 'flower',
+        sprite: {
+            id: 'flower',
+            fade: true
+        },
         rules: {
             default: GrowthRules.plants,
             conditional: [
@@ -65,7 +70,11 @@ module.exports = speciesData = [
         id: 'trees',
         symbol: '&psi;',
         color: '#174925',
-        sprite: ['tree1', 'tree2', 'tree8', 'tree11', 'tree13'],
+        sprite: {
+            id: ['tree1', 'tree8', 'tree11', 'tree13'],
+            fade: true
+        },
+        speed: 200,
         passable: false,
         rules: {
             default: GrowthRules.plants,
@@ -80,6 +89,44 @@ module.exports = speciesData = [
                 // tree growth stabilizes when the trees are old
                 {
                     species_id: 'trees',
+                    min_age: 3,
+                    rules: GrowthRules.plantsStable
+                },
+
+                {
+                    min_neighbors: 1,
+                    species_id: 'magic',
+                    rules: GrowthRules.plantsDying
+                }
+            ]
+        }
+    },
+
+    // Pine trees - SAME RULES ETC AS THE OTHER TREES
+    // Just separated out for some interest/variety
+    {
+        id: 'trees2',
+        symbol: '&psi;',
+        color: '#174925',
+        sprite: {
+            id: ['tree2'],
+            fade: true
+        },
+        speed: 200,
+        passable: false,
+        rules: {
+            default: GrowthRules.plants,
+            conditional: [
+                // the presence of grass catalyzes tree growth
+                {
+                    species_id: 'grass',
+                    min_neighbors: 4,
+                    rules: GrowthRules.plantsCatalyzed
+                },
+
+                // tree growth stabilizes when the trees are old
+                {
+                    species_id: 'trees2',
                     min_age: 3,
                     rules: GrowthRules.plantsStable
                 },

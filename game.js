@@ -109,7 +109,8 @@ function debugText() {
     var lines = [
         'PLAYER',
         '  coords: ' + game.player.coords.x + ' ' + game.player.coords.y,
-        '  health: ' + game.player.health
+        '  health: ' + game.player.health,
+        '  speed:  ' + game.player.speed
     ]
 
     var color = "#CDE6BB";
@@ -134,7 +135,7 @@ function onTap(pointer, doubleTap) {
 
 
 // This is pretty temporary until I decide on input stuff
-var speed = 250;
+var speed = 1;
 var movementButtons = [
     {id: 'move-left',  vel: XY(-speed, 0)},
     {id: 'move-right', vel: XY(speed, 0)},
@@ -148,8 +149,9 @@ function initMovement() {
 
         var go = function(evt) {
             evt.stopPropagation();
-            game.playerSprite.body.velocity.x = item.vel.x;
-            game.playerSprite.body.velocity.y = item.vel.y;
+            var speed = game.player.getSpeed();
+            game.playerSprite.body.velocity.x = item.vel.x * speed;
+            game.playerSprite.body.velocity.y = item.vel.y * speed;
         }
 
         var stop = function(evt) {

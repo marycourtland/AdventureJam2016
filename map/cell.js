@@ -51,36 +51,84 @@ Cell.prototype.getAge = function() {
 
 // sets the dominant species
 Cell.prototype.set = function(species) {
+    
+    if (!!this.species && !!species) {
+        if (this.species.id !== species.id) {
+            this.emit('change', {species: species})
+        }
+        else {
+            return; // no need to re-render the same species
+        }
+    }
+
+    this.hideAllExcept(species);
+
+    if (!!species) {
+        this.species = species;
+        this.add(species); // just in case it's not already set
+
+        this.register[species.id].visible = true;
+        if (this.register[species.id].sprite) {
+            this.showSprite(species.id);
+            //this.register[species.id].sprite.visible = true;
+        }
+    }
+
+
     // Make sure only this one is visible
     // TODO: later there may be multiple sprites per cell visible...
-    this.hideAllSpecies();
-
-    if (!species) {
-        return;
-    }
-
-    if (!!this.species && !!species && this.species.id !== species.id) {
-        this.emit('change', {species: species})
-    }
-
-    this.species = species;
-    this.add(species); // just in case it's not already set
-
-    this.register[species.id].visible = true;
-    if (this.register[species.id].sprite) {
-        this.register[species.id].sprite.visible = true;
-    }
 
     return this;
 }
 
+Cell.prototype.showSprite = function(id) {
+    var sprite = this.register[id].sprite;
+    if (sprite.alpha > 0) return;
 
-Cell.prototype.hideAllSpecies = function(species) {
-    for (var id in this.register) {
-        this.register[id].visible = false;
-        if (this.register[id].sprite) {
-            this.register[id].sprite.visible = false;
+    // todo: stuff this in the species data
+    if (this.register[id].species.sprite.fade) {
+        window.game.add.tween(sprite).to(
+            { alpha: 1 },
+            200,
+            Phaser.Easing.Linear.None,
+            true, // autostart
+            0,    // delay
+            0     // loop 
+        );
+    }
+    else {
+        sprite.alpha = 1;
+    }
+}
+
+Cell.prototype.hide = function(id) {
+    var reg = this.register[id];
+    if (!reg) return;
+
+    reg.visible = false;
+
+    if (reg.sprite && reg.sprite.alpha > 0) {
+        if (reg.species.sprite.fade) {
+            window.game.add.tween(reg.sprite).to(
+                { alpha: 0 },
+                200,
+                Phaser.Easing.Linear.None,
+                true, // autostart
+                0,    // delay
+                0     // loop 
+            );
         }
+        else {
+            reg.sprite.alpha = 0;
+        }
+    }
+}
+
+
+Cell.prototype.hideAllExcept = function(species) {
+    for (var id in this.register) {
+        if (!!species && species.id === id) continue;
+        this.hide(id);
     }
 }
 
@@ -148,6 +196,8 @@ Cell.prototype.add = function(species) {
     }
 
     // Sprite must be initialized, later
+    // TODO: check if sprites have already been initialized
+    // (this is for when we want to optimize for not front-loading the sprite-adding)
 
     return this;
 }
@@ -157,7 +207,7 @@ Cell.prototype.createSprites = function() {
     // This will have to be turned off and on as needed
     for (var species_id in this.register) {
         var reg = this.register[species_id];
-        var sprite_id = reg.species.sprite_id;
+        var sprite_id = reg.species.sprite.id;
         if (Utils.isArray(sprite_id)) {
             sprite_id = Utils.randomChoice(sprite_id)
         }
@@ -165,7 +215,7 @@ Cell.prototype.createSprites = function() {
         // TODO: access game elsehow
         reg.sprite = window.game.addMapSprite(this.coords, sprite_id);
         
-        reg.sprite.visible = reg.visible; 
+        reg.sprite.alpha = reg.visible ? 1 : 0
     }
 }
 

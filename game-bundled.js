@@ -73,6 +73,12 @@ module.exports = Character = function(params) {
     for (var species_id in this.speciesResponses) {
         console.assert(typeof this.speciesResponses[species_id] === 'function');
     }
+
+    // Speed while walking through the map
+    // This will change depending on where you are (e.g. in forest)
+    // TODO: put this default 
+    this.defaultSpeed = Settings.defaultSpeed;
+    this.speed = this.defaultSpeed;
 }
 
 Character.prototype = {};
@@ -123,6 +129,19 @@ Character.prototype.respondToSpecies = function(species) {
     if (species.id in this.speciesResponses) {
         this.speciesResponses[species.id]();
     }
+
+    // SET WALKING SPEED
+    // TODO: not working yet
+    if (typeof species.speed === 'number') {
+        this.speed = species.speed;
+    }
+    else {
+        this.speed = this.defaultSpeed;
+    }
+}
+
+Character.prototype.getSpeed = function() {
+    return this.speed;
 }
 
 
@@ -344,7 +363,8 @@ function debugText() {
     var lines = [
         'PLAYER',
         '  coords: ' + game.player.coords.x + ' ' + game.player.coords.y,
-        '  health: ' + game.player.health
+        '  health: ' + game.player.health,
+        '  speed:  ' + game.player.speed
     ]
 
     var color = "#CDE6BB";
@@ -369,7 +389,7 @@ function onTap(pointer, doubleTap) {
 
 
 // This is pretty temporary until I decide on input stuff
-var speed = 250;
+var speed = 1;
 var movementButtons = [
     {id: 'move-left',  vel: XY(-speed, 0)},
     {id: 'move-right', vel: XY(speed, 0)},
@@ -383,8 +403,9 @@ function initMovement() {
 
         var go = function(evt) {
             evt.stopPropagation();
-            game.playerSprite.body.velocity.x = item.vel.x;
-            game.playerSprite.body.velocity.y = item.vel.y;
+            var speed = game.player.getSpeed();
+            game.playerSprite.body.velocity.x = item.vel.x * speed;
+            game.playerSprite.body.velocity.y = item.vel.y * speed;
         }
 
         var stop = function(evt) {
@@ -649,36 +670,84 @@ Cell.prototype.getAge = function() {
 
 // sets the dominant species
 Cell.prototype.set = function(species) {
+    
+    if (!!this.species && !!species) {
+        if (this.species.id !== species.id) {
+            this.emit('change', {species: species})
+        }
+        else {
+            return; // no need to re-render the same species
+        }
+    }
+
+    this.hideAllExcept(species);
+
+    if (!!species) {
+        this.species = species;
+        this.add(species); // just in case it's not already set
+
+        this.register[species.id].visible = true;
+        if (this.register[species.id].sprite) {
+            this.showSprite(species.id);
+            //this.register[species.id].sprite.visible = true;
+        }
+    }
+
+
     // Make sure only this one is visible
     // TODO: later there may be multiple sprites per cell visible...
-    this.hideAllSpecies();
-
-    if (!species) {
-        return;
-    }
-
-    if (!!this.species && !!species && this.species.id !== species.id) {
-        this.emit('change', {species: species})
-    }
-
-    this.species = species;
-    this.add(species); // just in case it's not already set
-
-    this.register[species.id].visible = true;
-    if (this.register[species.id].sprite) {
-        this.register[species.id].sprite.visible = true;
-    }
 
     return this;
 }
 
+Cell.prototype.showSprite = function(id) {
+    var sprite = this.register[id].sprite;
+    if (sprite.alpha > 0) return;
 
-Cell.prototype.hideAllSpecies = function(species) {
-    for (var id in this.register) {
-        this.register[id].visible = false;
-        if (this.register[id].sprite) {
-            this.register[id].sprite.visible = false;
+    // todo: stuff this in the species data
+    if (this.register[id].species.sprite.fade) {
+        window.game.add.tween(sprite).to(
+            { alpha: 1 },
+            200,
+            Phaser.Easing.Linear.None,
+            true, // autostart
+            0,    // delay
+            0     // loop 
+        );
+    }
+    else {
+        sprite.alpha = 1;
+    }
+}
+
+Cell.prototype.hide = function(id) {
+    var reg = this.register[id];
+    if (!reg) return;
+
+    reg.visible = false;
+
+    if (reg.sprite && reg.sprite.alpha > 0) {
+        if (reg.species.sprite.fade) {
+            window.game.add.tween(reg.sprite).to(
+                { alpha: 0 },
+                200,
+                Phaser.Easing.Linear.None,
+                true, // autostart
+                0,    // delay
+                0     // loop 
+            );
         }
+        else {
+            reg.sprite.alpha = 0;
+        }
+    }
+}
+
+
+Cell.prototype.hideAllExcept = function(species) {
+    for (var id in this.register) {
+        if (!!species && species.id === id) continue;
+        this.hide(id);
     }
 }
 
@@ -746,6 +815,8 @@ Cell.prototype.add = function(species) {
     }
 
     // Sprite must be initialized, later
+    // TODO: check if sprites have already been initialized
+    // (this is for when we want to optimize for not front-loading the sprite-adding)
 
     return this;
 }
@@ -755,7 +826,7 @@ Cell.prototype.createSprites = function() {
     // This will have to be turned off and on as needed
     for (var species_id in this.register) {
         var reg = this.register[species_id];
-        var sprite_id = reg.species.sprite_id;
+        var sprite_id = reg.species.sprite.id;
         if (Utils.isArray(sprite_id)) {
             sprite_id = Utils.randomChoice(sprite_id)
         }
@@ -763,7 +834,7 @@ Cell.prototype.createSprites = function() {
         // TODO: access game elsehow
         reg.sprite = window.game.addMapSprite(this.coords, sprite_id);
         
-        reg.sprite.visible = reg.visible; 
+        reg.sprite.alpha = reg.visible ? 1 : 0
     }
 }
 
@@ -868,21 +939,23 @@ module.exports = speciesData = [
         id: 'blank',
         symbol: '~',
         color: '#5F4F29',
-        sprite: 'dirt'
+        sprite: {id: 'dirt'}
     },
-
     {
         id: 'neutralized',
         symbol: 'x',
         color: '#422121',
-        sprite: 'neutralized'
+        sprite: {id: 'neutralized'}
     },
 
     {
         id: 'magic',
         symbol: '&#8960;',
         color: '#4C24A3',
-        sprite: 'magic',
+        sprite: {
+            id: 'magic',
+            fade: true
+        },
         rules: {
             default: GrowthRules.magic
         }
@@ -892,7 +965,7 @@ module.exports = speciesData = [
         id: 'grass',
         symbol: '&#8756;',
         color: '#46CF46', 
-        sprite: 'grass',
+        sprite: {id: 'grass'},
         rules: {
             default: GrowthRules.plants,
             conditional: [
@@ -909,7 +982,10 @@ module.exports = speciesData = [
         id: 'flowers',
         symbol: '&#9880;',
         color: '#E46511',
-        sprite: 'flower',
+        sprite: {
+            id: 'flower',
+            fade: true
+        },
         rules: {
             default: GrowthRules.plants,
             conditional: [
@@ -926,7 +1002,11 @@ module.exports = speciesData = [
         id: 'trees',
         symbol: '&psi;',
         color: '#174925',
-        sprite: ['tree1', 'tree2', 'tree8', 'tree11', 'tree13'],
+        sprite: {
+            id: ['tree1', 'tree8', 'tree11', 'tree13'],
+            fade: true
+        },
+        speed: 200,
         passable: false,
         rules: {
             default: GrowthRules.plants,
@@ -941,6 +1021,44 @@ module.exports = speciesData = [
                 // tree growth stabilizes when the trees are old
                 {
                     species_id: 'trees',
+                    min_age: 3,
+                    rules: GrowthRules.plantsStable
+                },
+
+                {
+                    min_neighbors: 1,
+                    species_id: 'magic',
+                    rules: GrowthRules.plantsDying
+                }
+            ]
+        }
+    },
+
+    // Pine trees - SAME RULES ETC AS THE OTHER TREES
+    // Just separated out for some interest/variety
+    {
+        id: 'trees2',
+        symbol: '&psi;',
+        color: '#174925',
+        sprite: {
+            id: ['tree2'],
+            fade: true
+        },
+        speed: 200,
+        passable: false,
+        rules: {
+            default: GrowthRules.plants,
+            conditional: [
+                // the presence of grass catalyzes tree growth
+                {
+                    species_id: 'grass',
+                    min_neighbors: 4,
+                    rules: GrowthRules.plantsCatalyzed
+                },
+
+                // tree growth stabilizes when the trees are old
+                {
+                    species_id: 'trees2',
                     min_age: 3,
                     rules: GrowthRules.plantsStable
                 },
@@ -1087,12 +1205,13 @@ Map.generate = function() {
         cell.add(self.species.magic);
         cell.add(self.species.grass);
         cell.add(self.species.trees);
+        cell.add(self.species.trees2);
     })
 
     self.sow(self.species.grass, 1/10);
     self.sow(self.species.flowers, 1/50)
     self.sow(self.species.trees, 1/20);
-
+    self.sow(self.species.trees2, 1/20);
     self.env.advance(3);
 
     // empty spot in the 0,0 corner
@@ -1414,10 +1533,15 @@ var SpeciesMask = require('./species-mask');
 
 module.exports = Species = function(params) {
     this.id = params.id || 'species' + Math.floor(Math.random()*1e8);
-    this.sprite_id = params.sprite;
+    this.sprite = params.sprite;
 
     // behavior
+    // TODO: fix passable for phaser
     this.passable = params.hasOwnProperty('passable') ? params.passable : true;
+
+    if (params.hasOwnProperty('speed')) {
+        this.speed = params.speed;
+    }
 
     this.initRules(params.rules);
 
