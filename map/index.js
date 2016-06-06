@@ -45,6 +45,9 @@ Map.generate = function() {
     // empty spot in the 0,0 corner
     self.rect(self.species.grass, {x:0, y:0}, {x:6, y:6});
 
+    // here is some magic until the wizard is implemented
+    self.diamondClump(self.center, self.species.magic)
+
 }
 
 Map.diamondClump = function(coords, species) {

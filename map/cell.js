@@ -51,6 +51,10 @@ Cell.prototype.getAge = function() {
 
 // sets the dominant species
 Cell.prototype.set = function(species) {
+    // Make sure only this one is visible
+    // TODO: later there may be multiple sprites per cell visible...
+    this.hideAllSpecies();
+
     if (!species) {
         return;
     }
@@ -61,10 +65,6 @@ Cell.prototype.set = function(species) {
 
     this.species = species;
     this.add(species); // just in case it's not already set
-    
-    // Make sure only this one is visible
-    // TODO: later there may be multiple sprites per cell visible...
-    this.hideAllSpecies();
 
     this.register[species.id].visible = true;
     if (this.register[species.id].sprite) {
@@ -108,6 +108,9 @@ Cell.prototype.flush = function() {
     // increment age?
     var previousSpeciesId = this.species ? this.species.id : null;
 
+    if (!this.nextSpecies)
+        this.nextSpecies = this.register.blank.species;
+
     if (!!this.nextSpecies) { 
         // if the species is incumbent, increment its age.
         if (previousSpeciesId === this.nextSpecies.id) {
@@ -117,8 +120,9 @@ Cell.prototype.flush = function() {
             // reset of the age of the newly-dead species to 0
             this.register[previousSpeciesId].age = 0;
         }
-    this.set(this.nextSpecies);
     }
+
+    this.set(this.nextSpecies);
 
 }
 
