@@ -1,37 +1,57 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
-module.exports = SpriteData = {};
+// Tree sprites are from
+// http://opengameart.org/content/tree-collection-v26-bleeds-game-art
+// Bleed - http://remusprites.carbonmade.com/
 
-SpriteData.player = {
-    name: 'player',
-    url: 'images/player.png',
-    frame_size: {x: 80,  y:180},
-    frame_origin: {x: 40, y:90},
-
-    frames: {
-        'n': {x: 0, y:0},
-        's': {x: 1, y:0},
-        'w': {x: 2, y:0},
-        'e': {x: 3, y:0},
-    }
-}
-
-SpriteData.wizard = {
-    name: 'wizard',
-    url: 'images/wizard.png',
-    frame_size: {x: 80,  y:180},
-    frame_origin: {x: 40, y:90},
-
-    frames: {
-        'n': {x: 0, y:0},
-        's': {x: 1, y:0},
-        'w': {x: 2, y:0},
-        'e': {x: 3, y:0},
+module.exports = AssetData = {
+    player: {
+        url:     'images/player-forward.png',
+        anchors: [0.5, 1.0],
+    },
+    wizard: {
+        url:     'images/wizard.png',
+        anchors: [0.5, 1.0],
+    },
+	magic: {
+        url:    'images/magic-over-dirt.png',
+        anchors: [0.5, 2/3],
+    },
+	dirt: {
+        url:    'images/ground-dirt.png',
+        anchors: [0.5, 2/3],
+    },
+	grass: {
+        url:    'images/ground-grass.png',
+        anchors: [0.5, 2/3],
+    },
+	flower: {
+        // todo: do a real image for this
+        url:    'images/ground-grass.png',
+        anchors: [0.5, 2/3],
+    },
+	tree1: {
+        url:    'images/_tree_01_grass.png',
+        anchors: [0.5, 2/3],
+    },
+	tree2: {
+        url:    'images/_tree_02_grass.png',
+        anchors: [0.5, 0.75],
+    },
+	tree8: {
+        url:    'images/_tree_08_grass.png',
+        anchors: [0.5, 2/3],
+    },
+	tree11: {
+        url:    'images/_tree_11_grass.png',
+        anchors: [0.5, 2/3],
+    },
+	tree13: {
+        url:    'images/_tree_13_grass.png',
+        anchors: [0.5, 0.75],
     }
 }
 
 },{}],2:[function(require,module,exports){
-var Sprite = require('./sprite');
-var SpriteData = require('./data/sprites');
 var Inventory = require('./inventory');
 var Utils = require('../utils');
 
@@ -39,13 +59,9 @@ var CHAR_SPECIES_LISTENER_PREFIX = 'character-species-listener-';
 
 module.exports = Character = function(params) {
     params.id = params.id || '';
-    params.sprite= params.sprite || '';
-
-    console.assert(params.sprite in SpriteData, "spriteId doesn't exist: " + params.sprite);
 
     this.map = params.map;
     this.id = params.id;
-    this.sprite = new Sprite(SpriteData[params.sprite]).setFrame(Object.keys(SpriteData[params.sprite].frames)[0]);
     this.coords = {x:0, y:0};
 
     this.inventory = new Inventory(this);
@@ -60,7 +76,6 @@ module.exports = Character = function(params) {
 }
 
 Character.prototype = {};
-
 
 // ============= MOVEMENT / RENDERING
 
@@ -77,17 +92,6 @@ Character.prototype.moveTo = function(coords) {
 
     this.coords.x = coords.x;
     this.coords.y = coords.y;
-
-    // move sprite (put it in the center of the tile)
-    var pos = {
-        x: this.coords.x * this.map.dims.x,
-        y: this.coords.y * this.map.dims.y,
-    }
-    var offset = this.map.getOffset();
-    this.sprite.moveTo({x: pos.x + offset.x, y: pos.y + offset.y});
-    this.sprite.move({x: this.map.dims.x / 2, y: this.map.dims.y / 2});
-
-    // TODO: make sure it doesn't go off the map... or handle that case or something
 
     // Respond appropriately to whatever species is underfoot
     // ** For now, doesn't pass anything to the response function 
@@ -111,33 +115,20 @@ Character.prototype.move = function(diff) {
     return this;
 }
 
+Character.prototype.isAt = function(coords) {
+    return coords.x === this.coords.x && coords.y === this.coords.y;
+}
+
 Character.prototype.respondToSpecies = function(species) {
     if (species.id in this.speciesResponses) {
         this.speciesResponses[species.id]();
     }
 }
 
-Character.prototype.faceDirection = function(dir) {
-    var scaledDir = {
-        x: dir.x / (dir.x === 0 ? 1 : Math.abs(dir.x)),
-        y: dir.y / (dir.y === 0 ? 1 : Math.abs(dir.y))
-    };
 
-    var frame;
-    for (var dirFrame in Utils.dirs) {
-        if (scaledDir.x === Utils.dirs[dirFrame].x && scaledDir.y === Utils.dirs[dirFrame].y) {
-            frame = dirFrame;
-            break;
-        }
-    }
-
-    this.sprite.setFrame(frame);
-    return this;
-}
-
+// not sure if this is needed anymore
 Character.prototype.refresh = function() {
     this.moveTo(this.coords);
-    this.sprite.refreshPosition();
 }
 
 // ============================== HEALTH ETC
@@ -173,7 +164,7 @@ Character.prototype.use = function(item, coords) {
     item.useAt(coords);
 }
 
-},{"../utils":29,"./data/sprites":1,"./inventory":3,"./sprite":4}],3:[function(require,module,exports){
+},{"../utils":23,"./inventory":3}],3:[function(require,module,exports){
 module.exports = Inventory = function(char) {
     this.char = char;
     this.items = {};
@@ -242,269 +233,211 @@ Inventory.prototype.refresh = function() {
 }
 
 },{}],4:[function(require,module,exports){
-// warning, messy code
+var Settings = window.Settings;
+var AssetData = require('./asset_data')
+var Map = require('./map');
+var Player = require('./player');
+var XY = require('./xy');
 
-module.exports = Sprite = function(data) {
-    this.data = data;
-    this.scale = 1;
+window.player = null;
+window.game = null;
 
-    // determine total image size
-    this.size = {x:0, y:0};
-    for (var frame in this.data.frames) {
-        var f = this.data.frames[frame];
-        this.size.x = Math.max(this.size.x, f.x);
-        this.size.y = Math.max(this.size.y, f.y);
-    }
-    this.size.x += 1;
-    this.size.y += 1;
-    this.size.x *= this.data.frame_size.x;
-    this.size.y *= this.data.frame_size.y;
+window.onload = function() {
+    window.game = new Phaser.Game(window.innerWidth, window.innerHeight, Phaser.AUTO, 'game', null, true, false);
 
-    // position of sprite in the game
-    this.position = {x:0, y:0}
+    game.mapGroup = null; // will be initialized
 
-    this.init();
-}
+    // use for the map sprites, not character sprites
+    game.addMapSprite = function(gameCoords, sprite_id) {
+        var sprite = game.add.isoSprite(
+            gameCoords.x * Settings.cellDims.x,
+            gameCoords.y * Settings.cellDims.y,
+            0,
+            sprite_id, 0, game.mapGroup
+        )
+        sprite.anchor.set.apply(sprite.anchor, AssetData[sprite_id].anchors);
 
-Sprite.prototype = {};
-
-Sprite.prototype.init = function() {
-    this.html = document.createElement('div');
-    this.html.setAttribute('id', 'sprite-' + this.data.name);
-    this.html.setAttribute('class', 'sprite');
-    this.html.style.backgroundImage = 'url("' + this.data.url + '")';
-    this.frame = Object.keys(this.data.frames)[0];
-    this.refresh();
-    return this;
-}
-
-
-Sprite.prototype.refresh = function() {
-    this.refreshScale();
-    this.refreshFrame();
-    this.refreshPosition();
-    return this;
-}
-
-Sprite.prototype.refreshScale = function() {
-    // size of the background, including all frames
-    var bgSize = {
-        x: this.size.x * this.scale,
-        y: this.size.y * this.scale
+        return sprite;
     }
 
-    // size of the sprite's html element (width, height)
-    var spriteSize = {
-        x: this.data.frame_size.x * this.scale,
-        y: this.data.frame_size.y * this.scale
-    }
+    Map.init({
+        size: Settings.gameSize
+    })
 
 
-    // set html
-    this.html.style.backgroundSize = bgSize.x + 'px ' + bgSize.y + 'px';
+    // Initialize Phaser game state
+    game.cursor = null;
 
-    this.html.style.width = spriteSize.x + 'px';
-    this.html.style.height = spriteSize.y + 'px';
-    
-    return this;
-}
+    var Boot = function (game) {};
+    Boot.prototype = {
+        preload: function () {
+            for (var sprite_id in AssetData) {
+                game.load.image(sprite_id, AssetData[sprite_id].url);
+            }
 
-Sprite.prototype.refreshFrame = function() {
-    // position of the background (to get the proper frame)
-    var bgPos = {
-        x: -this.data.frame_size.x * this.data.frames[this.frame].x * this.scale,
-        y: -this.data.frame_size.y * this.data.frames[this.frame].y * this.scale
-    }
+            game.time.advancedTiming = true;
 
-    this.html.style.backgroundPosition = bgPos.x + 'px ' + bgPos.y + 'px';
+            game.plugins.add(new Phaser.Plugin.Isometric(game));
+            
+            game.world.setBounds(0, 0, 5000, 5000);
 
-    return this;
-}
+            game.physics.startSystem(Phaser.Plugin.Isometric.ISOARCADE);
+            game.iso.anchor.setTo.apply(game.iso.anchor, Settings.gameAnchor);
 
-Sprite.prototype.refreshPosition = function() {
+        },
+        create: function () {
+            game.mapGroup = game.add.group();
+            game.physics.isoArcade.gravity.setTo(0, 0, 0);
 
-    // adjust the sprite until its origin is lined up with its position
-    var posOffset = {
-        x: -this.data.frame_origin.x * this.scale,
-        y: -this.data.frame_origin.y * this.scale
-    }
+            Map.generate();
+            Map.forEach(function(coords, cell) {
+                cell.createSprites();
+            })
+            game.iso.simpleSort(game.mapGroup);
+            
+            
+            game.cursor = new Phaser.Plugin.Isometric.Point3();
+            game.input.onUp.add(onTap, this);
 
-    this.html.style.left = (posOffset.x + this.position.x) + 'px';
-    this.html.style.top = (posOffset.y + this.position.y) + 'px';
+            // PLAYER
+            // ** Sprite is completely independent from the player object
+            // (Unlike the cell objs, who own their sprites)
+            //
+            game.playerSprite = game.add.isoSprite(38, 38, 2, 'player', 0, game.mapGroup);
+            game.playerSprite.anchor.set(0.5, 1.0);
+            game.physics.isoArcade.enable(game.playerSprite);
+            game.playerSprite.body.collideWorldBounds = true;
+            
+            game.player = Player(Map);
+            
+            // CONTROLS
+            initMovement();
 
-    return this;
-}
+            // CAMERA
+            game.camera.follow(game.playerSprite);
 
-Sprite.prototype.setFrame = function(frame) {
-    console.assert(frame in this.data.frames, 'Sprite sheet does not contain frame "' + frame + '"')
-    if (this.frame === frame) return this; // no need to redo stuff
-    this.frame = frame;
-    this.refreshFrame();
-    return this;
-}
+            // SPIN UP THE MAP
+            startMapIteration();
 
-Sprite.prototype.scaleBy = function(factor) {
-    this.scale *= factor;
-    this.refreshScale();
-    return this;
-}
-
-Sprite.prototype.scaleTo = function(size) {
-    // scales by size.y, since scale is scalar
-    this.scale = size.y / this.data.frame_size.y ;
-    this.refreshScale();
-    return this;
-}
-
-Sprite.prototype.place = function(container) {
-    container.appendChild(this.html);
-    return this;
-}
-
-Sprite.prototype.move = function(change) {
-    this.position.x += change.x;
-    this.position.y += change.y;
-    this.refreshPosition();
-    return this;
-}
-
-Sprite.prototype.moveTo = function(position) {
-    this.position.x = position.x;
-    this.position.y = position.y;
-    this.refreshPosition();
-    return this;
-}
-
-},{}],5:[function(require,module,exports){
-module.exports = Walker = function(char, getNextDir, onStep) {
-    this.char = char;
-    this.timeout = null;
-    this.walking = false;
-    this.getNextDir = getNextDir;
-    this.onStep = typeof onStep === 'function' ? onStep : function() {};
-}
-
-Walker.prototype = {};
-
-Walker.prototype.timeTillNextStep = function() {
-    // 3-4 seconds, but once in a while stop for a bit
-    var base = 3000;
-    if (Math.random() < 1/10) base = 8000;
-    return base +  Math.random() * 1000;
-}
-
-Walker.prototype.start = function() {
-    this.walking = true;
-    this.step();
-}
-
-Walker.prototype.stop = function() {
-    window.clearTimeout(this.timeout);
-    this.timeout = null;
-    this.walking = false;
-}
-
-Walker.prototype.step = function() {
-    if (!this.walking) return;
-    
-    var dir = this.getNextDir()
-    this.char.move(dir);
-    this.onStep(dir);
-
-    var self = this;
-    window.clearTimeout(this.timeout);
-    this.timeout = window.setTimeout(function() {
-        self.step();
-    }, this.timeTillNextStep());
-}
-
-},{}],6:[function(require,module,exports){
-module.exports = Controls = {};
-
-var game;
-
-Controls.init = function(gameInstance) {
-    game = gameInstance;
-    this.bindEvents();
-}
-
-Controls.bindEvents = function() {
-    game.html.mouseOverlay.onclick = function(evt) {
-        evt.stopPropagation();
-        var offset = game.map.getOffset();
-        var mousePos = {
-            x: evt.clientX - offset.x - game.map.renderer.bbox.left,
-            y: evt.clientY - offset.y - game.map.renderer.bbox.top
+        },
+        update: function () {
+            game.iso.unproject(game.input.activePointer.position, game.cursor);
+            
+            // Which cell is the player on? send game coords to player obj
+            var inputCoords = getGameCoords(game.playerSprite.isoX, game.playerSprite.isoY);
+            if (!game.player.isAt(inputCoords)) {
+                game.player.moveTo(inputCoords);
+            }
+        },
+        render: function () {
+            debugText();
         }
-        var coords = game.map.getCoordsFromPixels(mousePos);
-        game.state.advance({coords: coords});
-    }
+    };
 
-    document.body.onclick = function() {
-        game.state.advance({});
+    game.state.add('Boot', Boot);
+    game.state.start('Boot');
+};
+
+// TODO: refactor after decisions are made / stuff is stable
+
+function debugText() {
+    var lines = [
+        'PLAYER',
+        '  coords: ' + game.player.coords.x + ' ' + game.player.coords.y,
+        '  health: ' + game.player.health
+    ]
+
+    var color = "#CDE6BB";
+    var lineheight = 14;
+    var line = 1;
+    for (var line = 0; line < lines.length; line++) {
+        game.debug.text(lines[line], 2, (line + 1) * lineheight, color)
     }
-    
-    this.bindInventory();
-    this.bindMovement();
 }
 
-Controls.bindMovement = function() {
-    var keyboardCallbacks = {
-        37: Controls.handlers.left,
-        39: Controls.handlers.right,
-        38: Controls.handlers.up,
-        40: Controls.handlers.down
-    }
-
-    window.addEventListener('keydown', function(event) {
-        var keycode = event.fake || window.event ? event.keyCode : event.which;
-        if (keycode in keyboardCallbacks) keyboardCallbacks[keycode]();
-    });
+function getGameCoords(isoX, isoY) {
+  return XY(
+    Math.round(isoX / Settings.cellDims.x),
+    Math.round(isoY / Settings.cellDims.y)
+  );
 }
 
-Controls.bindInventory = function() {
-    var self = this;
-    var slots = Array.apply(Array, game.html.inventory.getElementsByClassName('slot'));
-    slots.forEach(function(slotHtml) {
-        slotHtml.onclick = function(evt) {
+function onTap(pointer, doubleTap) {
+    var tapCoords = getGameCoords(game.cursor.x, game.cursor.y);
+    // todo: place inventory item
+}
+
+
+// This is pretty temporary until I decide on input stuff
+var speed = 250;
+var movementButtons = [
+    {id: 'move-left',  vel: XY(-speed, 0)},
+    {id: 'move-right', vel: XY(speed, 0)},
+    {id: 'move-up',    vel: XY(0, -speed)},
+    {id: 'move-down',  vel: XY(0, speed)},
+]
+
+function initMovement() {
+    movementButtons.forEach(function(item) {
+        var button = document.getElementById(item.id);
+
+        var go = function(evt) {
             evt.stopPropagation();
-            self.handlers.inventory(slotHtml.dataset.itemId);
+            game.playerSprite.body.velocity.x = item.vel.x;
+            game.playerSprite.body.velocity.y = item.vel.y;
         }
+
+        var stop = function(evt) {
+            evt.stopPropagation();
+            game.playerSprite.body.velocity.x = 0;
+            game.playerSprite.body.velocity.y = 0;
+        }
+
+        button.addEventListener('mousedown', go);
+        button.addEventListener('mouseup', stop);
+        button.addEventListener('touchstart', go);
+        button.addEventListener('touchend', stop);
+    })
+
+}
+initMovement();
+
+
+function startMapIteration() {
+    Map.env.range().forEach(function(coords) {
+        var cell = Map.getCell(coords);
+        cell.iterationTimeout = null;
+        cell.iterate = function() {
+            if (Settings.mapIterationTimeout <= 0) return;
+
+            cell.advance();
+
+            // schedule another iteration
+            clearTimeout(cell.iterationTimeout);
+            cell.iterationTimeout = setTimeout(function() {
+                cell.iterate();
+            }, getTimeout() )
+        }
+
+        function getTimeout() {
+            // adjust the settings a bit, randomly...
+            var scale = 1 + 0.5 * (Math.random() * 2 - 1);
+            return Settings.mapIterationTimeout * scale;
+        }
+
+        // single-cell replacement for Advancerator
+        cell.advance = function() {
+            var neighbors = Map.env.neighbors(coords);
+            this.next(neighbors);
+            this.flush();
+        }
+
+        window.setTimeout(function() { cell.iterate(); }, getTimeout());
     })
 }
 
-Controls.handlers = {};
 
-// INVENTORY
-
-Controls.handlers.inventory = function(itemId) {
-    game.state.advance({item: itemId});
-}
-
-
-// MOVEMENT
-
-Controls.handlers.left = function() {
-    game.player.move(Utils.dirs['w']);
-    game.refreshView();
-},
-
-Controls.handlers.right = function() {
-    game.player.move(Utils.dirs['e']);
-    game.refreshView();
-},
-
-Controls.handlers.up = function() {
-    game.player.move(Utils.dirs['n']);
-    game.refreshView();
-},
-
-Controls.handlers.down = function() {
-    game.player.move(Utils.dirs['s']);
-    game.refreshView();
-}
-
-},{}],7:[function(require,module,exports){
+},{"./asset_data":1,"./map":17,"./player":22,"./xy":24}],5:[function(require,module,exports){
 module.exports = Bomb = {};
 Bomb.id = 'bomb';
 
@@ -514,13 +447,13 @@ Bomb.useAt = function(coords) {
     map.refresh();
 }
 
-},{}],8:[function(require,module,exports){
+},{}],6:[function(require,module,exports){
 // Empty placeholder object. TODO
 
 module.exports = Box = {};
 Box.id = 'box';
 
-},{}],9:[function(require,module,exports){
+},{}],7:[function(require,module,exports){
 // Empty placeholder object. TODO
 
 module.exports = Camera= {};
@@ -533,7 +466,7 @@ Camera.useAt = function(coords) {
 
 }
 
-},{}],10:[function(require,module,exports){
+},{}],8:[function(require,module,exports){
 // Empty placeholder object. TODO
 
 module.exports = Detector = {};
@@ -544,7 +477,7 @@ Detector.useAt = function(coords) {
     map.placeItem(coords, this);
 }
 
-},{}],11:[function(require,module,exports){
+},{}],9:[function(require,module,exports){
 // this is sort of a manager object
 // Usage:
 // var box_instance = ToolChest.make(ToolChest.types.box);
@@ -592,7 +525,7 @@ ToolChest.make = function(type) { return new ToolChest.Item(type); }
 ToolChest._next_id = 0;
 ToolChest.nextID = function() { return this._next_id++; }
 
-},{"./bomb.js":7,"./box.js":8,"./camera.js":9,"./detector.js":10,"./neutralizer.js":12,"./type-template":13}],12:[function(require,module,exports){
+},{"./bomb.js":5,"./box.js":6,"./camera.js":7,"./detector.js":8,"./neutralizer.js":10,"./type-template":11}],10:[function(require,module,exports){
 module.exports = Neutralizer = {};
 Neutralizer.id = 'neutralizer';
 
@@ -603,7 +536,7 @@ Neutralizer.useAt = function(coords) {
     map.refreshCell(coords);
 }
 
-},{}],13:[function(require,module,exports){
+},{}],11:[function(require,module,exports){
 // Methods that should be callable for each item type.
 module.exports = TypeTemplate = {};
 
@@ -639,7 +572,7 @@ TypeTemplate.refresh = function() {
 }
 
 
-},{}],14:[function(require,module,exports){
+},{}],12:[function(require,module,exports){
 // This is the procedure which executes the advancing of the environment species
 // from one iteration to the next.
 //
@@ -662,7 +595,7 @@ module.exports = Advancerator = function(env) {
     })
 }
 
-},{}],15:[function(require,module,exports){
+},{}],13:[function(require,module,exports){
 // A cell (location on the grid) can have multiple species living in it.
 // But one of them is dominant (which will be displayed)
 //
@@ -671,10 +604,18 @@ module.exports = Advancerator = function(env) {
 // all the species and compute which one is dominant
 
 var SpeciesBattle = require('./species-battle')
+var Utils = require('../utils')
 
-module.exports = Cell = function(blank) {
+module.exports = Cell = function(blank, coords) {
     this.species = null;
+    this.coords = coords;
+
+    // register contains:
+    //  species
+    //  age
+    //  sprite obj
     this.register = {}; // indexed by id
+
     this.set(blank || '');
 
     this.items = [];
@@ -682,6 +623,7 @@ module.exports = Cell = function(blank) {
     // the 'next' slot is just a holding pattern until the current iteration is finalized
     // use cell.next(species), then cell.flush() to set it
     this.nextSpecies = null;
+
 
     // register callbacks when stuff happens
     this.callbacks = {
@@ -707,14 +649,37 @@ Cell.prototype.getAge = function() {
 
 // sets the dominant species
 Cell.prototype.set = function(species) {
+    if (!species) {
+        return;
+    }
+
     if (!!this.species && !!species && this.species.id !== species.id) {
         this.emit('change', {species: species})
     }
 
     this.species = species;
     this.add(species); // just in case it's not already set
+    
+    // Make sure only this one is visible
+    // TODO: later there may be multiple sprites per cell visible...
+    this.hideAllSpecies();
+
+    this.register[species.id].visible = true;
+    if (this.register[species.id].sprite) {
+        this.register[species.id].sprite.visible = true;
+    }
 
     return this;
+}
+
+
+Cell.prototype.hideAllSpecies = function(species) {
+    for (var id in this.register) {
+        this.register[id].visible = false;
+        if (this.register[id].sprite) {
+            this.register[id].sprite.visible = false;
+        }
+    }
 }
 
 // decide which species to be next
@@ -733,7 +698,7 @@ Cell.prototype.next = function(neighbors) {
 
     // Update age
     if (this.nextSpecies)
-    this.register[this.nextSpecies.id].age = nextStates[this.nextSpecies.id].age;
+        this.register[this.nextSpecies.id].age = nextStates[this.nextSpecies.id].age;
     
 }
 
@@ -750,9 +715,9 @@ Cell.prototype.flush = function() {
             // reset of the age of the newly-dead species to 0
             this.register[previousSpeciesId].age = 0;
         }
+    this.set(this.nextSpecies);
     }
 
-    this.set(this.nextSpecies);
 }
 
 Cell.prototype.add = function(species) {
@@ -764,15 +729,38 @@ Cell.prototype.add = function(species) {
     if (!(species.id in this.register)) {
         this.register[species.id] = {
             species: species,
-            age: 0
+            age: 0,
+            visible: false,
+            sprite: null
         }
     }
 
     // make sure there's a dominant species
     if (Object.keys(this.register).length === 1 || !this.species) {
         this.species = species;
+        this.register[species.id].visible = true;
     }
+
+    // Sprite must be initialized, later
+
     return this;
+}
+
+// This has to be done separately
+Cell.prototype.createSprites = function() {
+    // This will have to be turned off and on as needed
+    for (var species_id in this.register) {
+        var reg = this.register[species_id];
+        var sprite_id = reg.species.sprite_id;
+        if (Utils.isArray(sprite_id)) {
+            sprite_id = Utils.randomChoice(sprite_id)
+        }
+
+        // TODO: access game elsehow
+        reg.sprite = window.game.addMapSprite(this.coords, sprite_id);
+        
+        reg.sprite.visible = reg.visible; 
+    }
 }
 
 Cell.prototype.on = function(event, callback_id, callback) {
@@ -797,7 +785,7 @@ Cell.prototype.addItem = function(coords, item) {
     this.items.push(item);
 }
 
-},{"./species-battle":22}],16:[function(require,module,exports){
+},{"../utils":23,"./species-battle":19}],14:[function(require,module,exports){
 module.exports = GrowthRules = {
     magic: {
         stateMap: {
@@ -866,23 +854,41 @@ module.exports = GrowthRules = {
     }
 }
 
-},{}],17:[function(require,module,exports){
+},{}],15:[function(require,module,exports){
 var GrowthRules = require('./growth-rules')
 
 // Conditional growth rules are sorted by priority, low > high.
 
 module.exports = speciesData = [
-    { id: 'blank',     symbol: '~',             color: '#5F4F29'},
+    {
+        id: 'blank',
+        symbol: '~',
+        color: '#5F4F29',
+        sprite: 'dirt'
+    },
 
-    { id: 'neutralized', symbol: 'x',          color: '#422121'},
+    {
+        id: 'neutralized',
+        symbol: 'x',
+        color: '#422121',
+        sprite: 'neutralized'
+    },
 
-    { id: 'magic',     symbol: '&#8960;',      color: '#4C24A3',
+    {
+        id: 'magic',
+        symbol: '&#8960;',
+        color: '#4C24A3',
+        sprite: 'magic',
         rules: {
             default: GrowthRules.magic
         }
     },
 
-    { id: 'grass',     symbol: '&#8756;',      color: '#46CF46', 
+    {
+        id: 'grass',
+        symbol: '&#8756;',
+        color: '#46CF46', 
+        sprite: 'grass',
         rules: {
             default: GrowthRules.plants,
             conditional: [
@@ -895,7 +901,11 @@ module.exports = speciesData = [
         }
     },
 
-    { id: 'flowers',   symbol: '&#9880;',     color: '#E46511',
+    {
+        id: 'flowers',
+        symbol: '&#9880;',
+        color: '#E46511',
+        sprite: 'flower',
         rules: {
             default: GrowthRules.plants,
             conditional: [
@@ -908,7 +918,12 @@ module.exports = speciesData = [
         }
     },
 
-    { id: 'trees',     symbol: '&psi;', color: '#174925', passable: false,
+    {
+        id: 'trees',
+        symbol: '&psi;',
+        color: '#174925',
+        sprite: ['tree1', 'tree2', 'tree8', 'tree11', 'tree13'],
+        passable: false,
         rules: {
             default: GrowthRules.plants,
             conditional: [
@@ -937,12 +952,13 @@ module.exports = speciesData = [
 
 ]
 
-},{"./growth-rules":16}],18:[function(require,module,exports){
+},{"./growth-rules":14}],16:[function(require,module,exports){
 // Example:
 // env = new Env({x:30, y:30});
 
 var Cell = require('./cell.js')
 var Advancerator = require('./advancerator.js');
+var XY = require('../xy');
 
 module.exports = Env = function(size, blank_cell) {
     this.size = size;
@@ -956,7 +972,7 @@ Env.prototype.init = function(blank_cell) {
     for (var x = 0; x < this.size.x; x++) {
         this.cells.push([]);
         for (var y = 0; y < this.size.y; y++) {
-            this.cells[x][y] = new Cell(blank_cell);
+            this.cells[x][y] = new Cell(blank_cell, XY(x, y));
         }
     }
 
@@ -1030,10 +1046,10 @@ Env.prototype.randomCoords = function() {
     }
 }
 
-},{"./advancerator.js":14,"./cell.js":15}],19:[function(require,module,exports){
+},{"../xy":24,"./advancerator.js":12,"./cell.js":13}],17:[function(require,module,exports){
 var Env = require('./environment');
 var Species = require('./species');
-var Renderer = require('./renderer')
+//var Renderer = require('./renderer')
 var SpeciesData = require('./data/species') 
 
 module.exports = Map = {};
@@ -1047,17 +1063,14 @@ SpeciesData.forEach(function(s) {
 
 Map.init = function(params) {
     this.size = params.size;
-    this.dims = params.dims;
-    this.window = params.window; // what radius of tiles should comprise the camera window?
-
     this.center = {x: Math.floor(this.size.x/2), y: Math.floor(this.size.y/2)} // use Map.setCenter to change this
-
-    this.renderer = new Renderer(params.html, this.dims, this.center);
-
     this.env = new Env(this.size, this.species.blank);
 
-    this.generate();
-    this.render();
+    // Unused prototype stuff
+    //this.dims = params.dims;
+    //this.window = params.window; // what radius of tiles should comprise the camera window?
+    //this.renderer = new Renderer(params.html, this.dims, this.center);
+    //this.render();
 }
 
 
@@ -1066,19 +1079,21 @@ Map.generate = function() {
 
     // register involved species with all of the cells
     self.env.range().forEach(function(coords) {
-        self.env.get(coords).add(self.species.magic)
-        self.env.get(coords).add(self.species.grass);
-        self.env.get(coords).add(self.species.trees);
+        var cell = self.env.get(coords);
+        cell.add(self.species.magic);
+        cell.add(self.species.grass);
+        cell.add(self.species.trees);
     })
-
 
     self.sow(self.species.grass, 1/10);
     self.sow(self.species.flowers, 1/50)
-    self.sow(self.species.trees, 1/30);
+    self.sow(self.species.trees, 1/20);
 
-    self.env.advance(4);
+    self.env.advance(3);
 
-    self.env.advance(1);
+    // empty spot in the 0,0 corner
+    self.rect(self.species.grass, {x:0, y:0}, {x:6, y:6});
+
 }
 
 Map.diamondClump = function(coords, species) {
@@ -1093,6 +1108,16 @@ Map.diamondClump = function(coords, species) {
         {x: -1, y:  0},
         {x:  1, y:  0},
     ], species)
+}
+
+Map.rect = function(species, from, to) {
+    var clump = [];
+    for (var x = from.x; x < to.x; x++) {
+        for (var y = from.y; y < to.y; y++) {
+            clump.push({x:x, y:y});
+        }
+    }
+    return this.clump(from, clump, species);
 }
 
 // randomly set cells as the species
@@ -1147,6 +1172,10 @@ Map.advance = function(n) {
     return this;
 }
 
+
+// UNUSED PROTOTYPE STUFF
+/*
+
 // MARGINS / CAMERA
 Map.isInWindow = function(coords) {
     var distance = Math.max(
@@ -1164,6 +1193,7 @@ Map.getDistanceFromWindowEdge = function(coords) {
         east: coords.x - (this.center.x + this.window)
     }
 }
+
 
 
 // Different than isInWindow. Uses the rectangular renderer view
@@ -1239,147 +1269,9 @@ Map.getCoordsFromPixels = function(pixels) {
 
 // clump all this stuff together in a renderer
 Map.renderer = require('./renderer')
+*/
 
-},{"./data/species":17,"./environment":18,"./renderer":20,"./species":24}],20:[function(require,module,exports){
-module.exports = Renderer = function(html, dims, center) {
-    // Direct references. So the parent should not overwrite them.
-    this.html = html;
-    this.dims = dims;
-    this.centerCoords = center;
-    this.bbox = html.getBoundingClientRect();
-    this.centerPx = {
-        x: this.bbox.width / 2,
-        y: this.bbox.height / 2
-    }
-    this.viewsize = {
-        x: this.bbox.width / this.dims.x,
-        y: this.bbox.height / this.dims.y
-    }
-}
-
-// Settings
-cellClass = 'cell'
-cellIdDelimiter = '_'
-cellIdPrefix = cellClass + cellIdDelimiter;
-
-
-// Methods
-
-Renderer.prototype = {};
-
-Renderer.prototype.coordsToId = function(coords) {
-    return cellIdPrefix + coords.x + cellIdDelimiter + coords.y
-}
-Renderer.prototype.idToCoords = function(id) {
-    var coordArray = id.slice(cellIdPrefix.length).split(cellIdDelimiter);
-    return {x: coordArray[0], y: coordArray[1] }
-}
-
-Renderer.prototype.createCell = function(cellObject) {
-    var cellElement = document.createElement('div');
-    cellElement.setAttribute('class', cellClass);
-    this.styleCell(cellElement, cellObject);
-    return cellElement;
-}
-
-Renderer.prototype.styleCell = function(cellElement, cellObject) {
-    cellElement.style.width = this.dims.x + 'px';
-    cellElement.style.height = this.dims.y + 'px';
-    cellElement.style.lineHeight = this.dims.y + 'px';
-    cellElement.style.backgroundColor = cellObject.species.getColor();
-    cellElement.innerHTML = cellObject.species.getSymbol();
-}
-
-Renderer.prototype.positionCell = function(cellElement, coords) {
-    cellElement.setAttribute('id',  this.coordsToId(coords));
-
-    var position = {
-        x: this.centerPx.x + (-this.centerCoords.x + coords.x) * this.dims.x,
-        y: this.centerPx.y + (-this.centerCoords.y + coords.y) * this.dims.y
-    }
-
-    cellElement.style.left = position.x + 'px';
-    cellElement.style.top = position.y + 'px';
-    return cellElement;
-}
-
-Renderer.prototype.getCell = function(coords) {
-    return document.getElementById(this.coordsToId(coords));
-}
-
-Renderer.prototype.render = function(env) {
-    var self = this;
-
-    self.rescale();
-
-    self.html.innerHTML = '';
-
-    env.range().forEach(function(coords) {
-        var cellElement = self.createCell(env.get(coords));
-        self.positionCell(cellElement, coords);
-        self.html.appendChild(cellElement);
-    })
-}
-
-Renderer.prototype.refresh = function(env, fullRefresh) {
-    var self = this;
-
-    self.rescale();
-
-    var coordsToRefresh = env.range();
-
-    // TODO: this is super buggy with cells that used to be in view but aren't anymore
-    if (!fullRefresh) coordsToRefresh = coordsToRefresh.filter(function(crd) { return self.isInView(crd); });
- 
-    coordsToRefresh.forEach(function(coords) { self.refreshCoords(env, coords); })
-    return this;
-}
-
-Renderer.prototype.refreshCoords = function(env, coords) {
-    var cellObject = env.get(coords);
-    var cellElement = document.getElementById(this.coordsToId(coords));
-    this.styleCell(cellElement, cellObject)
-    this.positionCell(cellElement, coords);
-    return this;
-}
-
-Renderer.prototype.rescale = function() {
-    // argh
-    this.viewSize = {
-        x: this.bbox.width / this.dims.x,
-        y: this.bbox.height / this.dims.y
-    };
-    return this;
-}
-
-// Returns the number of pixels between the html's NW corner and the map's NW corner (at 0,0) 
-Renderer.prototype.getPixelOffset = function() {
-    return {
-        x: this.centerPx.x + -this.centerCoords.x * this.dims.x,
-        y: this.centerPx.y + -this.centerCoords.y * this.dims.y
-    }
-}
-
-// Returns cell coords, not pixels
-Renderer.prototype.getViewBbox = function() {
-    return {
-        x1: this.centerCoords.x - this.viewSize.x/2,
-        x2: this.centerCoords.x + this.viewSize.x/2,
-        y1: this.centerCoords.y - this.viewSize.y/2,
-        y2: this.centerCoords.y + this.viewSize.y/2,
-    }
-}
-
-// Returns whether a cell coords is in view or not
-Renderer.prototype.isInView = function(coords) {
-    var bbox = this.getViewBbox();
-    return coords.x > bbox.x1
-        && coords.x < bbox.x2
-        && coords.y > bbox.y1
-        && coords.y < bbox.y2;
-}
-
-},{}],21:[function(require,module,exports){
+},{"./data/species":15,"./environment":16,"./species":21}],18:[function(require,module,exports){
 // EXAMPLE:
 //
 // var ruleset = new RuleSet({
@@ -1463,7 +1355,7 @@ function indexWeights(deepArray) {
     return output;
 }
 
-},{}],22:[function(require,module,exports){
+},{}],19:[function(require,module,exports){
 // This module is for deciding the winning species in a cell!
 // 
 // For now, it's just 'which species is higher in the pecking order'
@@ -1491,7 +1383,7 @@ module.exports = SpeciesBattle = {
     }
 }
 
-},{}],23:[function(require,module,exports){
+},{}],20:[function(require,module,exports){
 // THE POINT OF THIS MODULE IS....
 //
 //    ... To take a cell object and decide whether it has a species in it.
@@ -1509,14 +1401,13 @@ module.exports = SpeciesMask = function(species_id) {
     }
 }
 
-},{}],24:[function(require,module,exports){
+},{}],21:[function(require,module,exports){
 var RuleSet = require('./ruleset');
 var SpeciesMask = require('./species-mask');
 
 module.exports = Species = function(params) {
     this.id = params.id || 'species' + Math.floor(Math.random()*1e8);
-    this.symbol = params.symbol || '';
-    this.color = params.color || 'black';
+    this.sprite_id = params.sprite;
 
     // behavior
     this.passable = params.hasOwnProperty('passable') ? params.passable : true;
@@ -1615,17 +1506,16 @@ function coordmapAvg(coordmap) {
     return coordmapSum(coordmap) / coordmap.length;
 }
 
-},{"./ruleset":21,"./species-mask":23}],25:[function(require,module,exports){
+},{"./ruleset":18,"./species-mask":20}],22:[function(require,module,exports){
 var Character = require('./character');
 var ToolChest = require('./items');
 
 var CELL_CHANGE_EVT = 'check_cell_for_magic';
 
-module.exports = Player = function(game) {
+module.exports = Player = function(map) {
     var player = new Character({
-        map: game.map,
+        map: map,
         id: 'player',
-        sprite: 'player',
 
         speciesResponses: {
             'magic': function() {
@@ -1635,14 +1525,11 @@ module.exports = Player = function(game) {
     });
 
     // ugh, TODO clean this up
-    player.sprite.scaleTo(game.cellDims).place(game.html.characters);
+    //player.sprite.scaleTo(game.cellDims).place(game.html.characters);
     player.moveTo(Settings.playerStart);
 
-    // temporary
-    window.player = player;
-
     // start some grass where the player is
-    game.map.diamondClump(player.coords, game.map.species.grass)
+    map.diamondClump(player.coords, map.species.grass)
 
     // Starting inventory
     initInventory(player, {
@@ -1652,7 +1539,7 @@ module.exports = Player = function(game) {
         detector: 3
     })
 
-    player.inventory.rendersTo(game.html.inventory);
+    player.inventory.rendersTo(document.getElementById('game-inventory'));
 
     return player;
 }
@@ -1665,259 +1552,7 @@ function initInventory(player, inventoryCounts) {
     }
 }
 
-},{"./character":2,"./items":11}],26:[function(require,module,exports){
-var Settings = window.Settings;
-var ToolChest = require('./items');
-var Utils = require('./utils');
-var Controls = require('./controls');
-var Wizard = require('./wizard');
-var Player = require('./player');
-window.TC = ToolChest;
-
-var game = {};
-game.map = require('./map');
-game.state = require('./state');
-game.size = Settings.gameSize; 
-game.cellDims = Settings.cellDims;
-
-window.game = game;
-
-function initGame() {
-    game.html = {
-        board: document.getElementById('game'),
-        characters: document.getElementById('game-characters'),
-        inventory: document.getElementById('game-inventory'),
-        mouseOverlay: document.getElementById('mouse-overlay')
-    }
-
-    game.map.init({
-        size: game.size,
-        dims: game.cellDims,
-        window: 10,
-        html: game.html.board
-    });
-
-    // Characters
-    // TODO: separate character rendering and then don't pass charElement in here
-    game.wizard = Wizard(game, game.map);
-    game.player = Player(game, game.map);
-
-    game.refreshView();
-    game.state.init(game);
-    Controls.init(game);
-
-    game.iterateMap();
-}
-
-game.refreshView = function() {
-    if (!game.map.isInWindow(game.player.coords)) {
-        game.map.recenter(game.player.coords);
-        game.player.refresh();
-        game.wizard.refresh();
-    }
-}
-
-game.refreshView2 = function() {
-    var d = Map.getDistanceFromWindowEdge(game.player.coords);
-    if (d.north > 0 || d.south > 0 || d.west > 0 || d.east > 0) {
-        //console.log('d:', d)
-        if (d.north > 0) game.map.shiftView({x:0, y:-d.north});
-        if (d.south > 0) game.map.shiftView({x:0, y: d.south});
-        if (d.west > 0) game.map.shiftView({x:-d.west, y:0});
-        if (d.east > 0) game.map.shiftView({x: d.east, y:0});
-        game.player.refresh();
-        game.wizard.refresh();
-    }
-}
-
-if (Settings.advanceAllCells) {
-    // TODO: maybe things would be nicer if this was demoted to a worker
-    game.iterationTimeout = null;
-    game.iterateMap = function() {
-        if (Settings.mapIterationTimeout <= 0) return;
-
-        game.map.advance();
-
-        if (!Settings.randomizeCellIteration) {
-            game.map.refresh();
-            if (window.doCounts) window.doCounts();
-        }
-        else {
-            // Pick random times to show the cell update
-            // TODO: the isInView call might be outdated if we change views
-            game.map.forEach(function(coords, cell) {
-                if (!game.map.isInView(coords)) return;
-                setTimeout(function() {
-                    game.map.refreshCell(coords);
-                }, Math.random() * Settings.mapIterationTimeout);
-            })
-        }
-        
-        // Schedule another map iteration
-        clearTimeout(game.iterationTimeout);
-        game.iterationTimeout = setTimeout(function() {
-            game.iterateMap();
-        }, Settings.mapIterationTimeout)
-    }
-}
-else {
-    // Advance each cell individually
-    // spin off its own little timer thingy
-    // ** THIS IS SUPER PROTOTYPE-Y
-    game.iterateMap = function() {
-        game.map.env.range().forEach(function(coords) {
-            var cell = game.map.getCell(coords);
-            cell.iterationTimeout = null;
-            cell.iterate = function() {
-                if (Settings.mapIterationTimeout <= 0) return;
-
-                cell.advance();
-
-                game.map.refreshCell(coords);
-
-                // schedule another iteration
-                clearTimeout(cell.iterationTimeout);
-                cell.iterationTimeout = setTimeout(function() {
-                    cell.iterate();
-                }, getTimeout() )
-            }
-
-            function getTimeout() {
-                // adjust the settings a bit, randomly...
-                var scale = 1 + 0.5 * (Math.random() * 2 - 1);
-                return Settings.mapIterationTimeout * scale;
-            }
-
-            // single-cell replacement for Advancerator
-            cell.advance = function() {
-                var neighbors = game.map.env.neighbors(coords);
-                this.next(neighbors);
-                this.flush();
-            }
-
-            cell.iterate();
-        })
-    }
-}
-
-// UI/HUD
-window.UI = require('./ui');
-window.onload = UI.infoWrap('loading...', initGame);
-
-},{"./controls":6,"./items":11,"./map":19,"./player":25,"./state":27,"./ui":28,"./utils":29,"./wizard":30}],27:[function(require,module,exports){
-// Woohoo, the game state!
-
-module.exports = GameState = {};
-var game;
-var currentData = {}; // blah, some scope, so that different state nodes can communicate w/ each other
-
-GameState.init = function(gameInstance) {
-    game = gameInstance;
-    this.current = this.nodes.idle;
-}
-
-GameState.advance = function(transitionData) {
-    var next = this.current.getNext(transitionData);
-    if (!next) return; // staying in the same state 
-
-    this.current.finish();
-    this.current = next;
-    this.current.execute(transitionData);
-}
-
-
-// Individual states that the game can be in.
-// TODO: separate content into a data file
-GameState.nodes = {};
-
-// here is a template
-GameState.nodes.sample = {};
-GameState.nodes.sample.execute = function(data) {};
-GameState.nodes.sample.finish = function() {};
-GameState.nodes.sample.getNext = function(data) {};
-
-
-// IDLE STATE: when nothing is going on. Waiting for the player to click or something
-GameState.nodes.idle = {}
-GameState.nodes.idle.execute = function() {
-    currentData = {};
-};
-GameState.nodes.idle.finish = function() {};
-GameState.nodes.idle.getNext = function(data) {
-    // Clicked an inventory item
-    if (!!data.item) return GameState.nodes.itemSelected;
-}
-
-// ITEM SELECTED: player is about to use this item.
-GameState.nodes.itemSelected = {}
-GameState.nodes.itemSelected.execute = function(data) {
-    var item = game.player.inventory.items[data.item];
-    item.select();
-    currentData.item = item;
-}
-GameState.nodes.itemSelected.finish = function() {
-    currentData.item.deselect();
-    // keep the item around so it can be used
-}
-GameState.nodes.itemSelected.getNext = function(data) {
-    // If you click a cell, use the item on that cell
-    if (!!data.coords) return GameState.nodes.usingItem; 
-
-    // If you click somewhere else, then cancel this use
-    return GameState.nodes.idle;
-}
-
-// USING ITEM: you're using an item.
-// It should automatically advance to the idle state.
-GameState.nodes.usingItem = {};
-GameState.nodes.usingItem.execute = function(data) {
-    game.player.use(currentData.item, data.coords);
-
-    if (Settings.advanceAllCells) GameState.advance();
-}
-GameState.nodes.usingItem.finish = function() {
-    delete currentData.item;
-}
-GameState.nodes.usingItem.getNext = function(data) { return GameState.nodes.idle; }
-
-},{}],28:[function(require,module,exports){
-// UI/HUD
-
-module.exports = UI = {};
-
-UI.infoTimeout = null;
-
-// Display info text for the specified lifetime
-// If lifetime isn't specified, then the text will stay up forever (until something else is shown)
-UI.info = function(text, lifetime) {
-
-    document.getElementById('info').textContent = text;
-
-    clearTimeout(UI.infoTimeout);
-    if (typeof lifetime === 'number') {
-        UI.infoTimeout = setTimeout(function() {
-            UI.info('', false);
-        }, lifetime)
-    }
-}
-
-// Display info text only while the given function is executing
-UI.infoWrap = function(text, fn) {
-    return function() {
-        UI.info(text);
-
-        setTimeout(function() {
-            fn();
-            UI.info('');
-        }, 0)
-    }
-}
-
-UI.zoomOut = UI.infoWrap('zooming...', function() { Map.zoomOut(); })
-UI.zoomIn = UI.infoWrap('zooming...', function() { Map.zoomIn(); })
-
-
-},{}],29:[function(require,module,exports){
+},{"./character":2,"./items":9}],23:[function(require,module,exports){
 module.exports = Utils = {};
 
 Utils.dirs = { 
@@ -1928,8 +1563,12 @@ Utils.dirs = {
 }
 
 Utils.randomChoice = function(array) {
-    if (typeof array === 'object') array = Object.keys(array);
+    if (!Utils.isArray(array) && typeof array === 'object') array = Object.keys(array);
     return array[Math.floor(Math.random() * array.length)];
+}
+
+Utils.isArray = function(array) {
+    return array.constructor === [].constructor;
 }
 
 Utils.distance = function(coords1, coords2) {
@@ -1939,65 +1578,14 @@ Utils.distance = function(coords1, coords2) {
     )
 }
 
-},{}],30:[function(require,module,exports){
-var Character = require('./character');
-var Utils = require('./utils');
-var Walking = require('./character/walking');
-
-module.exports = Wizard = function(game) {
-    var wizard = new Character({
-        map: game.map,
-        id: 'wizard',
-        sprite: 'wizard',
-        speciesResponses: {
-            'neutralized': function() {
-                wizard.ouch();
-            }
-        }
-    });
-
-    // make sure wizard is beyond a certain point
-    var startingCoords = {x: -1, y: -1};
-    while (startingCoords.x < Settings.wizardMin.x && startingCoords.y < Settings.wizardMin.y) {
-        startingCoords = game.map.env.randomCoords();
-    }
-
-    // ugh, TODO clean this up
-    wizard.sprite.scaleTo(game.cellDims).place(game.html.characters);
-    wizard.moveTo(startingCoords);
-    window.wizard = wizard;
-
-    // start magic where the wizard is
-    game.map.diamondClump(wizard.coords, game.map.species.magic)
-
-
-    // have the wizard amble randomly
-    wizard.getSomewhatRandomDir = function() {
-        // 33% chance to walk in the same direction as last step
-        if (!!this.lastStep && Math.random() < 1/3) {
-            return this.lastStep;
-        }
-        return Utils.dirs[Utils.randomChoice(Utils.dirs)];
-    }
-
-    wizard.walk = new Walking(wizard,
-        function getNextDir() {
-            return wizard.getSomewhatRandomDir();
-        },
-        function onStep(dir) {
-            wizard.faceDirection(dir);
-            wizard.refresh();
-
-            // make sure the wizard trails magic
-            game.map.set(wizard.coords, Map.species.magic);
-            game.map.refreshCell(wizard.coords);
-
-            wizard.lastStep = dir;
-        }
-    )
-    wizard.walk.start();
-
-    return wizard;
+},{}],24:[function(require,module,exports){
+module.exports = function(x, y) {
+    return new XY(x, y);
 }
 
-},{"./character":2,"./character/walking":5,"./utils":29}]},{},[26]);
+var XY = function(x, y) {
+    this.x = x;
+    this.y = y;
+}
+
+},{}]},{},[4]);

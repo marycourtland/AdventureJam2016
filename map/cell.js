@@ -6,10 +6,18 @@
 // all the species and compute which one is dominant
 
 var SpeciesBattle = require('./species-battle')
+var Utils = require('../utils')
 
-module.exports = Cell = function(blank) {
+module.exports = Cell = function(blank, coords) {
     this.species = null;
+    this.coords = coords;
+
+    // register contains:
+    //  species
+    //  age
+    //  sprite obj
     this.register = {}; // indexed by id
+
     this.set(blank || '');
 
     this.items = [];
@@ -17,6 +25,7 @@ module.exports = Cell = function(blank) {
     // the 'next' slot is just a holding pattern until the current iteration is finalized
     // use cell.next(species), then cell.flush() to set it
     this.nextSpecies = null;
+
 
     // register callbacks when stuff happens
     this.callbacks = {
@@ -42,14 +51,37 @@ Cell.prototype.getAge = function() {
 
 // sets the dominant species
 Cell.prototype.set = function(species) {
+    if (!species) {
+        return;
+    }
+
     if (!!this.species && !!species && this.species.id !== species.id) {
         this.emit('change', {species: species})
     }
 
     this.species = species;
     this.add(species); // just in case it's not already set
+    
+    // Make sure only this one is visible
+    // TODO: later there may be multiple sprites per cell visible...
+    this.hideAllSpecies();
+
+    this.register[species.id].visible = true;
+    if (this.register[species.id].sprite) {
+        this.register[species.id].sprite.visible = true;
+    }
 
     return this;
+}
+
+
+Cell.prototype.hideAllSpecies = function(species) {
+    for (var id in this.register) {
+        this.register[id].visible = false;
+        if (this.register[id].sprite) {
+            this.register[id].sprite.visible = false;
+        }
+    }
 }
 
 // decide which species to be next
@@ -68,7 +100,7 @@ Cell.prototype.next = function(neighbors) {
 
     // Update age
     if (this.nextSpecies)
-    this.register[this.nextSpecies.id].age = nextStates[this.nextSpecies.id].age;
+        this.register[this.nextSpecies.id].age = nextStates[this.nextSpecies.id].age;
     
 }
 
@@ -85,9 +117,9 @@ Cell.prototype.flush = function() {
             // reset of the age of the newly-dead species to 0
             this.register[previousSpeciesId].age = 0;
         }
+    this.set(this.nextSpecies);
     }
 
-    this.set(this.nextSpecies);
 }
 
 Cell.prototype.add = function(species) {
@@ -99,15 +131,38 @@ Cell.prototype.add = function(species) {
     if (!(species.id in this.register)) {
         this.register[species.id] = {
             species: species,
-            age: 0
+            age: 0,
+            visible: false,
+            sprite: null
         }
     }
 
     // make sure there's a dominant species
     if (Object.keys(this.register).length === 1 || !this.species) {
         this.species = species;
+        this.register[species.id].visible = true;
     }
+
+    // Sprite must be initialized, later
+
     return this;
+}
+
+// This has to be done separately
+Cell.prototype.createSprites = function() {
+    // This will have to be turned off and on as needed
+    for (var species_id in this.register) {
+        var reg = this.register[species_id];
+        var sprite_id = reg.species.sprite_id;
+        if (Utils.isArray(sprite_id)) {
+            sprite_id = Utils.randomChoice(sprite_id)
+        }
+
+        // TODO: access game elsehow
+        reg.sprite = window.game.addMapSprite(this.coords, sprite_id);
+        
+        reg.sprite.visible = reg.visible; 
+    }
 }
 
 Cell.prototype.on = function(event, callback_id, callback) {

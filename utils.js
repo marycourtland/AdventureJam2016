@@ -8,8 +8,12 @@ Utils.dirs = {
 }
 
 Utils.randomChoice = function(array) {
-    if (typeof array === 'object') array = Object.keys(array);
+    if (!Utils.isArray(array) && typeof array === 'object') array = Object.keys(array);
     return array[Math.floor(Math.random() * array.length)];
+}
+
+Utils.isArray = function(array) {
+    return array.constructor === [].constructor;
 }
 
 Utils.distance = function(coords1, coords2) {

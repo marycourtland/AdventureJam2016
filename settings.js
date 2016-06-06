@@ -7,18 +7,20 @@ window.Settings = {};
 Settings.advanceAllCells = false;
 
 // Game settings
-Settings.gameSize = {x: 70, y:70}; // cells
-Settings.cellDims = {x: 30, y:30}; // pixels per cell
+Settings.gameAnchor = [0.5, -0.5]
+Settings.gameAnchor = [0.5,0.1]
+Settings.gameSize = {x: 60, y:60}; // cells
+Settings.cellDims = {x: 38, y:38}; // pixels per cell (isometric)
 
 
 // Map iteration
 // if the randomize switch is on, it only makes sense to do timeout at least 10sec, if not 20
-Settings.mapIterationTimeout    = 100000; // millis between map updates. Use 0 to disable automatic updates
+Settings.mapIterationTimeout    = 10000; // millis between map updates. Use 0 to disable automatic updates
 Settings.randomizeCellIteration = true;
 
 // Characters
 Settings.maxHealth = 10;
-Settings.playerStart = {x: 20, y: 20}
+Settings.playerStart = {x: 2, y: 0}
 Settings.wizardMin = {x: 35, y: 35}
 
 
