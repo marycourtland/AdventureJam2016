@@ -30,23 +30,23 @@ module.exports = AssetData = {
         anchors: [0.5, 2/3],
     },
 	tree1: {
-        url:    'images/_tree_01_grass.png',
+        url:    'images/tree_01_grass.png',
         anchors: [0.5, 2/3],
     },
 	tree2: {
-        url:    'images/_tree_02_grass.png',
+        url:    'images/tree_02_grass.png',
         anchors: [0.5, 0.75],
     },
 	tree8: {
-        url:    'images/_tree_08_grass.png',
+        url:    'images/tree_08_grass.png',
         anchors: [0.5, 2/3],
     },
 	tree11: {
-        url:    'images/_tree_11_grass.png',
+        url:    'images/tree_11_grass.png',
         anchors: [0.5, 2/3],
     },
 	tree13: {
-        url:    'images/_tree_13_grass.png',
+        url:    'images/tree_13_grass.png',
         anchors: [0.5, 0.75],
     }
 }
