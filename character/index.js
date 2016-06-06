@@ -1,5 +1,3 @@
-var Sprite = require('./sprite');
-var SpriteData = require('./data/sprites');
 var Inventory = require('./inventory');
 var Utils = require('../utils');
 
@@ -7,13 +5,9 @@ var CHAR_SPECIES_LISTENER_PREFIX = 'character-species-listener-';
 
 module.exports = Character = function(params) {
     params.id = params.id || '';
-    params.sprite= params.sprite || '';
-
-    console.assert(params.sprite in SpriteData, "spriteId doesn't exist: " + params.sprite);
 
     this.map = params.map;
     this.id = params.id;
-    //this.sprite = new Sprite(SpriteData[params.sprite]).setFrame(Object.keys(SpriteData[params.sprite].frames)[0]);
     this.coords = {x:0, y:0};
 
     this.inventory = new Inventory(this);
@@ -28,7 +22,6 @@ module.exports = Character = function(params) {
 }
 
 Character.prototype = {};
-
 
 // ============= MOVEMENT / RENDERING
 
@@ -45,17 +38,6 @@ Character.prototype.moveTo = function(coords) {
 
     this.coords.x = coords.x;
     this.coords.y = coords.y;
-
-    // move sprite (put it in the center of the tile)
-    var pos = {
-        x: this.coords.x * this.map.dims.x,
-        y: this.coords.y * this.map.dims.y,
-    }
-    var offset = this.map.getOffset();
-    this.sprite.moveTo({x: pos.x + offset.x, y: pos.y + offset.y});
-    this.sprite.move({x: this.map.dims.x / 2, y: this.map.dims.y / 2});
-
-    // TODO: make sure it doesn't go off the map... or handle that case or something
 
     // Respond appropriately to whatever species is underfoot
     // ** For now, doesn't pass anything to the response function 
@@ -79,33 +61,20 @@ Character.prototype.move = function(diff) {
     return this;
 }
 
+Character.prototype.isAt = function(coords) {
+    return coords.x === this.coords.x && coords.y === this.coords.y;
+}
+
 Character.prototype.respondToSpecies = function(species) {
     if (species.id in this.speciesResponses) {
         this.speciesResponses[species.id]();
     }
 }
 
-Character.prototype.faceDirection = function(dir) {
-    var scaledDir = {
-        x: dir.x / (dir.x === 0 ? 1 : Math.abs(dir.x)),
-        y: dir.y / (dir.y === 0 ? 1 : Math.abs(dir.y))
-    };
 
-    var frame;
-    for (var dirFrame in Utils.dirs) {
-        if (scaledDir.x === Utils.dirs[dirFrame].x && scaledDir.y === Utils.dirs[dirFrame].y) {
-            frame = dirFrame;
-            break;
-        }
-    }
-
-    this.sprite.setFrame(frame);
-    return this;
-}
-
+// not sure if this is needed anymore
 Character.prototype.refresh = function() {
     this.moveTo(this.coords);
-    this.sprite.refreshPosition();
 }
 
 // ============================== HEALTH ETC

@@ -157,7 +157,9 @@ Cell.prototype.createSprites = function() {
         if (Utils.isArray(sprite_id)) {
             sprite_id = Utils.randomChoice(sprite_id)
         }
-        reg.sprite = game.addMapSprite(this.coords, sprite_id);
+
+        // TODO: access game elsehow
+        reg.sprite = window.game.addMapSprite(this.coords, sprite_id);
         
         reg.sprite.visible = reg.visible; 
     }

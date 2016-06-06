@@ -42,6 +42,9 @@ Map.generate = function() {
 
     self.env.advance(3);
 
+    // empty spot in the 0,0 corner
+    self.rect(self.species.grass, {x:0, y:0}, {x:6, y:6});
+
 }
 
 Map.diamondClump = function(coords, species) {
@@ -56,6 +59,16 @@ Map.diamondClump = function(coords, species) {
         {x: -1, y:  0},
         {x:  1, y:  0},
     ], species)
+}
+
+Map.rect = function(species, from, to) {
+    var clump = [];
+    for (var x = from.x; x < to.x; x++) {
+        for (var y = from.y; y < to.y; y++) {
+            clump.push({x:x, y:y});
+        }
+    }
+    return this.clump(from, clump, species);
 }
 
 // randomly set cells as the species

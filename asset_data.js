@@ -4,12 +4,12 @@
 
 module.exports = AssetData = {
     player: {
-        url:     'images/player.png',
-        anchors: [0.0, 0.0],
+        url:     'images/player-forward.png',
+        anchors: [0.5, 1.0],
     },
     wizard: {
         url:     'images/wizard.png',
-        anchors: [0.0, 0.0],
+        anchors: [0.5, 1.0],
     },
 	magic: {
         url:    'images/magic-over-dirt.png',
