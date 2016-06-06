@@ -19,6 +19,12 @@ module.exports = Character = function(params) {
     for (var species_id in this.speciesResponses) {
         console.assert(typeof this.speciesResponses[species_id] === 'function');
     }
+
+    // Speed while walking through the map
+    // This will change depending on where you are (e.g. in forest)
+    // TODO: put this default 
+    this.defaultSpeed = Settings.defaultSpeed;
+    this.speed = this.defaultSpeed;
 }
 
 Character.prototype = {};
@@ -69,6 +75,19 @@ Character.prototype.respondToSpecies = function(species) {
     if (species.id in this.speciesResponses) {
         this.speciesResponses[species.id]();
     }
+
+    // SET WALKING SPEED
+    // TODO: not working yet
+    if (typeof species.speed === 'number') {
+        this.speed = species.speed;
+    }
+    else {
+        this.speed = this.defaultSpeed;
+    }
+}
+
+Character.prototype.getSpeed = function() {
+    return this.speed;
 }
 
 

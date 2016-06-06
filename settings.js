@@ -20,9 +20,9 @@ Settings.randomizeCellIteration = true;
 
 // Characters
 Settings.maxHealth = 10;
-Settings.playerStart = {x: 2, y: 0}
-Settings.wizardMin = {x: 35, y: 35}
-
+Settings.playerStart = {x: 2, y: 0};
+Settings.wizardMin = {x: 35, y: 35};
+Settings.defaultSpeed = 500;
 
 // Items
 Settings.itemUsageRadii = {

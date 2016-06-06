@@ -34,12 +34,13 @@ Map.generate = function() {
         cell.add(self.species.magic);
         cell.add(self.species.grass);
         cell.add(self.species.trees);
+        cell.add(self.species.trees2);
     })
 
     self.sow(self.species.grass, 1/10);
     self.sow(self.species.flowers, 1/50)
     self.sow(self.species.trees, 1/20);
-
+    self.sow(self.species.trees2, 1/20);
     self.env.advance(3);
 
     // empty spot in the 0,0 corner

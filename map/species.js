@@ -6,7 +6,12 @@ module.exports = Species = function(params) {
     this.sprite = params.sprite;
 
     // behavior
+    // TODO: fix passable for phaser
     this.passable = params.hasOwnProperty('passable') ? params.passable : true;
+
+    if (params.hasOwnProperty('speed')) {
+        this.speed = params.speed;
+    }
 
     this.initRules(params.rules);
 
