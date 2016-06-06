@@ -86,7 +86,7 @@ Cell.prototype.showSprite = function(id) {
     if (sprite.alpha > 0) return;
 
     // todo: stuff this in the species data
-    if (id === 'magic' || id === 'trees') {
+    if (this.register[id].species.sprite.fade) {
         window.game.add.tween(sprite).to(
             { alpha: 1 },
             200,
@@ -108,7 +108,7 @@ Cell.prototype.hide = function(id) {
     reg.visible = false;
 
     if (reg.sprite && reg.sprite.alpha > 0) {
-        if (id === 'magic' || id === 'trees') {
+        if (reg.species.sprite.fade) {
             window.game.add.tween(reg.sprite).to(
                 { alpha: 0 },
                 200,
@@ -196,6 +196,8 @@ Cell.prototype.add = function(species) {
     }
 
     // Sprite must be initialized, later
+    // TODO: check if sprites have already been initialized
+    // (this is for when we want to optimize for not front-loading the sprite-adding)
 
     return this;
 }
@@ -205,7 +207,7 @@ Cell.prototype.createSprites = function() {
     // This will have to be turned off and on as needed
     for (var species_id in this.register) {
         var reg = this.register[species_id];
-        var sprite_id = reg.species.sprite_id;
+        var sprite_id = reg.species.sprite.id;
         if (Utils.isArray(sprite_id)) {
             sprite_id = Utils.randomChoice(sprite_id)
         }

@@ -3,7 +3,7 @@ var SpeciesMask = require('./species-mask');
 
 module.exports = Species = function(params) {
     this.id = params.id || 'species' + Math.floor(Math.random()*1e8);
-    this.sprite_id = params.sprite;
+    this.sprite = params.sprite;
 
     // behavior
     this.passable = params.hasOwnProperty('passable') ? params.passable : true;
