@@ -11,6 +11,7 @@ Settings.gameAnchor = [0.5, -0.5]
 Settings.gameAnchor = [0.5,0.1]
 Settings.gameSize = {x: 60, y:60}; // cells
 Settings.cellDims = {x: 38, y:38}; // pixels per cell (isometric)
+Settings.cameraDeadzone = 0.6;  
 
 
 // Map iteration
