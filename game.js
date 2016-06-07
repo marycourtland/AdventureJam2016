@@ -74,12 +74,27 @@ window.onload = function() {
             game.playerSprite.body.collideWorldBounds = true;
             
             game.player = Player(Map);
-            
-            // CONTROLS
-            initMovement();
 
             // CAMERA
             game.camera.follow(game.playerSprite);
+
+            //var center = XY(game.playerSprite.x, game.playerSprite.y) 
+            //var center = game.playerSprite;
+            var center = XY(game.width / 2, game.height / 2)
+            var deadzone = XY(
+                game.camera.width * Settings.cameraDeadzone,
+                game.camera.height * Settings.cameraDeadzone
+            )
+            game.camera.deadzone = new Phaser.Rectangle(
+                center.x - deadzone.x / 2,
+                center.y - deadzone.y / 2,
+                deadzone.x,
+                deadzone.y
+            );
+            console.log('Center:', center);
+            console.log('Deadzone:', game.camera.deadzone)
+
+
 
             // SPIN UP THE MAP
             startMapIteration();
@@ -87,11 +102,13 @@ window.onload = function() {
         },
         update: function () {
             game.iso.unproject(game.input.activePointer.position, game.cursor);
+
+            handleMovement();
             
             // Which cell is the player on? send game coords to player obj
-            var inputCoords = getGameCoords(game.playerSprite.isoX, game.playerSprite.isoY);
-            if (!game.player.isAt(inputCoords)) {
-                game.player.moveTo(inputCoords);
+            var spriteCoords = getGameCoords(game.playerSprite.isoX, game.playerSprite.isoY);
+            if (!game.player.isAt(spriteCoords)) {
+                game.player.moveTo(spriteCoords);
             }
         },
         render: function () {
@@ -106,7 +123,10 @@ window.onload = function() {
 // TODO: refactor after decisions are made / stuff is stable
 
 function debugText() {
+    var cursor = getGameCoords(game.cursor.x, game.cursor.y);
     var lines = [
+        'CURSOR',
+        '  coords: ' + cursor.x + ' ' + cursor.y,
         'PLAYER',
         '  coords: ' + game.player.coords.x + ' ' + game.player.coords.y,
         '  health: ' + game.player.health,
@@ -133,42 +153,28 @@ function onTap(pointer, doubleTap) {
     // todo: place inventory item
 }
 
+var stop = function() {
+    game.playerSprite.body.velocity.setTo(0, 0);
+}
 
-// This is pretty temporary until I decide on input stuff
-var speed = 1;
-var movementButtons = [
-    {id: 'move-left',  vel: XY(-speed, 0)},
-    {id: 'move-right', vel: XY(speed, 0)},
-    {id: 'move-up',    vel: XY(0, -speed)},
-    {id: 'move-down',  vel: XY(0, speed)},
-]
+function handleMovement() {
 
-function initMovement() {
-    movementButtons.forEach(function(item) {
-        var button = document.getElementById(item.id);
+    var spriteCoords = getGameCoords(game.playerSprite.isoX, game.playerSprite.isoY);
+    var cursorCoords = getGameCoords(game.cursor.x, game.cursor.y);
+    if (spriteCoords.x === cursorCoords.x && spriteCoords.y === cursorCoords.y) {
+        stop();
+        return;
+    }
 
-        var go = function(evt) {
-            evt.stopPropagation();
-            var speed = game.player.getSpeed();
-            game.playerSprite.body.velocity.x = item.vel.x * speed;
-            game.playerSprite.body.velocity.y = item.vel.y * speed;
-        }
+    if (game.input.activePointer.isDown) {
+        game.physics.isoArcade.moveToPointer(game.playerSprite, 500);
+    }
+    else {
+       stop(); 
+    }
 
-        var stop = function(evt) {
-            evt.stopPropagation();
-            game.playerSprite.body.velocity.x = 0;
-            game.playerSprite.body.velocity.y = 0;
-        }
-
-        button.addEventListener('mousedown', go);
-        button.addEventListener('mouseup', stop);
-        button.addEventListener('touchstart', go);
-        button.addEventListener('touchend', stop);
-    })
 
 }
-initMovement();
-
 
 function startMapIteration() {
     Map.env.range().forEach(function(coords) {
