@@ -1,6 +1,7 @@
 var Settings = window.Settings;
 var AssetData = require('../asset_data');
 var Map = require('../map');
+var GamePlayModes = require('../gameplay-modes');
 var Player = require('../player');
 var XY = require('../xy');
 var game;
@@ -11,10 +12,6 @@ module.exports = Play = function (_game) {
 
 Play.prototype = {
     preload: function() {
-        game.map = Map;
-        game.map.init({
-            size: Settings.gameSize
-        })
 
         // TODO clean this up, find better homes for these methods
         game.addMapSprite = function(gameCoords, sprite_id) {
@@ -29,10 +26,18 @@ Play.prototype = {
 
             return sprite;
         }
+
+        game.map = Map;
+        game.map.init({
+            size: Settings.gameSize
+        })
+
+        game.playModes = GamePlayModes;
+        game.playModes.init(game)
     },
 
     create: function () {
-        console.log('Game state: PlayLoad');
+        console.log('Game state: Play');
         game.cursor = null;
 
         game.mapGroup = game.add.group();
@@ -75,6 +80,8 @@ Play.prototype = {
             deadzone.y
         );
 
+        bindInventoryEvents();
+
         // SPIN UP THE MAP
         startMapIteration();
     },
@@ -101,10 +108,12 @@ Play.prototype = {
 function debugText() {
     var cursor = getGameCoords(game.cursor.x, game.cursor.y);
     var lines = [
-        'CURSOR',
-        '  coords: ' + cursor.x + ' ' + cursor.y,
+        'GAME',
+        '  mode:     ' + game.playModes.get(),
+        '  cursor:   ' + xyStr(cursor),
+        '  last tap: ' + (!!game.lastTap ? xyStr(game.lastTap) : ''),
         'PLAYER',
-        '  coords: ' + game.player.coords.x + ' ' + game.player.coords.y,
+        '  coords: ' + xyStr(game.player.coords),
         '  health: ' + game.player.health,
         '  speed:  ' + game.player.speed
     ]
@@ -116,6 +125,8 @@ function debugText() {
         game.debug.text(lines[line], 2, (line + 1) * lineheight, color)
     }
 }
+
+function xyStr(xy) { return xy.x + ' ' + xy.y; }
 
 function getGameCoords(isoX, isoY) {
   return XY(
@@ -137,28 +148,35 @@ function handleMovement() {
         return;
     }
 
-    if (game.input.activePointer.isDown) {
+    if (game.input.activePointer.isDown && game.playModes.get() === 'idle') {
         game.physics.isoArcade.moveToPointer(game.playerSprite, 500);
     }
     else {
        stop(); 
     }
+}
 
-
+function bindInventoryEvents() {
+    // This is vanilla html, not phaser. TODO: see if there is a better way
+    var inventoryHtml = document.getElementById('game-inventory');
+    var slots = Array.apply(Array, inventoryHtml.getElementsByClassName('slot'));
+    slots.forEach(function(slotHtml) {
+        slotHtml.onclick = function(evt) {
+            evt.stopPropagation(); // don't send it to the phaser game canvas
+            console.log('Clicked:', slotHtml.dataset.itemId)
+            game.playModes.advance({item: slotHtml.dataset.itemId});
+        }
+    })
 }
 
 
 function onTap(pointer, doubleTap) {
-    var tapCoords = getGameCoords(game.cursor.x, game.cursor.y);
-    // todo: place inventory item
-}
+    game.lastTap = getGameCoords(game.cursor.x, game.cursor.y);
 
-// duplicated in play-main.js
-function getGameCoords(isoX, isoY) {
-  return XY(
-    Math.round(isoX / Settings.cellDims.x),
-    Math.round(isoY / Settings.cellDims.y)
-  );
+    // Taps signify possible mode changes
+    game.playModes.advance({coords: game.lastTap});
+
+    // todo: place inventory item
 }
 
 function startMapIteration() {

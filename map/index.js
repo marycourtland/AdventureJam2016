@@ -35,6 +35,7 @@ Map.generate = function() {
         cell.add(self.species.grass);
         cell.add(self.species.trees);
         cell.add(self.species.trees2);
+        cell.add(self.species.neutralized);
     })
 
     self.sow(self.species.grass, 1/10);

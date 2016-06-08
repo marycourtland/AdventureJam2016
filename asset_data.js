@@ -11,6 +11,18 @@ module.exports = AssetData = {
         url:     'images/wizard.png',
         anchors: [0.5, 1.0],
     },
+	neutralizer1: {
+        url:    'images/neutralizer1.png',
+        anchors: [0.5, 2/3],
+    },
+	neutralizer2: {
+        url:    'images/neutralizer2.png',
+        anchors: [0.5, 2/3],
+    },
+	neutralizer3: {
+        url:    'images/neutralizer3.png',
+        anchors: [0.5, 2/3],
+    },
 	magic: {
         url:    'images/magic-over-dirt.png',
         anchors: [0.5, 2/3],
