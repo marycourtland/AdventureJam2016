@@ -187,6 +187,7 @@ Cell.prototype.add = function(species) {
             visible: false,
             sprite: null
         }
+        //this.createSpriteFor(species.id);
     }
 
     // make sure there's a dominant species
@@ -206,17 +207,23 @@ Cell.prototype.add = function(species) {
 Cell.prototype.createSprites = function() {
     // This will have to be turned off and on as needed
     for (var species_id in this.register) {
-        var reg = this.register[species_id];
-        var sprite_id = reg.species.sprite.id;
-        if (Utils.isArray(sprite_id)) {
-            sprite_id = Utils.randomChoice(sprite_id)
-        }
-
-        // TODO: access game elsehow
-        reg.sprite = window.game.addMapSprite(this.coords, sprite_id);
-        
-        reg.sprite.alpha = reg.visible ? 1 : 0
+        this.createSpriteFor(species_id);
     }
+}
+
+Cell.prototype.createSpriteFor = function(id) {
+    var reg = this.register[id];
+    var sprite_id = reg.species.sprite.id;
+    if (Utils.isArray(sprite_id)) {
+        sprite_id = Utils.randomChoice(sprite_id)
+    }
+
+    // TODO: access game elsehow
+    reg.sprite = window.game.addMapSprite(this.coords, sprite_id);
+    
+    reg.sprite.alpha = reg.visible ? 1 : 0
+
+    return reg.sprite;
 }
 
 Cell.prototype.on = function(event, callback_id, callback) {

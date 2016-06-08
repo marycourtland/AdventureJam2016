@@ -12,6 +12,18 @@ module.exports = AssetData = {
         url:     'images/wizard.png',
         anchors: [0.5, 1.0],
     },
+	neutralizer1: {
+        url:    'images/neutralizer1.png',
+        anchors: [0.5, 2/3],
+    },
+	neutralizer2: {
+        url:    'images/neutralizer2.png',
+        anchors: [0.5, 2/3],
+    },
+	neutralizer3: {
+        url:    'images/neutralizer3.png',
+        anchors: [0.5, 2/3],
+    },
 	magic: {
         url:    'images/magic-over-dirt.png',
         anchors: [0.5, 2/3],
@@ -183,7 +195,7 @@ Character.prototype.use = function(item, coords) {
     item.useAt(coords);
 }
 
-},{"../utils":23,"./inventory":3}],3:[function(require,module,exports){
+},{"../utils":29,"./inventory":3}],3:[function(require,module,exports){
 module.exports = Inventory = function(char) {
     this.char = char;
     this.items = {};
@@ -252,235 +264,127 @@ Inventory.prototype.refresh = function() {
 }
 
 },{}],4:[function(require,module,exports){
-var Settings = window.Settings;
-var AssetData = require('./asset_data')
-var Map = require('./map');
-var Player = require('./player');
-var XY = require('./xy');
+// Game modes are called 'modes' to avoid conflict with phaser game states.
+// These are basically modes during the main gameplay state.
+// Sorry mode rhymes with node :)
 
-window.player = null;
+module.exports = GamePlayModes = {};
+var game;
+var currentData = {}; // blah, some scope, so that different modes can communicate w/ each other
+
+GamePlayModes.init = function(gameInstance) {
+    game = gameInstance;
+    
+    // stuff some string ids into each mode, for interfacing outside (meh)
+    for (var mode in this.modes) {
+        this.modes[mode].id = mode;
+    }
+
+    this.current = this.modes.idle;
+}
+
+GamePlayModes.advance = function(transitionData) {
+    var next = this.current.getNext(transitionData);
+    if (!next) return; // staying in the same state 
+
+    this.current.finish();
+    this.current = next;
+    this.current.execute(transitionData);
+}
+
+GamePlayModes.get = function() { return this.current.id; }
+
+
+// Individual modes that the game can be in.
+// TODO: separate content into a data file
+GamePlayModes.modes = {};
+
+// here is a template
+GamePlayModes.modes.sample = {};
+GamePlayModes.modes.sample.execute = function(data) {};
+GamePlayModes.modes.sample.finish = function() {};
+GamePlayModes.modes.sample.getNext = function(data) {};
+
+
+// IDLE MODE: when nothing is going on. Waiting for the player to click or something
+GamePlayModes.modes.idle = {}
+GamePlayModes.modes.idle.execute = function() {
+    currentData = {};
+};
+GamePlayModes.modes.idle.finish = function() {};
+GamePlayModes.modes.idle.getNext = function(data) {
+    // Clicked an inventory item
+    if (!!data.item) return GamePlayModes.modes.itemSelected;
+}
+
+// ITEM SELECTED: player is about to use this item.
+GamePlayModes.modes.itemSelected = {}
+GamePlayModes.modes.itemSelected.execute = function(data) {
+    var item = game.player.inventory.items[data.item];
+    item.select();
+    currentData.item = item;
+}
+GamePlayModes.modes.itemSelected.finish = function() {
+    currentData.item.deselect();
+    // keep the item around so it can be used
+}
+GamePlayModes.modes.itemSelected.getNext = function(data) {
+    // If you click a cell, use the item on that cell
+    if (!!data.coords) return GamePlayModes.modes.usingItem; 
+
+    // If you click somewhere else, then cancel this use
+    return GamePlayModes.modes.idle;
+}
+
+// USING ITEM: you're using an item.
+// It should automatically advance to the idle mode.
+GamePlayModes.modes.usingItem = {};
+GamePlayModes.modes.usingItem.execute = function(data) {
+    game.player.use(currentData.item, data.coords);
+
+    if (Settings.advanceAllCells) GamePlayModes.advance();
+}
+GamePlayModes.modes.usingItem.finish = function() {
+    delete currentData.item;
+}
+GamePlayModes.modes.usingItem.getNext = function(data) {
+    return GamePlayModes.modes.idle;
+}
+
+
+},{}],5:[function(require,module,exports){
+var Settings = window.Settings;
+var GameStates = require('./states');
+
 window.game = null;
 
 window.onload = function() {
     window.game = new Phaser.Game(window.innerWidth, window.innerHeight, Phaser.AUTO, 'game', null, true, false);
 
-    game.mapGroup = null; // will be initialized
-
-    // use for the map sprites, not character sprites
-    game.addMapSprite = function(gameCoords, sprite_id) {
-        var sprite = game.add.isoSprite(
-            gameCoords.x * Settings.cellDims.x,
-            gameCoords.y * Settings.cellDims.y,
-            0,
-            sprite_id, 0, game.mapGroup
-        )
-        sprite.anchor.set.apply(sprite.anchor, AssetData[sprite_id].anchors);
-
-        return sprite;
+    for (var state in GameStates) {
+        game.state.add(state, GameStates[state]);
     }
 
-    Map.init({
-        size: Settings.gameSize
-    })
-
-
-    // Initialize Phaser game state
-    game.cursor = null;
-
-    var Boot = function (game) {};
-    Boot.prototype = {
-        preload: function () {
-            for (var sprite_id in AssetData) {
-                game.load.image(sprite_id, AssetData[sprite_id].url);
-            }
-
-            game.time.advancedTiming = true;
-
-            game.plugins.add(new Phaser.Plugin.Isometric(game));
-            
-            game.world.setBounds(0, 0, 5000, 5000);
-
-            game.physics.startSystem(Phaser.Plugin.Isometric.ISOARCADE);
-            game.iso.anchor.setTo.apply(game.iso.anchor, Settings.gameAnchor);
-
-        },
-        create: function () {
-            game.mapGroup = game.add.group();
-            game.physics.isoArcade.gravity.setTo(0, 0, 0);
-
-            Map.generate();
-            Map.forEach(function(coords, cell) {
-                cell.createSprites();
-            })
-            game.iso.simpleSort(game.mapGroup);
-            
-            
-            game.cursor = new Phaser.Plugin.Isometric.Point3();
-            game.input.onUp.add(onTap, this);
-
-            // PLAYER
-            // ** Sprite is completely independent from the player object
-            // (Unlike the cell objs, who own their sprites)
-            //
-            game.playerSprite = game.add.isoSprite(38, 38, 2, 'player', 0, game.mapGroup);
-            game.playerSprite.anchor.set(0.5, 1.0);
-            game.physics.isoArcade.enable(game.playerSprite);
-            game.playerSprite.body.collideWorldBounds = true;
-            
-            game.player = Player(Map);
-
-            // CAMERA
-            game.camera.follow(game.playerSprite);
-
-            //var center = XY(game.playerSprite.x, game.playerSprite.y) 
-            //var center = game.playerSprite;
-            var center = XY(game.width / 2, game.height / 2)
-            var deadzone = XY(
-                game.camera.width * Settings.cameraDeadzone,
-                game.camera.height * Settings.cameraDeadzone
-            )
-            game.camera.deadzone = new Phaser.Rectangle(
-                center.x - deadzone.x / 2,
-                center.y - deadzone.y / 2,
-                deadzone.x,
-                deadzone.y
-            );
-            console.log('Center:', center);
-            console.log('Deadzone:', game.camera.deadzone)
-
-
-
-            // SPIN UP THE MAP
-            startMapIteration();
-
-        },
-        update: function () {
-            game.iso.unproject(game.input.activePointer.position, game.cursor);
-
-            handleMovement();
-            
-            // Which cell is the player on? send game coords to player obj
-            var spriteCoords = getGameCoords(game.playerSprite.isoX, game.playerSprite.isoY);
-            if (!game.player.isAt(spriteCoords)) {
-                game.player.moveTo(spriteCoords);
-            }
-        },
-        render: function () {
-            debugText();
-        }
-    };
-
-    game.state.add('Boot', Boot);
     game.state.start('Boot');
 };
 
-// TODO: refactor after decisions are made / stuff is stable
 
-function debugText() {
-    var cursor = getGameCoords(game.cursor.x, game.cursor.y);
-    var lines = [
-        'CURSOR',
-        '  coords: ' + cursor.x + ' ' + cursor.y,
-        'PLAYER',
-        '  coords: ' + game.player.coords.x + ' ' + game.player.coords.y,
-        '  health: ' + game.player.health,
-        '  speed:  ' + game.player.speed
-    ]
-
-    var color = "#CDE6BB";
-    var lineheight = 14;
-    var line = 1;
-    for (var line = 0; line < lines.length; line++) {
-        game.debug.text(lines[line], 2, (line + 1) * lineheight, color)
-    }
-}
-
-function getGameCoords(isoX, isoY) {
-  return XY(
-    Math.round(isoX / Settings.cellDims.x),
-    Math.round(isoY / Settings.cellDims.y)
-  );
-}
-
-function onTap(pointer, doubleTap) {
-    var tapCoords = getGameCoords(game.cursor.x, game.cursor.y);
-    // todo: place inventory item
-}
-
-var stop = function() {
-    game.playerSprite.body.velocity.setTo(0, 0);
-}
-
-function handleMovement() {
-
-    var spriteCoords = getGameCoords(game.playerSprite.isoX, game.playerSprite.isoY);
-    var cursorCoords = getGameCoords(game.cursor.x, game.cursor.y);
-    if (spriteCoords.x === cursorCoords.x && spriteCoords.y === cursorCoords.y) {
-        stop();
-        return;
-    }
-
-    if (game.input.activePointer.isDown) {
-        game.physics.isoArcade.moveToPointer(game.playerSprite, 500);
-    }
-    else {
-       stop(); 
-    }
-
-
-}
-
-function startMapIteration() {
-    Map.env.range().forEach(function(coords) {
-        var cell = Map.getCell(coords);
-        cell.iterationTimeout = null;
-        cell.iterate = function() {
-            if (Settings.mapIterationTimeout <= 0) return;
-
-            cell.advance();
-
-            // schedule another iteration
-            clearTimeout(cell.iterationTimeout);
-            cell.iterationTimeout = setTimeout(function() {
-                cell.iterate();
-            }, getTimeout() )
-        }
-
-        function getTimeout() {
-            // adjust the settings a bit, randomly...
-            var scale = 1 + 0.5 * (Math.random() * 2 - 1);
-            return Settings.mapIterationTimeout * scale;
-        }
-
-        // single-cell replacement for Advancerator
-        cell.advance = function() {
-            var neighbors = Map.env.neighbors(coords);
-            this.next(neighbors);
-            this.flush();
-        }
-
-        window.setTimeout(function() { cell.iterate(); }, getTimeout());
-    })
-}
-
-
-},{"./asset_data":1,"./map":17,"./player":22,"./xy":24}],5:[function(require,module,exports){
+},{"./states":26}],6:[function(require,module,exports){
 module.exports = Bomb = {};
 Bomb.id = 'bomb';
 
 Bomb.useAt = function(coords) {
     var map = window.game.map;
     map.diamondClump(coords, map.species.neutralized);
-    map.refresh();
 }
 
-},{}],6:[function(require,module,exports){
+},{}],7:[function(require,module,exports){
 // Empty placeholder object. TODO
 
 module.exports = Box = {};
 Box.id = 'box';
 
-},{}],7:[function(require,module,exports){
+},{}],8:[function(require,module,exports){
 // Empty placeholder object. TODO
 
 module.exports = Camera= {};
@@ -493,7 +397,7 @@ Camera.useAt = function(coords) {
 
 }
 
-},{}],8:[function(require,module,exports){
+},{}],9:[function(require,module,exports){
 // Empty placeholder object. TODO
 
 module.exports = Detector = {};
@@ -504,7 +408,7 @@ Detector.useAt = function(coords) {
     map.placeItem(coords, this);
 }
 
-},{}],9:[function(require,module,exports){
+},{}],10:[function(require,module,exports){
 // this is sort of a manager object
 // Usage:
 // var box_instance = ToolChest.make(ToolChest.types.box);
@@ -552,7 +456,7 @@ ToolChest.make = function(type) { return new ToolChest.Item(type); }
 ToolChest._next_id = 0;
 ToolChest.nextID = function() { return this._next_id++; }
 
-},{"./bomb.js":5,"./box.js":6,"./camera.js":7,"./detector.js":8,"./neutralizer.js":10,"./type-template":11}],10:[function(require,module,exports){
+},{"./bomb.js":6,"./box.js":7,"./camera.js":8,"./detector.js":9,"./neutralizer.js":11,"./type-template":12}],11:[function(require,module,exports){
 module.exports = Neutralizer = {};
 Neutralizer.id = 'neutralizer';
 
@@ -560,10 +464,9 @@ Neutralizer.id = 'neutralizer';
 Neutralizer.useAt = function(coords) {
     var map = window.game.map;
     map.set(coords, map.species.neutralized)
-    map.refreshCell(coords);
 }
 
-},{}],11:[function(require,module,exports){
+},{}],12:[function(require,module,exports){
 // Methods that should be callable for each item type.
 module.exports = TypeTemplate = {};
 
@@ -599,7 +502,7 @@ TypeTemplate.refresh = function() {
 }
 
 
-},{}],12:[function(require,module,exports){
+},{}],13:[function(require,module,exports){
 // This is the procedure which executes the advancing of the environment species
 // from one iteration to the next.
 //
@@ -622,7 +525,7 @@ module.exports = Advancerator = function(env) {
     })
 }
 
-},{}],13:[function(require,module,exports){
+},{}],14:[function(require,module,exports){
 // A cell (location on the grid) can have multiple species living in it.
 // But one of them is dominant (which will be displayed)
 //
@@ -812,6 +715,7 @@ Cell.prototype.add = function(species) {
             visible: false,
             sprite: null
         }
+        //this.createSpriteFor(species.id);
     }
 
     // make sure there's a dominant species
@@ -831,17 +735,23 @@ Cell.prototype.add = function(species) {
 Cell.prototype.createSprites = function() {
     // This will have to be turned off and on as needed
     for (var species_id in this.register) {
-        var reg = this.register[species_id];
-        var sprite_id = reg.species.sprite.id;
-        if (Utils.isArray(sprite_id)) {
-            sprite_id = Utils.randomChoice(sprite_id)
-        }
-
-        // TODO: access game elsehow
-        reg.sprite = window.game.addMapSprite(this.coords, sprite_id);
-        
-        reg.sprite.alpha = reg.visible ? 1 : 0
+        this.createSpriteFor(species_id);
     }
+}
+
+Cell.prototype.createSpriteFor = function(id) {
+    var reg = this.register[id];
+    var sprite_id = reg.species.sprite.id;
+    if (Utils.isArray(sprite_id)) {
+        sprite_id = Utils.randomChoice(sprite_id)
+    }
+
+    // TODO: access game elsehow
+    reg.sprite = window.game.addMapSprite(this.coords, sprite_id);
+    
+    reg.sprite.alpha = reg.visible ? 1 : 0
+
+    return reg.sprite;
 }
 
 Cell.prototype.on = function(event, callback_id, callback) {
@@ -866,7 +776,7 @@ Cell.prototype.addItem = function(coords, item) {
     this.items.push(item);
 }
 
-},{"../utils":23,"./species-battle":19}],14:[function(require,module,exports){
+},{"../utils":29,"./species-battle":20}],15:[function(require,module,exports){
 module.exports = GrowthRules = {
     magic: {
         stateMap: {
@@ -935,7 +845,7 @@ module.exports = GrowthRules = {
     }
 }
 
-},{}],15:[function(require,module,exports){
+},{}],16:[function(require,module,exports){
 var GrowthRules = require('./growth-rules')
 
 // Conditional growth rules are sorted by priority, low > high.
@@ -951,7 +861,10 @@ module.exports = speciesData = [
         id: 'neutralized',
         symbol: 'x',
         color: '#422121',
-        sprite: {id: 'neutralized'}
+        sprite: {
+            id: ['neutralizer1', 'neutralizer2', 'neutralizer3'],
+            fade: true
+        }
     },
 
     {
@@ -1080,7 +993,7 @@ module.exports = speciesData = [
 
 ]
 
-},{"./growth-rules":14}],16:[function(require,module,exports){
+},{"./growth-rules":15}],17:[function(require,module,exports){
 // Example:
 // env = new Env({x:30, y:30});
 
@@ -1174,7 +1087,7 @@ Env.prototype.randomCoords = function() {
     }
 }
 
-},{"../xy":24,"./advancerator.js":12,"./cell.js":13}],17:[function(require,module,exports){
+},{"../xy":30,"./advancerator.js":13,"./cell.js":14}],18:[function(require,module,exports){
 var Env = require('./environment');
 var Species = require('./species');
 //var Renderer = require('./renderer')
@@ -1212,6 +1125,7 @@ Map.generate = function() {
         cell.add(self.species.grass);
         cell.add(self.species.trees);
         cell.add(self.species.trees2);
+        cell.add(self.species.neutralized);
     })
 
     self.sow(self.species.grass, 1/10);
@@ -1403,7 +1317,7 @@ Map.getCoordsFromPixels = function(pixels) {
 Map.renderer = require('./renderer')
 */
 
-},{"./data/species":15,"./environment":16,"./species":21}],18:[function(require,module,exports){
+},{"./data/species":16,"./environment":17,"./species":22}],19:[function(require,module,exports){
 // EXAMPLE:
 //
 // var ruleset = new RuleSet({
@@ -1487,7 +1401,7 @@ function indexWeights(deepArray) {
     return output;
 }
 
-},{}],19:[function(require,module,exports){
+},{}],20:[function(require,module,exports){
 // This module is for deciding the winning species in a cell!
 // 
 // For now, it's just 'which species is higher in the pecking order'
@@ -1515,7 +1429,7 @@ module.exports = SpeciesBattle = {
     }
 }
 
-},{}],20:[function(require,module,exports){
+},{}],21:[function(require,module,exports){
 // THE POINT OF THIS MODULE IS....
 //
 //    ... To take a cell object and decide whether it has a species in it.
@@ -1533,7 +1447,7 @@ module.exports = SpeciesMask = function(species_id) {
     }
 }
 
-},{}],21:[function(require,module,exports){
+},{}],22:[function(require,module,exports){
 var RuleSet = require('./ruleset');
 var SpeciesMask = require('./species-mask');
 
@@ -1643,7 +1557,7 @@ function coordmapAvg(coordmap) {
     return coordmapSum(coordmap) / coordmap.length;
 }
 
-},{"./ruleset":18,"./species-mask":20}],22:[function(require,module,exports){
+},{"./ruleset":19,"./species-mask":21}],23:[function(require,module,exports){
 var Character = require('./character');
 var ToolChest = require('./items');
 
@@ -1689,7 +1603,294 @@ function initInventory(player, inventoryCounts) {
     }
 }
 
-},{"./character":2,"./items":9}],23:[function(require,module,exports){
+},{"./character":2,"./items":10}],24:[function(require,module,exports){
+var AssetData = require('../asset_data');
+
+var game;
+
+module.exports = Boot = function (_game) { 
+    game = _game;
+};
+
+Boot.prototype = {
+    preload: function () {
+        for (var sprite_id in AssetData) {
+            game.load.image(sprite_id, AssetData[sprite_id].url);
+        }
+
+        game.time.advancedTiming = true;
+
+        game.plugins.add(new Phaser.Plugin.Isometric(game));
+        
+        game.world.setBounds(0, 0, 5000, 5000);
+
+        game.physics.startSystem(Phaser.Plugin.Isometric.ISOARCADE);
+        game.iso.anchor.setTo.apply(game.iso.anchor, Settings.gameAnchor);
+    },
+
+    create: function() {
+        console.log('Game state: Boot');
+        game.state.start('Menu');
+    }
+}
+
+},{"../asset_data":1}],25:[function(require,module,exports){
+var game;
+
+module.exports = End = function (_game) { 
+    game = _game;
+};
+
+End.prototype = {
+    create: function () {
+        console.log('Game state: End');
+        // Todo :)
+
+        game.state.start('Menu');
+    },
+};
+
+},{}],26:[function(require,module,exports){
+module.exports = GameStates = {
+    Boot: require('./boot.js'),
+    Menu: require('./menu.js'),
+    Play: require('./play.js'),
+    End:  require('./end.js'),
+}
+
+},{"./boot.js":24,"./end.js":25,"./menu.js":27,"./play.js":28}],27:[function(require,module,exports){
+var game;
+
+module.exports = Menu = function (_game) { 
+    game = _game;
+};
+
+Menu.prototype = {
+    create: function () {
+        console.log('Game state: Menu');
+        // Todo :)
+
+        game.state.start('Play');
+    },
+};
+
+},{}],28:[function(require,module,exports){
+var Settings = window.Settings;
+var AssetData = require('../asset_data');
+var Map = require('../map');
+var GamePlayModes = require('../gameplay-modes');
+var Player = require('../player');
+var XY = require('../xy');
+var game;
+
+module.exports = Play = function (_game) { 
+    game = _game;
+};
+
+Play.prototype = {
+    preload: function() {
+
+        // TODO clean this up, find better homes for these methods
+        game.addMapSprite = function(gameCoords, sprite_id) {
+            // use for the map sprites, not character sprites
+            var sprite = game.add.isoSprite(
+                gameCoords.x * Settings.cellDims.x,
+                gameCoords.y * Settings.cellDims.y,
+                0,
+                sprite_id, 0, game.mapGroup
+            )
+            sprite.anchor.set.apply(sprite.anchor, AssetData[sprite_id].anchors);
+
+            return sprite;
+        }
+
+        game.map = Map;
+        game.map.init({
+            size: Settings.gameSize
+        })
+
+        game.playModes = GamePlayModes;
+        game.playModes.init(game)
+    },
+
+    create: function () {
+        console.log('Game state: Play');
+        game.cursor = null;
+
+        game.mapGroup = game.add.group();
+        game.physics.isoArcade.gravity.setTo(0, 0, 0);
+
+        game.map.generate();
+        game.map.forEach(function(coords, cell) {
+            cell.createSprites();
+        })
+        game.iso.simpleSort(game.mapGroup);
+        
+        game.cursor = new Phaser.Plugin.Isometric.Point3();
+        game.input.onUp.add(onTap, this);
+
+        // PLAYER
+        // ** Sprite is completely independent from the player object
+        // (Unlike the cell objs, who own their sprites)
+        //
+        game.playerSprite = game.add.isoSprite(38, 38, 2, 'player', 0, game.mapGroup);
+        game.playerSprite.anchor.set(0.5, 1.0);
+        game.physics.isoArcade.enable(game.playerSprite);
+        game.playerSprite.body.collideWorldBounds = true;
+        
+        game.player = Player(game.map);
+
+        // CAMERA
+        game.camera.follow(game.playerSprite);
+
+        //var center = XY(game.playerSprite.x, game.playerSprite.y) 
+        //var center = game.playerSprite;
+        var center = XY(game.width / 2, game.height / 2)
+        var deadzone = XY(
+            game.camera.width * Settings.cameraDeadzone,
+            game.camera.height * Settings.cameraDeadzone
+        )
+        game.camera.deadzone = new Phaser.Rectangle(
+            center.x - deadzone.x / 2,
+            center.y - deadzone.y / 2,
+            deadzone.x,
+            deadzone.y
+        );
+
+        bindInventoryEvents();
+
+        // SPIN UP THE MAP
+        startMapIteration();
+    },
+
+    update: function () {
+        game.iso.unproject(game.input.activePointer.position, game.cursor);
+
+        handleMovement();
+        
+        // Which cell is the player on? send game coords to player obj
+        var spriteCoords = getGameCoords(game.playerSprite.isoX, game.playerSprite.isoY);
+        if (!game.player.isAt(spriteCoords)) {
+            game.player.moveTo(spriteCoords);
+        }
+    },
+    render: function () {
+        debugText();
+    }
+};
+
+// Misc floating helpers
+// TODO: refactor after decisions are made / stuff is stable
+
+function debugText() {
+    var cursor = getGameCoords(game.cursor.x, game.cursor.y);
+    var lines = [
+        'GAME',
+        '  mode:     ' + game.playModes.get(),
+        '  cursor:   ' + xyStr(cursor),
+        '  last tap: ' + (!!game.lastTap ? xyStr(game.lastTap) : ''),
+        'PLAYER',
+        '  coords: ' + xyStr(game.player.coords),
+        '  health: ' + game.player.health,
+        '  speed:  ' + game.player.speed
+    ]
+
+    var color = "#CDE6BB";
+    var lineheight = 14;
+    var line = 1;
+    for (var line = 0; line < lines.length; line++) {
+        game.debug.text(lines[line], 2, (line + 1) * lineheight, color)
+    }
+}
+
+function xyStr(xy) { return xy.x + ' ' + xy.y; }
+
+function getGameCoords(isoX, isoY) {
+  return XY(
+    Math.round(isoX / Settings.cellDims.x),
+    Math.round(isoY / Settings.cellDims.y)
+  );
+}
+
+var stop = function() {
+    game.playerSprite.body.velocity.setTo(0, 0);
+}
+
+function handleMovement() {
+
+    var spriteCoords = getGameCoords(game.playerSprite.isoX, game.playerSprite.isoY);
+    var cursorCoords = getGameCoords(game.cursor.x, game.cursor.y);
+    if (spriteCoords.x === cursorCoords.x && spriteCoords.y === cursorCoords.y) {
+        stop();
+        return;
+    }
+
+    if (game.input.activePointer.isDown && game.playModes.get() === 'idle') {
+        game.physics.isoArcade.moveToPointer(game.playerSprite, 500);
+    }
+    else {
+       stop(); 
+    }
+}
+
+function bindInventoryEvents() {
+    // This is vanilla html, not phaser. TODO: see if there is a better way
+    var inventoryHtml = document.getElementById('game-inventory');
+    var slots = Array.apply(Array, inventoryHtml.getElementsByClassName('slot'));
+    slots.forEach(function(slotHtml) {
+        slotHtml.onclick = function(evt) {
+            evt.stopPropagation(); // don't send it to the phaser game canvas
+            console.log('Clicked:', slotHtml.dataset.itemId)
+            game.playModes.advance({item: slotHtml.dataset.itemId});
+        }
+    })
+}
+
+
+function onTap(pointer, doubleTap) {
+    game.lastTap = getGameCoords(game.cursor.x, game.cursor.y);
+
+    // Taps signify possible mode changes
+    game.playModes.advance({coords: game.lastTap});
+
+    // todo: place inventory item
+}
+
+function startMapIteration() {
+    Map.env.range().forEach(function(coords) {
+        var cell = Map.getCell(coords);
+        cell.iterationTimeout = null;
+        cell.iterate = function() {
+            if (Settings.mapIterationTimeout <= 0) return;
+
+            cell.advance();
+
+            // schedule another iteration
+            clearTimeout(cell.iterationTimeout);
+            cell.iterationTimeout = setTimeout(function() {
+                cell.iterate();
+            }, getTimeout() )
+        }
+
+        function getTimeout() {
+            // adjust the settings a bit, randomly...
+            var scale = 1 + 0.5 * (Math.random() * 2 - 1);
+            return Settings.mapIterationTimeout * scale;
+        }
+
+        // single-cell replacement for Advancerator
+        cell.advance = function() {
+            var neighbors = Map.env.neighbors(coords);
+            this.next(neighbors);
+            this.flush();
+        }
+
+        window.setTimeout(function() { cell.iterate(); }, getTimeout());
+    })
+}
+
+
+},{"../asset_data":1,"../gameplay-modes":4,"../map":18,"../player":23,"../xy":30}],29:[function(require,module,exports){
 module.exports = Utils = {};
 
 Utils.dirs = { 
@@ -1715,7 +1916,7 @@ Utils.distance = function(coords1, coords2) {
     )
 }
 
-},{}],24:[function(require,module,exports){
+},{}],30:[function(require,module,exports){
 module.exports = function(x, y) {
     return new XY(x, y);
 }
@@ -1725,4 +1926,4 @@ var XY = function(x, y) {
     this.y = y;
 }
 
-},{}]},{},[4]);
+},{}]},{},[5]);

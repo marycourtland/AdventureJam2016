@@ -13,7 +13,10 @@ module.exports = speciesData = [
         id: 'neutralized',
         symbol: 'x',
         color: '#422121',
-        sprite: {id: 'neutralized'}
+        sprite: {
+            id: ['neutralizer1', 'neutralizer2', 'neutralizer3'],
+            fade: true
+        }
     },
 
     {

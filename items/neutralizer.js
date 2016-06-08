@@ -5,5 +5,4 @@ Neutralizer.id = 'neutralizer';
 Neutralizer.useAt = function(coords) {
     var map = window.game.map;
     map.set(coords, map.species.neutralized)
-    map.refreshCell(coords);
 }
