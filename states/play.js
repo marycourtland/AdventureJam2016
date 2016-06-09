@@ -12,7 +12,6 @@ module.exports = Play = function (_game) {
 
 Play.prototype = {
     preload: function() {
-
         // TODO clean this up, find better homes for these methods
         game.addMapSprite = function(gameCoords, sprite_id) {
             // use for the map sprites, not character sprites
@@ -43,7 +42,7 @@ Play.prototype = {
         game.mapGroup = game.add.group();
         game.physics.isoArcade.gravity.setTo(0, 0, 0);
 
-        game.map.generate();
+        game.map.generateTest();
         game.map.forEach(function(coords, cell) {
             cell.createSprites();
         })

@@ -8,8 +8,9 @@ Settings.advanceAllCells = false;
 
 // Game settings
 Settings.gameAnchor = [0.5, -0.5]
-Settings.gameAnchor = [0.5,0.1]
-Settings.gameSize = {x: 60, y:60}; // cells
+Settings.gameAnchor = [0.5,0.2]
+Settings.gameDims = {x: 1000, y: 1000}; // usually 5k
+Settings.gameSize = {x: 10, y:10}; // cells
 Settings.cellDims = {x: 38, y:38}; // pixels per cell (isometric)
 Settings.cameraDeadzone = 0.6;  
 
@@ -21,7 +22,7 @@ Settings.randomizeCellIteration = true;
 
 // Characters
 Settings.maxHealth = 10;
-Settings.playerStart = {x: 2, y: 0};
+Settings.playerStart = {x: 7, y: 7};
 Settings.wizardMin = {x: 35, y: 35};
 Settings.defaultSpeed = 500;
 

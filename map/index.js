@@ -24,6 +24,32 @@ Map.init = function(params) {
     //this.render();
 }
 
+Map.generateTest = function() {
+    var self = this;
+    // register involved species with all of the cells
+    self.env.range().forEach(function(coords) {
+        var cell = self.env.get(coords);
+        cell.add(self.species.grass);
+    })
+
+    self.sow(self.species.grass, 1);
+
+    var rut_cells = [
+        {x: 1, y: 3},
+        {x: 2, y: 3},
+        {x: 3, y: 3},
+        {x: 4, y: 3}
+    ]
+    
+    rut_cells.forEach(function(coords) {
+        var cell = self.env.get(coords);
+        cell.rut('footsteps', 1);
+    })
+
+    this.env.advance(2);
+
+}
+
 
 Map.generate = function() {
     var self = this;
@@ -49,7 +75,6 @@ Map.generate = function() {
 
     // here is some magic until the wizard is implemented
     self.diamondClump(self.center, self.species.magic)
-
 }
 
 Map.diamondClump = function(coords, species) {
@@ -68,8 +93,8 @@ Map.diamondClump = function(coords, species) {
 
 Map.rect = function(species, from, to) {
     var clump = [];
-    for (var x = from.x; x < to.x; x++) {
-        for (var y = from.y; y < to.y; y++) {
+    for (var x = from.x; x <= to.x; x++) {
+        for (var y = from.y; y <= to.y; y++) {
             clump.push({x:x, y:y});
         }
     }
@@ -79,6 +104,12 @@ Map.rect = function(species, from, to) {
 // randomly set cells as the species
 Map.sow = function(species, frequency) {
     var self = this;
+
+    self.forEach(function(coords, cell) {
+        if (Math.random() > frequency) return;
+        self.env.set(coords, species);
+    })
+/*
     var numSeeds = self.size.x * self.size.y * frequency;
 
     // Pick some places to seed
@@ -88,7 +119,7 @@ Map.sow = function(species, frequency) {
     }
 
     seeds.forEach(function(coords) { self.env.set(coords, species); })
-
+*/
     return this
 }
 

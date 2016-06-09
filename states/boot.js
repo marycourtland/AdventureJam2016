@@ -1,3 +1,4 @@
+var Settings = window.Settings;
 var AssetData = require('../asset_data');
 
 var game;
@@ -16,7 +17,7 @@ Boot.prototype = {
 
         game.plugins.add(new Phaser.Plugin.Isometric(game));
         
-        game.world.setBounds(0, 0, 5000, 5000);
+        game.world.setBounds(0, 0, Settings.gameDims.x, Settings.gameDims.y);
 
         game.physics.startSystem(Phaser.Plugin.Isometric.ISOARCADE);
         game.iso.anchor.setTo.apply(game.iso.anchor, Settings.gameAnchor);

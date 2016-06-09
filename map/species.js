@@ -30,6 +30,12 @@ Species.prototype.initRules = function(rules) {
     // The default rules govern how the species spreads based on its own presence
     this.rules.default = new RuleSet(this.rules.default)   
 
+    // Ruts are like conditionals, but semantically different
+    this.rules.ruts = this.rules.ruts || [];
+    this.rules.ruts.forEach(function(rut) {
+        rut.rules = new RuleSet(rut.rules);
+    })
+
     // Conditional rules are based on other species
     this.rules.conditional = this.rules.conditional || [];
 
@@ -68,9 +74,26 @@ Species.prototype.nextState = function(cell, neighbors) {
 Species.prototype.decideRuleset = function(cell, neighbors) {
     var winningRuleset = this.rules.default;
 
-    if (this.rules.conditional.length === 0) return winningRuleset;
+    if (this.rules.conditional.length + this.rules.ruts.length === 0)
+        return winningRuleset;
 
-    // Conditional rules are sorted from lowest priority to highest.
+    // RUTS
+    // If a rut is present, it can override other stuff
+    // - should be sorted from HIGHEST priority to lowest.
+    for (var i = 0; i < this.rules.ruts.length; i++) {
+        // The probability that this rut ends up affecting the cell
+        // is proportional to its intensity (0 to 1)
+        // TODO: this needs testing
+        var rut = this.rules.ruts[i];
+        var intensity = cell.ruts[rut.rut_id];
+        if (!intensity || Math.random() > intensity) continue;
+
+        winningRuleset = rut.rules;
+        return winningRuleset;
+    }
+
+    // CONDITIONAL RULES
+    // - should be sorted from lowest priority to highest.
 
     this.rules.conditional.forEach(function(condition) {
         var maskedNeighbors = mapCoordmap(neighbors, condition.mask);
@@ -84,6 +107,7 @@ Species.prototype.decideRuleset = function(cell, neighbors) {
 
         winningRuleset = condition.rules;
     })
+
 
     return winningRuleset;
 }

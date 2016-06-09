@@ -3,6 +3,27 @@ var GrowthRules = require('./growth-rules')
 // Conditional growth rules are sorted by priority, low > high.
 
 module.exports = speciesData = [
+    // TESTING ONLY
+    {
+        id: 'blue',
+        symbol: '~',
+        color: '#5F4F29',
+        sprite: {id: 'blue'}
+    },
+    {
+        id: 'red',
+        symbol: '~',
+        color: '#5F4F29',
+        sprite: {id: 'red'}
+    },
+    {
+        id: 'green',
+        symbol: '~',
+        color: '#5F4F29',
+        sprite: {id: 'green'}
+    },
+
+    // REAL SPECIES
     {
         id: 'blank',
         symbol: '~',
@@ -28,7 +49,13 @@ module.exports = speciesData = [
             fade: true
         },
         rules: {
-            default: GrowthRules.magic
+            default: GrowthRules.magic,
+            ruts: [
+                {
+                    rut_id: 'magic',
+                    rules: GrowthRules.magicCrazy
+                }
+            ]
         }
     },
 
@@ -44,6 +71,12 @@ module.exports = speciesData = [
                     min_neighbors: 1,
                     species_id: 'magic',
                     rules: GrowthRules.plantsDying
+                }
+            ],
+            ruts: [
+                {
+                    rut_id: 'footsteps',
+                    rules: GrowthRules.completeDeath
                 }
             ]
         }
@@ -64,6 +97,12 @@ module.exports = speciesData = [
                     min_neighbors: 1,
                     species_id: 'magic',
                     rules: GrowthRules.plantsDying
+                }
+            ],
+            ruts: [
+                {
+                    rut_id: 'footsteps',
+                    rules: GrowthRules.completeDeath
                 }
             ]
         }
