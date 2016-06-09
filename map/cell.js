@@ -234,7 +234,8 @@ Cell.prototype.createSpriteFor = function(id) {
 // RUTS =======
 
 Cell.prototype.rut = function(rut_id, intensity) {
-   this.ruts[rut_id] = intensity; 
+    if (typeof intensity === 'undefined') intensity = 1;
+    this.ruts[rut_id] = intensity; 
 }
 
 // EVENTS =======

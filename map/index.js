@@ -1,3 +1,4 @@
+var Settings = window.Settings;
 var Env = require('./environment');
 var Species = require('./species');
 //var Renderer = require('./renderer')
@@ -37,8 +38,6 @@ Map.generateTest = function() {
     var rut_cells = [
         {x: 1, y: 3},
         {x: 2, y: 3},
-        {x: 3, y: 3},
-        {x: 4, y: 3}
     ]
     
     rut_cells.forEach(function(coords) {
@@ -47,11 +46,12 @@ Map.generateTest = function() {
     })
 
     this.env.advance(2);
-
 }
 
 
 Map.generate = function() {
+    if (Settings.mode === 'test') return this.generateTest();
+
     var self = this;
 
     // register involved species with all of the cells
@@ -66,8 +66,8 @@ Map.generate = function() {
 
     self.sow(self.species.grass, 1/10);
     self.sow(self.species.flowers, 1/50)
-    self.sow(self.species.trees, 1/20);
-    self.sow(self.species.trees2, 1/20);
+    self.sow(self.species.trees, 1/30);
+    self.sow(self.species.trees2, 1/30);
     self.env.advance(3);
 
     // empty spot in the 0,0 corner
