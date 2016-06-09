@@ -12,11 +12,14 @@ module.exports = Cell = function(blank, coords) {
     this.species = null;
     this.coords = coords;
 
-    // register contains:
+    // species register contains:
     //  species
     //  age
     //  sprite obj
     this.register = {}; // indexed by id
+
+    // Ruts
+    this.ruts = {}; // indexed by rut id
 
     this.set(blank || '');
 
@@ -203,6 +206,8 @@ Cell.prototype.add = function(species) {
     return this;
 }
 
+// SPRITES =======
+
 // This has to be done separately
 Cell.prototype.createSprites = function() {
     // This will have to be turned off and on as needed
@@ -226,6 +231,15 @@ Cell.prototype.createSpriteFor = function(id) {
     return reg.sprite;
 }
 
+// RUTS =======
+
+Cell.prototype.rut = function(rut_id, intensity) {
+    if (typeof intensity === 'undefined') intensity = 1;
+    this.ruts[rut_id] = intensity; 
+}
+
+// EVENTS =======
+
 Cell.prototype.on = function(event, callback_id, callback) {
     this.callbacks[event][callback_id] = callback; 
 }
@@ -242,7 +256,7 @@ Cell.prototype.emit = function(event, data) {
     }
 }
 
-// ITEMS
+// ITEMS =======
 
 Cell.prototype.addItem = function(coords, item) {
     this.items.push(item);

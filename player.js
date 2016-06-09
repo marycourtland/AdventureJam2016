@@ -13,6 +13,10 @@ module.exports = Player = function(map) {
                 player.ouch();
             }
         },
+
+        trailingRuts: {
+            'footsteps': 1
+        }
     });
 
     // ugh, TODO clean this up

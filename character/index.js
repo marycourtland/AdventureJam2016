@@ -25,6 +25,8 @@ module.exports = Character = function(params) {
     // TODO: put this default 
     this.defaultSpeed = Settings.defaultSpeed;
     this.speed = this.defaultSpeed;
+
+    this.trailingRuts = params.trailingRuts || {};
 }
 
 Character.prototype = {};
@@ -55,6 +57,11 @@ Character.prototype.moveTo = function(coords) {
     newCell.on('change', CHAR_SPECIES_LISTENER_PREFIX + this.id, function(data) {
         self.respondToSpecies(data.species)
     })
+    
+    // trail ruts underfoot, like footsteps or whatnot
+    for (var rut_id in this.trailingRuts) {
+        newCell.rut(rut_id, this.trailingRuts[rut_id]);
+    }
 
     return this;
 }

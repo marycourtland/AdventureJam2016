@@ -4,6 +4,18 @@
 // Bleed - http://remusprites.carbonmade.com/
 
 module.exports = AssetData = {
+    blue: {
+        url:     'images/colors/blue2.png',
+        anchors: [0.5, 0.5],
+    },
+    red: {
+        url:     'images/colors/red.png',
+        anchors: [0.5, 0.5],
+    },
+    green: {
+        url:     'images/colors/green.png',
+        anchors: [0.5, 0.5],
+    },
     player: {
         url:     'images/player-forward.png',
         anchors: [0.5, 1.0],
@@ -91,6 +103,8 @@ module.exports = Character = function(params) {
     // TODO: put this default 
     this.defaultSpeed = Settings.defaultSpeed;
     this.speed = this.defaultSpeed;
+
+    this.trailingRuts = params.trailingRuts || {};
 }
 
 Character.prototype = {};
@@ -121,6 +135,11 @@ Character.prototype.moveTo = function(coords) {
     newCell.on('change', CHAR_SPECIES_LISTENER_PREFIX + this.id, function(data) {
         self.respondToSpecies(data.species)
     })
+    
+    // trail ruts underfoot, like footsteps or whatnot
+    for (var rut_id in this.trailingRuts) {
+        newCell.rut(rut_id, this.trailingRuts[rut_id]);
+    }
 
     return this;
 }
@@ -540,11 +559,14 @@ module.exports = Cell = function(blank, coords) {
     this.species = null;
     this.coords = coords;
 
-    // register contains:
+    // species register contains:
     //  species
     //  age
     //  sprite obj
     this.register = {}; // indexed by id
+
+    // Ruts
+    this.ruts = {}; // indexed by rut id
 
     this.set(blank || '');
 
@@ -731,6 +753,8 @@ Cell.prototype.add = function(species) {
     return this;
 }
 
+// SPRITES =======
+
 // This has to be done separately
 Cell.prototype.createSprites = function() {
     // This will have to be turned off and on as needed
@@ -754,6 +778,15 @@ Cell.prototype.createSpriteFor = function(id) {
     return reg.sprite;
 }
 
+// RUTS =======
+
+Cell.prototype.rut = function(rut_id, intensity) {
+    if (typeof intensity === 'undefined') intensity = 1;
+    this.ruts[rut_id] = intensity; 
+}
+
+// EVENTS =======
+
 Cell.prototype.on = function(event, callback_id, callback) {
     this.callbacks[event][callback_id] = callback; 
 }
@@ -770,7 +803,7 @@ Cell.prototype.emit = function(event, data) {
     }
 }
 
-// ITEMS
+// ITEMS =======
 
 Cell.prototype.addItem = function(coords, item) {
     this.items.push(item);
@@ -782,6 +815,19 @@ module.exports = GrowthRules = {
         stateMap: {
             0: [0.001, 0.1, 0, 1, 1, 1, 1, 1, 0],
             1: [0, 0, 0, 1, 0, 1, 1, 0, 0]
+        },
+        weights: [
+            [1, 1, 1],
+            [1, 0, 1],
+            [1, 1, 1]
+        ]
+    },
+
+    // mostly used with ruts?
+    magicCrazy: {
+        stateMap: {
+            0: [0, 1, 1, 1, 1, 1, 1, 1, 1],
+            1: [0, 0, 0, 0, 0, 0, 0, 0, 0]
         },
         weights: [
             [1, 1, 1],
@@ -851,6 +897,27 @@ var GrowthRules = require('./growth-rules')
 // Conditional growth rules are sorted by priority, low > high.
 
 module.exports = speciesData = [
+    // TESTING ONLY
+    {
+        id: 'blue',
+        symbol: '~',
+        color: '#5F4F29',
+        sprite: {id: 'blue'}
+    },
+    {
+        id: 'red',
+        symbol: '~',
+        color: '#5F4F29',
+        sprite: {id: 'red'}
+    },
+    {
+        id: 'green',
+        symbol: '~',
+        color: '#5F4F29',
+        sprite: {id: 'green'}
+    },
+
+    // REAL SPECIES
     {
         id: 'blank',
         symbol: '~',
@@ -876,7 +943,13 @@ module.exports = speciesData = [
             fade: true
         },
         rules: {
-            default: GrowthRules.magic
+            default: GrowthRules.magic,
+            ruts: [
+                {
+                    rut_id: 'magic',
+                    rules: GrowthRules.magicCrazy
+                }
+            ]
         }
     },
 
@@ -892,6 +965,12 @@ module.exports = speciesData = [
                     min_neighbors: 1,
                     species_id: 'magic',
                     rules: GrowthRules.plantsDying
+                }
+            ],
+            ruts: [
+                {
+                    rut_id: 'footsteps',
+                    rules: GrowthRules.completeDeath
                 }
             ]
         }
@@ -912,6 +991,12 @@ module.exports = speciesData = [
                     min_neighbors: 1,
                     species_id: 'magic',
                     rules: GrowthRules.plantsDying
+                }
+            ],
+            ruts: [
+                {
+                    rut_id: 'footsteps',
+                    rules: GrowthRules.completeDeath
                 }
             ]
         }
@@ -1088,6 +1173,7 @@ Env.prototype.randomCoords = function() {
 }
 
 },{"../xy":30,"./advancerator.js":13,"./cell.js":14}],18:[function(require,module,exports){
+var Settings = window.Settings;
 var Env = require('./environment');
 var Species = require('./species');
 //var Renderer = require('./renderer')
@@ -1114,8 +1200,33 @@ Map.init = function(params) {
     //this.render();
 }
 
+Map.generateTest = function() {
+    var self = this;
+    // register involved species with all of the cells
+    self.env.range().forEach(function(coords) {
+        var cell = self.env.get(coords);
+        cell.add(self.species.grass);
+    })
+
+    self.sow(self.species.grass, 1);
+
+    var rut_cells = [
+        {x: 1, y: 3},
+        {x: 2, y: 3},
+    ]
+    
+    rut_cells.forEach(function(coords) {
+        var cell = self.env.get(coords);
+        cell.rut('footsteps', 1);
+    })
+
+    this.env.advance(2);
+}
+
 
 Map.generate = function() {
+    if (Settings.mode === 'test') return this.generateTest();
+
     var self = this;
 
     // register involved species with all of the cells
@@ -1130,8 +1241,8 @@ Map.generate = function() {
 
     self.sow(self.species.grass, 1/10);
     self.sow(self.species.flowers, 1/50)
-    self.sow(self.species.trees, 1/20);
-    self.sow(self.species.trees2, 1/20);
+    self.sow(self.species.trees, 1/30);
+    self.sow(self.species.trees2, 1/30);
     self.env.advance(3);
 
     // empty spot in the 0,0 corner
@@ -1139,7 +1250,6 @@ Map.generate = function() {
 
     // here is some magic until the wizard is implemented
     self.diamondClump(self.center, self.species.magic)
-
 }
 
 Map.diamondClump = function(coords, species) {
@@ -1158,8 +1268,8 @@ Map.diamondClump = function(coords, species) {
 
 Map.rect = function(species, from, to) {
     var clump = [];
-    for (var x = from.x; x < to.x; x++) {
-        for (var y = from.y; y < to.y; y++) {
+    for (var x = from.x; x <= to.x; x++) {
+        for (var y = from.y; y <= to.y; y++) {
             clump.push({x:x, y:y});
         }
     }
@@ -1169,6 +1279,12 @@ Map.rect = function(species, from, to) {
 // randomly set cells as the species
 Map.sow = function(species, frequency) {
     var self = this;
+
+    self.forEach(function(coords, cell) {
+        if (Math.random() > frequency) return;
+        self.env.set(coords, species);
+    })
+/*
     var numSeeds = self.size.x * self.size.y * frequency;
 
     // Pick some places to seed
@@ -1178,7 +1294,7 @@ Map.sow = function(species, frequency) {
     }
 
     seeds.forEach(function(coords) { self.env.set(coords, species); })
-
+*/
     return this
 }
 
@@ -1480,6 +1596,12 @@ Species.prototype.initRules = function(rules) {
     // The default rules govern how the species spreads based on its own presence
     this.rules.default = new RuleSet(this.rules.default)   
 
+    // Ruts are like conditionals, but semantically different
+    this.rules.ruts = this.rules.ruts || [];
+    this.rules.ruts.forEach(function(rut) {
+        rut.rules = new RuleSet(rut.rules);
+    })
+
     // Conditional rules are based on other species
     this.rules.conditional = this.rules.conditional || [];
 
@@ -1518,9 +1640,26 @@ Species.prototype.nextState = function(cell, neighbors) {
 Species.prototype.decideRuleset = function(cell, neighbors) {
     var winningRuleset = this.rules.default;
 
-    if (this.rules.conditional.length === 0) return winningRuleset;
+    if (this.rules.conditional.length + this.rules.ruts.length === 0)
+        return winningRuleset;
 
-    // Conditional rules are sorted from lowest priority to highest.
+    // RUTS
+    // If a rut is present, it can override other stuff
+    // - should be sorted from HIGHEST priority to lowest.
+    for (var i = 0; i < this.rules.ruts.length; i++) {
+        // The probability that this rut ends up affecting the cell
+        // is proportional to its intensity (0 to 1)
+        // TODO: this needs testing
+        var rut = this.rules.ruts[i];
+        var intensity = cell.ruts[rut.rut_id];
+        if (!intensity || Math.random() > intensity) continue;
+
+        winningRuleset = rut.rules;
+        return winningRuleset;
+    }
+
+    // CONDITIONAL RULES
+    // - should be sorted from lowest priority to highest.
 
     this.rules.conditional.forEach(function(condition) {
         var maskedNeighbors = mapCoordmap(neighbors, condition.mask);
@@ -1534,6 +1673,7 @@ Species.prototype.decideRuleset = function(cell, neighbors) {
 
         winningRuleset = condition.rules;
     })
+
 
     return winningRuleset;
 }
@@ -1573,6 +1713,10 @@ module.exports = Player = function(map) {
                 player.ouch();
             }
         },
+
+        trailingRuts: {
+            'footsteps': 1
+        }
     });
 
     // ugh, TODO clean this up
@@ -1604,6 +1748,7 @@ function initInventory(player, inventoryCounts) {
 }
 
 },{"./character":2,"./items":10}],24:[function(require,module,exports){
+var Settings = window.Settings;
 var AssetData = require('../asset_data');
 
 var game;
@@ -1622,7 +1767,7 @@ Boot.prototype = {
 
         game.plugins.add(new Phaser.Plugin.Isometric(game));
         
-        game.world.setBounds(0, 0, 5000, 5000);
+        game.world.setBounds(0, 0, Settings.gameDims.x, Settings.gameDims.y);
 
         game.physics.startSystem(Phaser.Plugin.Isometric.ISOARCADE);
         game.iso.anchor.setTo.apply(game.iso.anchor, Settings.gameAnchor);
@@ -1689,7 +1834,6 @@ module.exports = Play = function (_game) {
 
 Play.prototype = {
     preload: function() {
-
         // TODO clean this up, find better homes for these methods
         game.addMapSprite = function(gameCoords, sprite_id) {
             // use for the map sprites, not character sprites
@@ -1706,7 +1850,7 @@ Play.prototype = {
 
         game.map = Map;
         game.map.init({
-            size: Settings.gameSize
+            size: Settings.mapSize
         })
 
         game.playModes = GamePlayModes;
@@ -1790,9 +1934,10 @@ function debugText() {
         '  cursor:   ' + xyStr(cursor),
         '  last tap: ' + (!!game.lastTap ? xyStr(game.lastTap) : ''),
         'PLAYER',
-        '  coords: ' + xyStr(game.player.coords),
-        '  health: ' + game.player.health,
-        '  speed:  ' + game.player.speed
+        '  coords:    ' + xyStr(game.player.coords),
+        '  health:    ' + game.player.health,
+        '  speed:     ' + game.player.speed,
+        '  underfoot: ' + Map.getCell(game.player.coords).species.id 
     ]
 
     var color = "#CDE6BB";

@@ -12,7 +12,6 @@ module.exports = Play = function (_game) {
 
 Play.prototype = {
     preload: function() {
-
         // TODO clean this up, find better homes for these methods
         game.addMapSprite = function(gameCoords, sprite_id) {
             // use for the map sprites, not character sprites
@@ -29,7 +28,7 @@ Play.prototype = {
 
         game.map = Map;
         game.map.init({
-            size: Settings.gameSize
+            size: Settings.mapSize
         })
 
         game.playModes = GamePlayModes;
@@ -113,9 +112,10 @@ function debugText() {
         '  cursor:   ' + xyStr(cursor),
         '  last tap: ' + (!!game.lastTap ? xyStr(game.lastTap) : ''),
         'PLAYER',
-        '  coords: ' + xyStr(game.player.coords),
-        '  health: ' + game.player.health,
-        '  speed:  ' + game.player.speed
+        '  coords:    ' + xyStr(game.player.coords),
+        '  health:    ' + game.player.health,
+        '  speed:     ' + game.player.speed,
+        '  underfoot: ' + Map.getCell(game.player.coords).species.id 
     ]
 
     var color = "#CDE6BB";

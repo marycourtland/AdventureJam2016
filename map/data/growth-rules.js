@@ -11,6 +11,19 @@ module.exports = GrowthRules = {
         ]
     },
 
+    // mostly used with ruts?
+    magicCrazy: {
+        stateMap: {
+            0: [0, 1, 1, 1, 1, 1, 1, 1, 1],
+            1: [0, 0, 0, 0, 0, 0, 0, 0, 0]
+        },
+        weights: [
+            [1, 1, 1],
+            [1, 0, 1],
+            [1, 1, 1]
+        ]
+    },
+
     // When plants are old enough, they become stable - less likely to grow, slightly likely to die
     plantsStable: {
         stateMap: {

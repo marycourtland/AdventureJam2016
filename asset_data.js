@@ -3,6 +3,18 @@
 // Bleed - http://remusprites.carbonmade.com/
 
 module.exports = AssetData = {
+    blue: {
+        url:     'images/colors/blue2.png',
+        anchors: [0.5, 0.5],
+    },
+    red: {
+        url:     'images/colors/red.png',
+        anchors: [0.5, 0.5],
+    },
+    green: {
+        url:     'images/colors/green.png',
+        anchors: [0.5, 0.5],
+    },
     player: {
         url:     'images/player-forward.png',
         anchors: [0.5, 1.0],
