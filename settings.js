@@ -13,7 +13,7 @@ Settings.advanceAllCells = false; // advance all the cells at the same time, per
 Settings.mapSize = {x: 60, y:60}; // measured in game cells
 Settings.gameAnchor = [0.5, -0.5];
 Settings.gameAnchor = [0.5, 0.5];
-Settings.gameDims = {x: 5000, y: 5000}; // pixels
+Settings.gameDims = {x: 4000, y: 4000}; // pixels
 Settings.cellDims = {x: 38, y:38}; // isometric pixels per cell
 Settings.cameraDeadzone = 0.6;  
 
@@ -32,9 +32,16 @@ Settings.randomizeCellIteration = true;
 
 // === Characters
 Settings.maxHealth = 10;
-Settings.playerStart = {x: 1, y: 1};
+Settings.playerStart = {x: 20, y: 10};
 Settings.wizardMin = {x: 35, y: 35};
+Settings.wizardStart = {x: 3, y: 5};
 Settings.defaultSpeed = 500;
+
+if (Settings.mode === 'test') {
+    Settings.playerStart = {x: 8, y: 1};
+    Settings.wizardStart = {x: 1, y: 8};
+}
+
 
 // === Items
 Settings.itemUsageRadii = {

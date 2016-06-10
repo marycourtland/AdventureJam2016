@@ -120,6 +120,12 @@ module.exports = speciesData = [
         passable: false,
         rules: {
             default: GrowthRules.plants,
+            ruts: [
+                {
+                    rut_id: 'footsteps',
+                    rules: GrowthRules.completeDeath
+                }
+            ],
             conditional: [
                 // the presence of grass catalyzes tree growth
                 {

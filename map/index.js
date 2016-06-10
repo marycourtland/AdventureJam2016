@@ -31,6 +31,8 @@ Map.generateTest = function() {
     self.env.range().forEach(function(coords) {
         var cell = self.env.get(coords);
         cell.add(self.species.grass);
+        cell.add(self.species.magic);
+        cell.add(self.species.trees);
     })
 
     self.sow(self.species.grass, 1);
@@ -44,6 +46,8 @@ Map.generateTest = function() {
         var cell = self.env.get(coords);
         cell.rut('footsteps', 1);
     })
+
+    self.env.set({x:1,y:1}, self.species.trees)
 
     this.env.advance(2);
 }

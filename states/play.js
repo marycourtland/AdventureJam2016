@@ -3,6 +3,7 @@ var AssetData = require('../asset_data');
 var Map = require('../map');
 var GamePlayModes = require('../gameplay-modes');
 var Player = require('../player');
+var Wizard = require('../wizard');
 var XY = require('../xy');
 var game;
 
@@ -54,13 +55,24 @@ Play.prototype = {
         // PLAYER
         // ** Sprite is completely independent from the player object
         // (Unlike the cell objs, who own their sprites)
-        //
-        game.playerSprite = game.add.isoSprite(38, 38, 2, 'player', 0, game.mapGroup);
+        game.playerSprite = game.add.isoSprite(
+            Settings.playerStart.x * Settings.cellDims.x,
+            Settings.playerStart.y * Settings.cellDims.y,
+            2, 'player', 0, game.mapGroup
+        );
         game.playerSprite.anchor.set(0.5, 1.0);
         game.physics.isoArcade.enable(game.playerSprite);
         game.playerSprite.body.collideWorldBounds = true;
         
         game.player = Player(game.map);
+
+        // TODO: this sprite issue is a huge mess; clean it up
+        game.wizardSprite = game.add.isoSprite(
+            Settings.wizardStart.x * Settings.cellDims.x,
+            Settings.wizardStart.y * Settings.cellDims.y,
+            2, 'wizard', 0, game.mapGroup
+        )
+        game.wizard = Wizard(game.map, game.wizardSprite);
 
         // CAMERA
         game.camera.follow(game.playerSprite);
