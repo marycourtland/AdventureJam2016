@@ -2,31 +2,36 @@ var Character = require('./character');
 var Utils = require('./utils');
 var Walking = require('./character/walking');
 
-module.exports = Wizard = function(game) {
+module.exports = Wizard = function(map, sprite) {
     var wizard = new Character({
-        map: game.map,
+        map: map,
         id: 'wizard',
-        sprite: 'wizard',
         speciesResponses: {
             'neutralized': function() {
                 wizard.ouch();
             }
+        },
+
+        trailingRuts: {
+            'magic': 1
         }
     });
 
+    // create the sprite (Character does not do that)
+
     // make sure wizard is beyond a certain point
-    var startingCoords = {x: -1, y: -1};
-    while (startingCoords.x < Settings.wizardMin.x && startingCoords.y < Settings.wizardMin.y) {
-        startingCoords = game.map.env.randomCoords();
-    }
+    //var startingCoords = {x: -1, y: -1};
+    //while (startingCoords.x < Settings.wizardMin.x && startingCoords.y < Settings.wizardMin.y) {
+    //    startingCoords = game.map.env.randomCoords();
+    //}
+    var startingCoords = Settings.wizardStart;
 
     // ugh, TODO clean this up
-    wizard.sprite.scaleTo(game.cellDims).place(game.html.characters);
     wizard.moveTo(startingCoords);
     window.wizard = wizard;
 
     // start magic where the wizard is
-    game.map.diamondClump(wizard.coords, game.map.species.magic)
+    //map.diamondClump(wizard.coords, map.species.magic)
 
 
     // have the wizard amble randomly
@@ -43,13 +48,29 @@ module.exports = Wizard = function(game) {
             return wizard.getSomewhatRandomDir();
         },
         function onStep(dir) {
-            wizard.faceDirection(dir);
-            wizard.refresh();
+            //wizard.faceDirection(dir);
+
+            // move sprite
+            //sprite.isoX = wizard.coords.x * Settings.cellDims.x;
+            //sprite.isoY = wizard.coords.y * Settings.cellDims.y;
+
+            var tween = window.game.add.tween(sprite)
+                
+            tween.to(
+                {
+                    isoX: wizard.coords.x * Settings.cellDims.x - 30, // argh
+                    isoY: wizard.coords.y * Settings.cellDims.y - 23, // argh
+                },
+                400,
+                //Phaser.Easing.Linear.None,
+                Phaser.Easing.Sinusoidal.InOut,
+                true, 0, 0
+            )
+            tween.onComplete.add(function() {
+                map.env.set(wizard.coords, map.species.magic)
+            })
 
             // make sure the wizard trails magic
-            game.map.set(wizard.coords, Map.species.magic);
-            game.map.refreshCell(wizard.coords);
-
             wizard.lastStep = dir;
         }
     )

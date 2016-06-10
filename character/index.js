@@ -70,7 +70,7 @@ Character.prototype.move = function(diff) {
     console.assert(Math.abs(diff.x) + Math.abs(diff.y) === 1, 'character should only move 1 step at a time')
 
     this.moveTo({x: this.coords.x + diff.x, y: this.coords.y + diff.y});
-    this.faceDirection(diff);
+    //this.faceDirection(diff);
     return this;
 }
 

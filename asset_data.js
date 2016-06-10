@@ -20,7 +20,7 @@ module.exports = AssetData = {
         anchors: [0.5, 1.0],
     },
     wizard: {
-        url:     'images/wizard.png',
+        url:     'images/wizard-forward.png',
         anchors: [0.5, 1.0],
     },
 	neutralizer1: {

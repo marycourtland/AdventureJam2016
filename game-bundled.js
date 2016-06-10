@@ -21,7 +21,7 @@ module.exports = AssetData = {
         anchors: [0.5, 1.0],
     },
     wizard: {
-        url:     'images/wizard.png',
+        url:     'images/wizard-forward.png',
         anchors: [0.5, 1.0],
     },
 	neutralizer1: {
@@ -148,7 +148,7 @@ Character.prototype.move = function(diff) {
     console.assert(Math.abs(diff.x) + Math.abs(diff.y) === 1, 'character should only move 1 step at a time')
 
     this.moveTo({x: this.coords.x + diff.x, y: this.coords.y + diff.y});
-    this.faceDirection(diff);
+    //this.faceDirection(diff);
     return this;
 }
 
@@ -214,7 +214,7 @@ Character.prototype.use = function(item, coords) {
     item.useAt(coords);
 }
 
-},{"../utils":29,"./inventory":3}],3:[function(require,module,exports){
+},{"../utils":30,"./inventory":3}],3:[function(require,module,exports){
 module.exports = Inventory = function(char) {
     this.char = char;
     this.items = {};
@@ -283,6 +283,49 @@ Inventory.prototype.refresh = function() {
 }
 
 },{}],4:[function(require,module,exports){
+module.exports = Walker = function(char, getNextDir, onStep) {
+    this.char = char;
+    this.timeout = null;
+    this.walking = false;
+    this.getNextDir = getNextDir;
+    this.onStep = typeof onStep === 'function' ? onStep : function() {};
+}
+
+Walker.prototype = {};
+
+Walker.prototype.timeTillNextStep = function() {
+    // 3-4 seconds, but once in a while stop for a bit
+    var base = 3000;
+    if (Math.random() < 1/10) base = 8000;
+    return base +  Math.random() * 1000;
+}
+
+Walker.prototype.start = function() {
+    this.walking = true;
+    this.step();
+}
+
+Walker.prototype.stop = function() {
+    window.clearTimeout(this.timeout);
+    this.timeout = null;
+    this.walking = false;
+}
+
+Walker.prototype.step = function() {
+    if (!this.walking) return;
+    
+    var dir = this.getNextDir()
+    this.char.move(dir);
+    this.onStep(dir);
+
+    var self = this;
+    window.clearTimeout(this.timeout);
+    this.timeout = window.setTimeout(function() {
+        self.step();
+    }, this.timeTillNextStep());
+}
+
+},{}],5:[function(require,module,exports){
 // Game modes are called 'modes' to avoid conflict with phaser game states.
 // These are basically modes during the main gameplay state.
 // Sorry mode rhymes with node :)
@@ -371,7 +414,7 @@ GamePlayModes.modes.usingItem.getNext = function(data) {
 }
 
 
-},{}],5:[function(require,module,exports){
+},{}],6:[function(require,module,exports){
 var Settings = window.Settings;
 var GameStates = require('./states');
 
@@ -388,7 +431,7 @@ window.onload = function() {
 };
 
 
-},{"./states":26}],6:[function(require,module,exports){
+},{"./states":27}],7:[function(require,module,exports){
 module.exports = Bomb = {};
 Bomb.id = 'bomb';
 
@@ -397,13 +440,13 @@ Bomb.useAt = function(coords) {
     map.diamondClump(coords, map.species.neutralized);
 }
 
-},{}],7:[function(require,module,exports){
+},{}],8:[function(require,module,exports){
 // Empty placeholder object. TODO
 
 module.exports = Box = {};
 Box.id = 'box';
 
-},{}],8:[function(require,module,exports){
+},{}],9:[function(require,module,exports){
 // Empty placeholder object. TODO
 
 module.exports = Camera= {};
@@ -416,7 +459,7 @@ Camera.useAt = function(coords) {
 
 }
 
-},{}],9:[function(require,module,exports){
+},{}],10:[function(require,module,exports){
 // Empty placeholder object. TODO
 
 module.exports = Detector = {};
@@ -427,7 +470,7 @@ Detector.useAt = function(coords) {
     map.placeItem(coords, this);
 }
 
-},{}],10:[function(require,module,exports){
+},{}],11:[function(require,module,exports){
 // this is sort of a manager object
 // Usage:
 // var box_instance = ToolChest.make(ToolChest.types.box);
@@ -475,7 +518,7 @@ ToolChest.make = function(type) { return new ToolChest.Item(type); }
 ToolChest._next_id = 0;
 ToolChest.nextID = function() { return this._next_id++; }
 
-},{"./bomb.js":6,"./box.js":7,"./camera.js":8,"./detector.js":9,"./neutralizer.js":11,"./type-template":12}],11:[function(require,module,exports){
+},{"./bomb.js":7,"./box.js":8,"./camera.js":9,"./detector.js":10,"./neutralizer.js":12,"./type-template":13}],12:[function(require,module,exports){
 module.exports = Neutralizer = {};
 Neutralizer.id = 'neutralizer';
 
@@ -485,7 +528,7 @@ Neutralizer.useAt = function(coords) {
     map.set(coords, map.species.neutralized)
 }
 
-},{}],12:[function(require,module,exports){
+},{}],13:[function(require,module,exports){
 // Methods that should be callable for each item type.
 module.exports = TypeTemplate = {};
 
@@ -521,7 +564,7 @@ TypeTemplate.refresh = function() {
 }
 
 
-},{}],13:[function(require,module,exports){
+},{}],14:[function(require,module,exports){
 // This is the procedure which executes the advancing of the environment species
 // from one iteration to the next.
 //
@@ -544,7 +587,7 @@ module.exports = Advancerator = function(env) {
     })
 }
 
-},{}],14:[function(require,module,exports){
+},{}],15:[function(require,module,exports){
 // A cell (location on the grid) can have multiple species living in it.
 // But one of them is dominant (which will be displayed)
 //
@@ -809,7 +852,7 @@ Cell.prototype.addItem = function(coords, item) {
     this.items.push(item);
 }
 
-},{"../utils":29,"./species-battle":20}],15:[function(require,module,exports){
+},{"../utils":30,"./species-battle":21}],16:[function(require,module,exports){
 module.exports = GrowthRules = {
     magic: {
         stateMap: {
@@ -826,7 +869,7 @@ module.exports = GrowthRules = {
     // mostly used with ruts?
     magicCrazy: {
         stateMap: {
-            0: [0, 1, 1, 1, 1, 1, 1, 1, 1],
+            0: [0.5, 1, 1, 1, 1, 1, 1, 1, 1],
             1: [0, 0, 0, 0, 0, 0, 0, 0, 0]
         },
         weights: [
@@ -891,7 +934,7 @@ module.exports = GrowthRules = {
     }
 }
 
-},{}],16:[function(require,module,exports){
+},{}],17:[function(require,module,exports){
 var GrowthRules = require('./growth-rules')
 
 // Conditional growth rules are sorted by priority, low > high.
@@ -1014,6 +1057,12 @@ module.exports = speciesData = [
         passable: false,
         rules: {
             default: GrowthRules.plants,
+            ruts: [
+                {
+                    rut_id: 'footsteps',
+                    rules: GrowthRules.completeDeath
+                }
+            ],
             conditional: [
                 // the presence of grass catalyzes tree growth
                 {
@@ -1078,7 +1127,7 @@ module.exports = speciesData = [
 
 ]
 
-},{"./growth-rules":15}],17:[function(require,module,exports){
+},{"./growth-rules":16}],18:[function(require,module,exports){
 // Example:
 // env = new Env({x:30, y:30});
 
@@ -1172,7 +1221,7 @@ Env.prototype.randomCoords = function() {
     }
 }
 
-},{"../xy":30,"./advancerator.js":13,"./cell.js":14}],18:[function(require,module,exports){
+},{"../xy":32,"./advancerator.js":14,"./cell.js":15}],19:[function(require,module,exports){
 var Settings = window.Settings;
 var Env = require('./environment');
 var Species = require('./species');
@@ -1206,6 +1255,8 @@ Map.generateTest = function() {
     self.env.range().forEach(function(coords) {
         var cell = self.env.get(coords);
         cell.add(self.species.grass);
+        cell.add(self.species.magic);
+        cell.add(self.species.trees);
     })
 
     self.sow(self.species.grass, 1);
@@ -1219,6 +1270,8 @@ Map.generateTest = function() {
         var cell = self.env.get(coords);
         cell.rut('footsteps', 1);
     })
+
+    self.env.set({x:1,y:1}, self.species.trees)
 
     this.env.advance(2);
 }
@@ -1433,7 +1486,7 @@ Map.getCoordsFromPixels = function(pixels) {
 Map.renderer = require('./renderer')
 */
 
-},{"./data/species":16,"./environment":17,"./species":22}],19:[function(require,module,exports){
+},{"./data/species":17,"./environment":18,"./species":23}],20:[function(require,module,exports){
 // EXAMPLE:
 //
 // var ruleset = new RuleSet({
@@ -1517,7 +1570,7 @@ function indexWeights(deepArray) {
     return output;
 }
 
-},{}],20:[function(require,module,exports){
+},{}],21:[function(require,module,exports){
 // This module is for deciding the winning species in a cell!
 // 
 // For now, it's just 'which species is higher in the pecking order'
@@ -1545,7 +1598,7 @@ module.exports = SpeciesBattle = {
     }
 }
 
-},{}],21:[function(require,module,exports){
+},{}],22:[function(require,module,exports){
 // THE POINT OF THIS MODULE IS....
 //
 //    ... To take a cell object and decide whether it has a species in it.
@@ -1563,7 +1616,7 @@ module.exports = SpeciesMask = function(species_id) {
     }
 }
 
-},{}],22:[function(require,module,exports){
+},{}],23:[function(require,module,exports){
 var RuleSet = require('./ruleset');
 var SpeciesMask = require('./species-mask');
 
@@ -1697,7 +1750,7 @@ function coordmapAvg(coordmap) {
     return coordmapSum(coordmap) / coordmap.length;
 }
 
-},{"./ruleset":19,"./species-mask":21}],23:[function(require,module,exports){
+},{"./ruleset":20,"./species-mask":22}],24:[function(require,module,exports){
 var Character = require('./character');
 var ToolChest = require('./items');
 
@@ -1747,7 +1800,7 @@ function initInventory(player, inventoryCounts) {
     }
 }
 
-},{"./character":2,"./items":10}],24:[function(require,module,exports){
+},{"./character":2,"./items":11}],25:[function(require,module,exports){
 var Settings = window.Settings;
 var AssetData = require('../asset_data');
 
@@ -1779,7 +1832,7 @@ Boot.prototype = {
     }
 }
 
-},{"../asset_data":1}],25:[function(require,module,exports){
+},{"../asset_data":1}],26:[function(require,module,exports){
 var game;
 
 module.exports = End = function (_game) { 
@@ -1795,7 +1848,7 @@ End.prototype = {
     },
 };
 
-},{}],26:[function(require,module,exports){
+},{}],27:[function(require,module,exports){
 module.exports = GameStates = {
     Boot: require('./boot.js'),
     Menu: require('./menu.js'),
@@ -1803,7 +1856,7 @@ module.exports = GameStates = {
     End:  require('./end.js'),
 }
 
-},{"./boot.js":24,"./end.js":25,"./menu.js":27,"./play.js":28}],27:[function(require,module,exports){
+},{"./boot.js":25,"./end.js":26,"./menu.js":28,"./play.js":29}],28:[function(require,module,exports){
 var game;
 
 module.exports = Menu = function (_game) { 
@@ -1819,12 +1872,13 @@ Menu.prototype = {
     },
 };
 
-},{}],28:[function(require,module,exports){
+},{}],29:[function(require,module,exports){
 var Settings = window.Settings;
 var AssetData = require('../asset_data');
 var Map = require('../map');
 var GamePlayModes = require('../gameplay-modes');
 var Player = require('../player');
+var Wizard = require('../wizard');
 var XY = require('../xy');
 var game;
 
@@ -1876,13 +1930,24 @@ Play.prototype = {
         // PLAYER
         // ** Sprite is completely independent from the player object
         // (Unlike the cell objs, who own their sprites)
-        //
-        game.playerSprite = game.add.isoSprite(38, 38, 2, 'player', 0, game.mapGroup);
+        game.playerSprite = game.add.isoSprite(
+            Settings.playerStart.x * Settings.cellDims.x,
+            Settings.playerStart.y * Settings.cellDims.y,
+            2, 'player', 0, game.mapGroup
+        );
         game.playerSprite.anchor.set(0.5, 1.0);
         game.physics.isoArcade.enable(game.playerSprite);
         game.playerSprite.body.collideWorldBounds = true;
         
         game.player = Player(game.map);
+
+        // TODO: this sprite issue is a huge mess; clean it up
+        game.wizardSprite = game.add.isoSprite(
+            Settings.wizardStart.x * Settings.cellDims.x,
+            Settings.wizardStart.y * Settings.cellDims.y,
+            2, 'wizard', 0, game.mapGroup
+        )
+        game.wizard = Wizard(game.map, game.wizardSprite);
 
         // CAMERA
         game.camera.follow(game.playerSprite);
@@ -2035,7 +2100,7 @@ function startMapIteration() {
 }
 
 
-},{"../asset_data":1,"../gameplay-modes":4,"../map":18,"../player":23,"../xy":30}],29:[function(require,module,exports){
+},{"../asset_data":1,"../gameplay-modes":5,"../map":19,"../player":24,"../wizard":31,"../xy":32}],30:[function(require,module,exports){
 module.exports = Utils = {};
 
 Utils.dirs = { 
@@ -2061,7 +2126,89 @@ Utils.distance = function(coords1, coords2) {
     )
 }
 
-},{}],30:[function(require,module,exports){
+},{}],31:[function(require,module,exports){
+var Character = require('./character');
+var Utils = require('./utils');
+var Walking = require('./character/walking');
+
+module.exports = Wizard = function(map, sprite) {
+    var wizard = new Character({
+        map: map,
+        id: 'wizard',
+        speciesResponses: {
+            'neutralized': function() {
+                wizard.ouch();
+            }
+        },
+
+        trailingRuts: {
+            'magic': 1
+        }
+    });
+
+    // create the sprite (Character does not do that)
+
+    // make sure wizard is beyond a certain point
+    //var startingCoords = {x: -1, y: -1};
+    //while (startingCoords.x < Settings.wizardMin.x && startingCoords.y < Settings.wizardMin.y) {
+    //    startingCoords = game.map.env.randomCoords();
+    //}
+    var startingCoords = Settings.wizardStart;
+
+    // ugh, TODO clean this up
+    wizard.moveTo(startingCoords);
+    window.wizard = wizard;
+
+    // start magic where the wizard is
+    //map.diamondClump(wizard.coords, map.species.magic)
+
+
+    // have the wizard amble randomly
+    wizard.getSomewhatRandomDir = function() {
+        // 33% chance to walk in the same direction as last step
+        if (!!this.lastStep && Math.random() < 1/3) {
+            return this.lastStep;
+        }
+        return Utils.dirs[Utils.randomChoice(Utils.dirs)];
+    }
+
+    wizard.walk = new Walking(wizard,
+        function getNextDir() {
+            return wizard.getSomewhatRandomDir();
+        },
+        function onStep(dir) {
+            //wizard.faceDirection(dir);
+
+            // move sprite
+            //sprite.isoX = wizard.coords.x * Settings.cellDims.x;
+            //sprite.isoY = wizard.coords.y * Settings.cellDims.y;
+
+            var tween = window.game.add.tween(sprite)
+                
+            tween.to(
+                {
+                    isoX: wizard.coords.x * Settings.cellDims.x - 30, // argh
+                    isoY: wizard.coords.y * Settings.cellDims.y - 23, // argh
+                },
+                400,
+                //Phaser.Easing.Linear.None,
+                Phaser.Easing.Sinusoidal.InOut,
+                true, 0, 0
+            )
+            tween.onComplete.add(function() {
+                map.env.set(wizard.coords, map.species.magic)
+            })
+
+            // make sure the wizard trails magic
+            wizard.lastStep = dir;
+        }
+    )
+    wizard.walk.start();
+
+    return wizard;
+}
+
+},{"./character":2,"./character/walking":4,"./utils":30}],32:[function(require,module,exports){
 module.exports = function(x, y) {
     return new XY(x, y);
 }
@@ -2071,4 +2218,4 @@ var XY = function(x, y) {
     this.y = y;
 }
 
-},{}]},{},[5]);
+},{}]},{},[6]);
