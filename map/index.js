@@ -30,13 +30,15 @@ Map.generateTest = function() {
     // register involved species with all of the cells
     self.env.range().forEach(function(coords) {
         var cell = self.env.get(coords);
+        cell.add(self.species.trees2);
         cell.add(self.species.grass);
         cell.add(self.species.magic);
         cell.add(self.species.trees);
     })
 
-    self.sow(self.species.grass, 1);
+    self.sow(self.species.trees2, 0.2);
 
+    /*
     var rut_cells = [
         {x: 1, y: 3},
         {x: 2, y: 3},
@@ -46,10 +48,14 @@ Map.generateTest = function() {
         var cell = self.env.get(coords);
         cell.rut('footsteps', 1);
     })
+   */
 
-    self.env.set({x:1,y:1}, self.species.trees)
+    //self.env.set({x:1,y:1}, self.species.trees)
 
-    this.env.advance(2);
+    //self.rect(self.species.trees, {x:0, y:0}, {x:7, y:0});
+    //self.rect(self.species.trees2, {x:0, y:7}, {x:7, y:7});
+
+    //this.env.advance(2);
 }
 
 
@@ -71,8 +77,8 @@ Map.generate = function() {
     self.sow(self.species.grass, 1/10);
     self.sow(self.species.flowers, 1/50)
     self.sow(self.species.trees, 1/30);
-    self.sow(self.species.trees2, 1/30);
-    self.env.advance(3);
+    self.sow(self.species.trees2, 1/40);
+    self.env.advance(2);
 
     // empty spot in the 0,0 corner
     self.rect(self.species.grass, {x:0, y:0}, {x:6, y:6});

@@ -146,6 +146,10 @@ Cell.prototype.next = function(neighbors) {
     // Which species are contenders for dominance in this cell?
     var contenders = Object.keys(nextStates).filter(function(id) { return nextStates[id].state === 1; }) 
 
+    if (contenders.indexOf('trees2') !== -1 && this.species.id !== 'trees2') {
+        console.log('OK');
+    }
+
     // THE SPECIES BATTLE IT OUT...
     this.nextSpecies = this.get(SpeciesBattle.decide(contenders));
 
