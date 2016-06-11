@@ -161,7 +161,7 @@ function handleMovement() {
     }
 
     if (game.input.activePointer.isDown && game.playModes.get() === 'idle') {
-        game.physics.isoArcade.moveToPointer(game.playerSprite, 500);
+        game.physics.isoArcade.moveToPointer(game.playerSprite, game.player.speed);
     }
     else {
        stop(); 

@@ -118,7 +118,7 @@ speciesData.push({
         fade: true
     },
     speed: 200,
-    passable: false,
+    passable: true,
     rules: {
         default: GrowthRules.plants,
         ruts: [
@@ -162,7 +162,7 @@ speciesData.push({
         fade: true
     },
     speed: 200,
-    passable: false,
+    passable: true,
     rules: {
         default: GrowthRules.plants,
         conditionalnope: [

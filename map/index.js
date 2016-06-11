@@ -36,7 +36,7 @@ Map.generateTest = function() {
         cell.add(self.species.trees);
     })
 
-    self.sow(self.species.trees2, 0.2);
+    self.sow(self.species.trees2, 0.6);
 
     /*
     var rut_cells = [
