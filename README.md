@@ -1,7 +1,7 @@
 # NEUTRALIZE
 (Working title)
 
-### [Play the prototype here!](http://marycourtland.github.io/NeutralizeGame/prototype.html)
+### [Play the prototype here!](http://marycourtland.github.io/NeutralizeGame/phaser.html)
 
 It's a game. Features a dangerous exploratory hunt on a procedurally generated map.
 
