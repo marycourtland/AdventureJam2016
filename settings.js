@@ -15,7 +15,7 @@ Settings.gameAnchor = [0.5, -0.5];
 Settings.gameAnchor = [0.5, 0.5];
 Settings.gameDims = {x: 4000, y: 4000}; // pixels
 Settings.cellDims = {x: 38, y:38}; // isometric pixels per cell
-Settings.cameraDeadzone = 0.6;  
+Settings.cameraDeadzone = 0.4;
 
 // TEST SETTINGS - smaller map etc
 if (Settings.mode === 'test') {
@@ -27,7 +27,7 @@ if (Settings.mode === 'test') {
 
 // === Map iteration
 // if the randomize switch is on, it only makes sense to do timeout at least 10sec, if not 20
-Settings.mapIterationTimeout    = 10000; // millis between map updates. Use 0 to disable automatic updates
+Settings.mapIterationTimeout    = 20000; // millis between map updates. Use 0 to disable automatic updates
 Settings.randomizeCellIteration = true;
 
 // === Characters

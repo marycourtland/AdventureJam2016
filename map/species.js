@@ -13,6 +13,14 @@ module.exports = Species = function(params) {
         this.speed = params.speed;
     }
 
+    if (params.hasOwnProperty('timeToIteration')) {
+        this.timeToIteration = params.timeToIteration;
+    }
+
+    if (params.hasOwnProperty('forceNeighborIteration')) {
+        this.forceNeighborIteration = params.forceNeighborIteration;
+    }
+
     this.initRules(params.rules);
 
     //this.ruleSet = new RuleSet(params.rules);
@@ -66,8 +74,13 @@ Species.prototype.nextState = function(cell, neighbors) {
     // TODO: make a way to compose things together (like self.mask and cell.getAge)
     var maskedAges = mapCoordmap(neighbors, function(cell) { return !!cell ? self.mask(cell) * cell.getAge() : 0 });
     var age = Math.ceil(coordmapAvg(maskedAges));
+
+    var iterationTime = Settings.mapIterationTimeout;
+    if (ruleset.hasOwnProperty('iterationTime')) {
+        iterationTime = ruleset.iterationTime;
+    }
     
-    return {state: nextState, age: age};
+    return {state: nextState, age: age, iterationTime: iterationTime};
 }
 
 
@@ -110,6 +123,10 @@ Species.prototype.decideRuleset = function(cell, neighbors) {
 
 
     return winningRuleset;
+}
+
+Species.prototype.getIterationTime = function() {
+    return this.timeToIteration || Settings.mapIterationTimeout;    
 }
 
 // TODO make a coordmap object type...

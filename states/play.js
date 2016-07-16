@@ -192,33 +192,14 @@ function onTap(pointer, doubleTap) {
 }
 
 function startMapIteration() {
+    // this is just to kick off each cell
+    function getTimeout() {
+        // flat distribution because it' the first iteration
+        return Math.random() * Settings.mapIterationTimeout;
+    }
+
     Map.env.range().forEach(function(coords) {
         var cell = Map.getCell(coords);
-        cell.iterationTimeout = null;
-        cell.iterate = function() {
-            if (Settings.mapIterationTimeout <= 0) return;
-
-            cell.advance();
-
-            // schedule another iteration
-            clearTimeout(cell.iterationTimeout);
-            cell.iterationTimeout = setTimeout(function() {
-                cell.iterate();
-            }, getTimeout() )
-        }
-
-        function getTimeout() {
-            // adjust the settings a bit, randomly...
-            var scale = 1 + 0.5 * (Math.random() * 2 - 1);
-            return Settings.mapIterationTimeout * scale;
-        }
-
-        // single-cell replacement for Advancerator
-        cell.advance = function() {
-            var neighbors = Map.env.neighbors(coords);
-            this.next(neighbors);
-            this.flush();
-        }
 
         window.setTimeout(function() { cell.iterate(); }, getTimeout());
     })

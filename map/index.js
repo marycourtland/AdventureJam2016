@@ -36,7 +36,7 @@ Map.generateTest = function() {
         cell.add(self.species.trees);
     })
 
-    self.sow(self.species.trees2, 0.6);
+    //self.sow(self.species.trees2, 0.6);
 
     /*
     var rut_cells = [
@@ -52,10 +52,13 @@ Map.generateTest = function() {
 
     //self.env.set({x:1,y:1}, self.species.trees)
 
-    //self.rect(self.species.trees, {x:0, y:0}, {x:7, y:0});
+    self.rect(self.species.trees, {x:0, y:0}, {x:7, y:0});
     //self.rect(self.species.trees2, {x:0, y:7}, {x:7, y:7});
 
-    //this.env.advance(2);
+
+    self.rect(self.species.magic, {x:4, y:4}, {x:8, y:8});
+
+    this.env.advance(1);
 }
 
 
@@ -78,13 +81,13 @@ Map.generate = function() {
     self.sow(self.species.flowers, 1/50)
     self.sow(self.species.trees, 1/30);
     self.sow(self.species.trees2, 1/40);
-    self.env.advance(2);
+    self.env.advance(10);
 
     // empty spot in the 0,0 corner
-    self.rect(self.species.grass, {x:0, y:0}, {x:6, y:6});
+    self.rect(self.species.grass, {x:0, y:0}, {x:10, y:10});
+    self.rect(self.species.magic, {x:2, y:2}, {x:4, y:4});
 
-    // here is some magic until the wizard is implemented
-    self.diamondClump(self.center, self.species.magic)
+    self.env.advance(1);
 }
 
 Map.diamondClump = function(coords, species) {

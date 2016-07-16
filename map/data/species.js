@@ -49,6 +49,8 @@ speciesData.push({
         id: 'magic',
         fade: true
     },
+    timeToIteration: 1000,
+    forceNeighborIteration: true,
     rules: {
         default: GrowthRules.magic,
         ruts: [
@@ -114,7 +116,7 @@ speciesData.push({
     symbol: '&psi;',
     color: '#174925',
     sprite: {
-        id: ['tree1', 'tree8', 'tree11', 'tree13'],
+        id: ['tree1', 'tree8', 'tree11'],
         fade: true
     },
     speed: 200,
@@ -158,7 +160,7 @@ speciesData.push({
     symbol: '&psi;',
     color: '#174925',
     sprite: {
-        id: ['tree2'],
+        id: ['tree2', 'tree13'],
         fade: true
     },
     speed: 200,

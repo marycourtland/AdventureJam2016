@@ -29,11 +29,14 @@ module.exports = Cell = function(blank, coords) {
     // use cell.next(species), then cell.flush() to set it
     this.nextSpecies = null;
 
+    this.iterationTime = Settings.mapIterationTimeout; // this will be overwritten after setting a species
 
     // register callbacks when stuff happens
     this.callbacks = {
         change: {}
     }
+
+    this.forcedIterationTime = -1;
 };
 
 Cell.prototype = {};
@@ -149,10 +152,15 @@ Cell.prototype.next = function(neighbors) {
     // THE SPECIES BATTLE IT OUT...
     this.nextSpecies = this.get(SpeciesBattle.decide(contenders));
 
-    // Update age
-    if (this.nextSpecies)
-        this.register[this.nextSpecies.id].age = nextStates[this.nextSpecies.id].age;
-    
+    // Update age etc
+    if (this.nextSpecies) {
+        var nextState = nextStates[this.nextSpecies.id];
+        this.register[this.nextSpecies.id].age = nextState.age;
+        this.iterationTime = nextState.iterationTime;
+        if (this.nextSpecies.forceNeighborIteration) {
+            this.forceNeighborIteration();
+        }
+    }
 }
 
 Cell.prototype.flush = function() {
@@ -205,6 +213,73 @@ Cell.prototype.add = function(species) {
 
     return this;
 }
+
+// ITERATION STUFF
+
+
+// This is for when a cell gets manually set, and we have to pull various properties about it
+// e.g. the magic iteration time
+Cell.prototype.refreshTimeout = function() {
+    this.scheduleIteration();
+};
+
+Cell.prototype.scheduleIteration = function() {
+    clearTimeout(this.iterationTimeout);
+    var self = this;
+    this.iterationTimeout = setTimeout(function() {
+        self.iterate();
+    }, this.getIterationTime());
+
+    //reset the forced iteration
+    this.forcedIterationTime = -1;
+}
+
+
+Cell.prototype.getIterationTime = function() {
+    // Sometimes, neighboring cells will want to force a faster iteration at their boundaries
+    if (this.forcedIterationTime > 0) { return this.forcedIterationTime; }
+
+    var scale = 1 + 0.5 * (Math.random() * 2 - 1);
+    if (!this.species) return Settings.mapIterationTimeout * scale;
+    return this.species.getIterationTime() * scale;
+}
+
+
+Cell.prototype.iterate = function() {
+    if (Settings.mapIterationTimeout <= 0) return;
+
+    this.advance();
+
+    // schedule another iteration
+    this.scheduleIteration();
+}
+
+// Single-cell replacement for Advancerator
+Cell.prototype.advance = function() {
+    var neighbors = Map.env.neighbors(this.coords);
+    this.next(neighbors);
+    this.flush();
+}
+
+// Neighboring cells use this method to try to speed up the iteration
+Cell.prototype.forceIterationTime = function(time) {
+    if (this.forcedIterationTime > 0) return; // experimental
+    if (time > this.getIterationTime()) return;
+    if (time > this.forcedIterationTime && this.forcedIterationTime > 0) return;
+
+    this.forcedIterationTime = time;
+}
+
+// *This* cell might try to force *its* neighbors to iterate
+Cell.prototype.forceNeighborIteration = function() {
+    var time = this.getIterationTime();
+    var neighbors = Map.env.neighbors(this.coords);
+    neighbors.forEach(function(n) {
+        var cell = n.value;
+        if (!!cell) cell.forceIterationTime(time);
+    })
+}
+
 
 // SPRITES =======
 

@@ -68,6 +68,7 @@ module.exports = Wizard = function(map, sprite) {
             )
             tween.onComplete.add(function() {
                 map.env.set(wizard.coords, map.species.magic)
+                map.getCell(wizard.coords).refreshTimeout();
             })
 
             // make sure the wizard trails magic
