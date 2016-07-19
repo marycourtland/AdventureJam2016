@@ -11,19 +11,15 @@ var Utils = require('../utils')
 module.exports = Cell = function(blank, coords) {
     this.species = null;
     this.coords = coords;
+    this.items = [];
 
     // species register contains:
     //  species
     //  age
-    //  sprite obj
     this.register = {}; // indexed by id
 
     // Ruts
     this.ruts = {}; // indexed by rut id
-
-    this.set(blank || '');
-
-    this.items = [];
 
     // the 'next' slot is just a holding pattern until the current iteration is finalized
     // use cell.next(species), then cell.flush() to set it
@@ -33,10 +29,13 @@ module.exports = Cell = function(blank, coords) {
 
     // register callbacks when stuff happens
     this.callbacks = {
-        change: {}
+        change: {},
+        add: {}
     }
 
     this.forcedIterationTime = -1;
+
+    this.set(blank || '');
 };
 
 Cell.prototype = {};
@@ -57,85 +56,18 @@ Cell.prototype.getAge = function() {
 
 // sets the dominant species
 Cell.prototype.set = function(species) {
-    
-    if (!!this.species && !!species) {
-        if (this.species.id !== species.id) {
-            this.emit('change', {species: species})
-        }
-        else {
-            return; // no need to re-render the same species
-        }
+
+    if (!!this.species && !!species && this.species.id === species.id) {
+        return; // no need to re-set the same species
     }
-
-    this.hideAllExcept(species);
-
+    
     if (!!species) {
         this.species = species;
         this.add(species); // just in case it's not already set
-
-        this.register[species.id].visible = true;
-        if (this.register[species.id].sprite) {
-            this.showSprite(species.id);
-            //this.register[species.id].sprite.visible = true;
-        }
+        this.emit('change', {species: species})
     }
-
-
-    // Make sure only this one is visible
-    // TODO: later there may be multiple sprites per cell visible...
 
     return this;
-}
-
-Cell.prototype.showSprite = function(id) {
-    var sprite = this.register[id].sprite;
-    if (sprite.alpha > 0) return;
-
-    // todo: stuff this in the species data
-    if (this.register[id].species.sprite.fade) {
-        window.game.add.tween(sprite).to(
-            { alpha: 1 },
-            200,
-            Phaser.Easing.Linear.None,
-            true, // autostart
-            0,    // delay
-            0     // loop 
-        );
-    }
-    else {
-        sprite.alpha = 1;
-    }
-}
-
-Cell.prototype.hide = function(id) {
-    var reg = this.register[id];
-    if (!reg) return;
-
-    reg.visible = false;
-
-    if (reg.sprite && reg.sprite.alpha > 0) {
-        if (reg.species.sprite.fade) {
-            window.game.add.tween(reg.sprite).to(
-                { alpha: 0 },
-                200,
-                Phaser.Easing.Linear.None,
-                true, // autostart
-                0,    // delay
-                0     // loop 
-            );
-        }
-        else {
-            reg.sprite.alpha = 0;
-        }
-    }
-}
-
-
-Cell.prototype.hideAllExcept = function(species) {
-    for (var id in this.register) {
-        if (!!species && species.id === id) continue;
-        this.hide(id);
-    }
 }
 
 // decide which species to be next
@@ -191,25 +123,19 @@ Cell.prototype.add = function(species) {
         species = this.get('blank'); // this SHOULD be one of the registered species
     }
 
-    if (!(species.id in this.register)) {
-        this.register[species.id] = {
-            species: species,
-            age: 0,
-            visible: false,
-            sprite: null
-        }
-        //this.createSpriteFor(species.id);
+    if (species.id in this.register) return; // It's already added. No need to re-add it.
+
+    this.register[species.id] = {
+        species: species,
+        age: 0
     }
 
     // make sure there's a dominant species
     if (Object.keys(this.register).length === 1 || !this.species) {
         this.species = species;
-        this.register[species.id].visible = true;
     }
 
-    // Sprite must be initialized, later
-    // TODO: check if sprites have already been initialized
-    // (this is for when we want to optimize for not front-loading the sprite-adding)
+    this.emit('add', {species: species})
 
     return this;
 }
@@ -258,6 +184,10 @@ Cell.prototype.iterate = function() {
 Cell.prototype.advance = function() {
     var neighbors = Map.env.neighbors(this.coords);
     this.next(neighbors);
+
+    // Note: when the whole array of cells was being updated all at the same time,
+    // flush() was delayed. But now each cell updates itself independently, so
+    // we don't have to wait for the rest of the cells before calling flush().
     this.flush();
 }
 
@@ -278,32 +208,6 @@ Cell.prototype.forceNeighborIteration = function() {
         var cell = n.value;
         if (!!cell) cell.forceIterationTime(time);
     })
-}
-
-
-// SPRITES =======
-
-// This has to be done separately
-Cell.prototype.createSprites = function() {
-    // This will have to be turned off and on as needed
-    for (var species_id in this.register) {
-        this.createSpriteFor(species_id);
-    }
-}
-
-Cell.prototype.createSpriteFor = function(id) {
-    var reg = this.register[id];
-    var sprite_id = reg.species.sprite.id;
-    if (Utils.isArray(sprite_id)) {
-        sprite_id = Utils.randomChoice(sprite_id)
-    }
-
-    // TODO: access game elsehow
-    reg.sprite = window.game.addMapSprite(this.coords, sprite_id);
-    
-    reg.sprite.alpha = reg.visible ? 1 : 0
-
-    return reg.sprite;
 }
 
 // RUTS =======

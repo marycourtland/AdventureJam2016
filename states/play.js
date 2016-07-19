@@ -7,6 +7,9 @@ var Wizard = require('../wizard');
 var XY = require('../xy');
 var game;
 
+
+var PhaserCell = require('../phaser/cell.js')
+
 module.exports = Play = function (_game) { 
     game = _game;
 };
@@ -44,8 +47,10 @@ Play.prototype = {
         game.physics.isoArcade.gravity.setTo(0, 0, 0);
 
         game.map.generate();
+
+        var phaserCells = [];
         game.map.forEach(function(coords, cell) {
-            cell.createSprites();
+            phaserCells.push(new PhaserCell(cell));
         })
         game.iso.simpleSort(game.mapGroup);
         
