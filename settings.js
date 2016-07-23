@@ -1,9 +1,15 @@
 // not included in browserify bundle
 window.Settings = {};
 
-Settings.mode = 'default';
-var modeMatch = window.location.search.match(/mode=([^?]*)/i);
-if (modeMatch && modeMatch[1]) Settings.mode = modeMatch[1].toLowerCase();
+// ok this could go in a lib somewhere
+function getUrlParam(key) {
+    var match = window.location.search.match(new RegExp(key + '=([^?&]*)', 'i'));
+    if (match && match[1]) return match[1];
+    else return null;
+}
+
+Settings.view = getUrlParam('view') || 'phaserIso';
+Settings.mode = getUrlParam('mode') || 'default';
 
 
 // === Feature flags

@@ -1,15 +1,20 @@
 var Settings = window.Settings;
-var GameStates = require('./states');
+var Views = require('./views');
 
-window.game = null;
+// view-independent modules
+var Context = {
+    Map: require('./map'),
+    GamePlayModes: require('./gameplay-modes'),
+    Player: require('./player'),
+    Wizard: require('./wizard')
+}
+
+window.game = {};
 
 window.onload = function() {
-    window.game = new Phaser.Game(window.innerWidth, window.innerHeight, Phaser.AUTO, 'game', null, true, false);
-
-    for (var state in GameStates) {
-        game.state.add(state, GameStates[state]);
-    }
-
-    game.state.start('Boot');
-};
-
+    if (!(Settings.view in Views)) {
+        alert('Pick one of these for the game view: ' + Object.keys(Views).join(', '));
+        return;
+    } 
+    Views[Settings.view].load(Context);
+}

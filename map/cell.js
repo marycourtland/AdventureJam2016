@@ -6,7 +6,7 @@
 // all the species and compute which one is dominant
 
 var SpeciesBattle = require('./species-battle')
-var Utils = require('../utils')
+var Utils = window.Utils;
 
 module.exports = Cell = function(blank, coords) {
     this.species = null;

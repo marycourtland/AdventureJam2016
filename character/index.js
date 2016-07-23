@@ -1,5 +1,5 @@
+var Utils = window.Utils;
 var Inventory = require('./inventory');
-var Utils = require('../utils');
 
 var CHAR_SPECIES_LISTENER_PREFIX = 'character-species-listener-';
 

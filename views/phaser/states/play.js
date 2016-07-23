@@ -1,17 +1,24 @@
+var XY = window.XY;
 var Settings = window.Settings;
 var AssetData = require('../asset_data');
-var Map = require('../map');
-var GamePlayModes = require('../gameplay-modes');
-var Player = require('../player');
-var Wizard = require('../wizard');
-var XY = require('../xy');
 var game;
 
 
-var PhaserCell = require('../phaser/cell.js')
+// this holds player, wizard, etc
+var Context;
+
+var PhaserCell = require('../cell.js')
 
 module.exports = Play = function (_game) { 
     game = _game;
+};
+
+Play.setContext = function(newContext) {
+    console.assert(!!newContext.Map);
+    console.assert(!!newContext.GamePlayModes);
+    console.assert(!!newContext.Player);
+    console.assert(!!newContext.Wizard);
+    Context = newContext;
 };
 
 Play.prototype = {
@@ -30,12 +37,12 @@ Play.prototype = {
             return sprite;
         }
 
-        game.map = Map;
+        game.map = Context.Map;
         game.map.init({
             size: Settings.mapSize
         })
 
-        game.playModes = GamePlayModes;
+        game.playModes = Context.GamePlayModes;
         game.playModes.init(game)
     },
 
@@ -69,7 +76,7 @@ Play.prototype = {
         game.physics.isoArcade.enable(game.playerSprite);
         game.playerSprite.body.collideWorldBounds = true;
         
-        game.player = Player(game.map);
+        game.player = Context.Player(game.map);
 
         // TODO: this sprite issue is a huge mess; clean it up
         game.wizardSprite = game.add.isoSprite(
@@ -77,7 +84,7 @@ Play.prototype = {
             Settings.wizardStart.y * Settings.cellDims.y,
             2, 'wizard', 0, game.mapGroup
         )
-        game.wizard = Wizard(game.map, game.wizardSprite);
+        game.wizard = Context.Wizard(game.map, game.wizardSprite);
 
         // CAMERA
         game.camera.follow(game.playerSprite);
@@ -132,7 +139,7 @@ function debugText() {
         '  coords:    ' + xyStr(game.player.coords),
         '  health:    ' + game.player.health,
         '  speed:     ' + game.player.speed,
-        '  underfoot: ' + Map.getCell(game.player.coords).species.id 
+        '  underfoot: ' + Context.Map.getCell(game.player.coords).species.id 
     ]
 
     var color = "#CDE6BB";
@@ -197,6 +204,8 @@ function onTap(pointer, doubleTap) {
 }
 
 function startMapIteration() {
+    var Map = Context.Map;
+
     // this is just to kick off each cell
     function getTimeout() {
         // flat distribution because it' the first iteration

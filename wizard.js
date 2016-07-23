@@ -1,5 +1,5 @@
+var Utils = window.Utils;
 var Character = require('./character');
-var Utils = require('./utils');
 var Walking = require('./character/walking');
 
 module.exports = Wizard = function(map, sprite) {

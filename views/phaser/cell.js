@@ -1,5 +1,5 @@
 var SpeciesSprites = require('./data/species-sprites')
-var Utils = require('../utils')
+var Utils = window.Utils;
 
 module.exports = PhaserCell = function(cell) {
     this.cell = cell;

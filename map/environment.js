@@ -1,9 +1,9 @@
 // Example:
 // env = new Env({x:30, y:30});
 
+var XY = window.XY;
 var Cell = require('./cell.js')
 var Advancerator = require('./advancerator.js');
-var XY = require('../xy');
 
 module.exports = Env = function(size, blank_cell) {
     this.size = size;
