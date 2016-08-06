@@ -1,0 +1,212 @@
+@font-face {
+  font-family: Stentiga;
+  src: url("../../fonts/stentiga/stentiga.ttf");
+}
+
+@font-face {
+  font-family: Zrnic;
+  src: url("../../fonts/zrnic/zrnic_rg.ttf");
+}
+
+body {
+  background-color: #283128;
+  color: #CDE6BB;
+  font: 10pt sans-serif;
+  font: 12pt Zrnic;
+}
+
+a {
+  color: inherit;
+}
+
+.panel {
+    background-color: #0C1416;
+    padding: 1rem;
+    border: 4px solid #9EBA8A;
+    border-width: 4px 15px;
+    border-radius: 3px;
+}
+
+#title {
+  color: #CDE6BB;
+  font: 40pt Stentiga;
+  text-align: center;
+  margin: 3rem auto;
+}
+
+  #title.panel {
+    width: 400px;
+  }
+
+  /* experimental */
+  #title.rotated {
+    transform: rotate(-90deg);
+    transform-origin: 100% 0;
+    position: fixed;
+    left: -400px;
+  }
+
+#hud {
+}
+
+  #hud > * {
+    margin-right: 1em;
+  }
+
+  #hud #info {
+    float: right;
+    margin-right: 0;
+  }
+
+
+#board-layers {
+  display: block;
+  width: 500px;
+  height: 500px;
+  margin: 3rem auto;
+  position: relative;
+  background-color: #0C1416;
+
+  /* experimental */
+  border: 10px solid #9EBA8A;
+  border-width: 10px 40px;
+  border-radius: 5px;
+}
+
+.board-layer {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 500px;
+  height: 500px;
+  overflow: hidden;
+}
+
+#mouse-overlay:hover,
+#game-inventory .slot:hover {
+  cursor: pointer;
+}
+
+.cell {
+  color: darkgreen;
+  text-align: center;
+  position: absolute;
+  font-family: monospace;
+  font-size: 12px;
+  transition: background-color 0.5s linear;
+}
+
+.sprite {
+  position: absolute;
+  background-repeat: no-repeat;
+}
+
+/* Inventory: 10x2 array of slots */
+
+#game-inventory {
+  width: 520px; /* 10*(50+1+1) */
+  margin: 1em auto;
+  font-size: 0;
+  border-width: 4px 15px !important;
+  border-radius: 3px;
+  background-color: #9EBA8A;
+}
+
+#game-inventory,
+.slot {
+  border: 1px solid #9EBA8A;
+}
+
+  .slot {
+    display: inline-block;
+    background-color: #0C1416;
+    width: 50px;
+    height: 50px;
+  }
+
+    .slot.selected {
+      background-color: #422121;
+    }
+
+/* Item types */
+[data-item-type] {
+    background-size: 100%;
+}
+[data-item-type='neutralizer'] { background-image: url('../../images/items/neutralizer.png'); }
+[data-item-type='bomb'] { background-image: url('../../images/items/bomb.png'); }
+[data-item-type='camera'] { background-image: url('../../images/items/camera.png'); }
+[data-item-type='detector'] { background-image: url('../../images/items/detector.png'); }
+[data-item-type='neutralizer'] { background-image: url('../../images/items/neutralizer.png'); }
+
+
+/* shadow border animated */
+
+#game-shadow {
+  box-shadow: inset 0 0 8em black;
+}
+
+#game-shadow-animated {
+
+  /* Use steps(20) to conserve CPU */
+  animation: fog 6s infinite steps(20);
+  -webkit-animation: fog 6s infinite steps(20);
+  -moz-animation: fog 6s infinite steps(20);
+  -o-animation: fog 6s infinite steps(20);
+}
+
+@keyframes fog {
+  0% { box-shadow: inset 0 0 6em black; }
+  30% { box-shadow: inset 0 0 14em black; }
+  50% { box-shadow: inset 0 0 12em black; }
+  70% { box-shadow: inset 0 0 10em black; }
+  100% { box-shadow: inset 0 0 6em black; }
+}
+
+@-moz-keyframes fog {
+  0% { box-shadow: inset 0 0 6em black; }
+  30% { box-shadow: inset 0 0 14em black; }
+  50% { box-shadow: inset 0 0 12em black; }
+  70% { box-shadow: inset 0 0 10em black; }
+  100% { box-shadow: inset 0 0 6em black; }
+}
+
+@-webkit-keyframes fog {
+  0% { box-shadow: inset 0 0 6em black; }
+  30% { box-shadow: inset 0 0 14em black; }
+  50% { box-shadow: inset 0 0 12em black; }
+  70% { box-shadow: inset 0 0 10em black; }
+  100% { box-shadow: inset 0 0 6em black; }
+}
+
+@-o-keyframes fog {
+  0% { box-shadow: inset 0 0 6em black; }
+  30% { box-shadow: inset 0 0 14em black; }
+  50% { box-shadow: inset 0 0 12em black; }
+  70% { box-shadow: inset 0 0 10em black; }
+  100% { box-shadow: inset 0 0 6em black; }
+}
+
+
+
+/* Experimental: fullscreen map */
+#board-layers {
+    position: absolute;
+    top: 0;
+    left: 0;
+    margin: 0;
+    border-width: 0;
+    z-index: -1;
+    width: 100%;
+    height: 100%;
+}
+
+.board-layer {
+    width: 100%;
+    height: 100%;
+}
+
+#game-inventory {
+    position: absolute;
+    bottom: 1rem;
+    right: 1rem;
+}

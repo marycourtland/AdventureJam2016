@@ -2,7 +2,7 @@ var Utils = window.Utils;
 var Character = require('./character');
 var Walking = require('./character/walking');
 
-module.exports = Wizard = function(map, sprite) {
+module.exports = Wizard = function(map) {
     var wizard = new Character({
         map: map,
         id: 'wizard',
@@ -16,8 +16,8 @@ module.exports = Wizard = function(map, sprite) {
             'magic': 1
         }
     });
-
-    // create the sprite (Character does not do that)
+    
+    Events.init(wizard);
 
     // make sure wizard is beyond a certain point
     //var startingCoords = {x: -1, y: -1};
@@ -49,27 +49,16 @@ module.exports = Wizard = function(map, sprite) {
         },
         function onStep(dir) {
             //wizard.faceDirection(dir);
+            
+            // Note for the Phaser view: this movement happens before the animation, so it looks a bit
+            // janky. The magic appears on the next tile before the wizard appears to arrive on the tile.
+            // Maybe the phaser view could send a 'finished moving' signal back?
+            // But it's hard to keep different views decoupled, in that case.
+            
+            wizard.emit('moveDiscrete', {});
 
-            // move sprite
-            //sprite.isoX = wizard.coords.x * Settings.cellDims.x;
-            //sprite.isoY = wizard.coords.y * Settings.cellDims.y;
-
-            var tween = window.game.add.tween(sprite)
-                
-            tween.to(
-                {
-                    isoX: wizard.coords.x * Settings.cellDims.x - 30, // argh
-                    isoY: wizard.coords.y * Settings.cellDims.y - 23, // argh
-                },
-                400,
-                //Phaser.Easing.Linear.None,
-                Phaser.Easing.Sinusoidal.InOut,
-                true, 0, 0
-            )
-            tween.onComplete.add(function() {
-                map.env.set(wizard.coords, map.species.magic)
-                map.getCell(wizard.coords).refreshTimeout();
-            })
+            wizard.map.env.set(wizard.coords, wizard.map.species.magic);
+            wizard.map.getCell(wizard.coords).refreshTimeout();
 
             // make sure the wizard trails magic
             wizard.lastStep = dir;

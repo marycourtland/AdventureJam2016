@@ -6,6 +6,7 @@
 // all the species and compute which one is dominant
 
 var SpeciesBattle = require('./species-battle')
+var Events = window.Events;
 var Utils = window.Utils;
 
 module.exports = Cell = function(blank, coords) {
@@ -27,18 +28,16 @@ module.exports = Cell = function(blank, coords) {
 
     this.iterationTime = Settings.mapIterationTimeout; // this will be overwritten after setting a species
 
-    // register callbacks when stuff happens
-    this.callbacks = {
-        change: {},
-        add: {}
-    }
-
     this.forcedIterationTime = -1;
+
+//    this.callbacks = {add:{}, change:{}}
 
     this.set(blank || '');
 };
 
 Cell.prototype = {};
+
+Events.init(Cell.prototype);
 
 // convenience, to get the species object
 Cell.prototype.get = function(species_id) {
@@ -215,24 +214,6 @@ Cell.prototype.forceNeighborIteration = function() {
 Cell.prototype.rut = function(rut_id, intensity) {
     if (typeof intensity === 'undefined') intensity = 1;
     this.ruts[rut_id] = intensity; 
-}
-
-// EVENTS =======
-
-Cell.prototype.on = function(event, callback_id, callback) {
-    this.callbacks[event][callback_id] = callback; 
-}
-
-Cell.prototype.off = function(event, callback_id) {
-    delete this.callbacks[event][callback_id];
-}
-
-Cell.prototype.emit = function(event, data) {
-    if (event in this.callbacks && Object.keys(this.callbacks[event]).length > 0) {
-        for (var cb in this.callbacks[event]) {
-            this.callbacks[event][cb](data);
-        }
-    }
 }
 
 // ITEMS =======

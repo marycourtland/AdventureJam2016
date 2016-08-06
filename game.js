@@ -5,6 +5,7 @@ var Views = require('./views');
 var Context = {
     Map: require('./map'),
     GamePlayModes: require('./gameplay-modes'),
+    Items: require('./items'),
     Player: require('./player'),
     Wizard: require('./wizard')
 }

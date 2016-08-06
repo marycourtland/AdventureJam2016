@@ -25,11 +25,22 @@ Map.init = function(params) {
     //this.render();
 }
 
+Map.startIteration = function() {
+    // this is just the first timeout
+    function getTimeout(){
+        // flat distribution because it's the first iteration
+        return Math.random() * Settings.mapIterationTimeout
+    }
+
+    this.forEach(function(coords, cell) {
+        setTimeout(function() { cell.iterate(); }, getTimeout());
+    })
+}
+
 Map.generateTest = function() {
     var self = this;
     // register involved species with all of the cells
-    self.env.range().forEach(function(coords) {
-        var cell = self.env.get(coords);
+    self.forEach(function(coords, cell) {
         cell.add(self.species.trees2);
         cell.add(self.species.grass);
         cell.add(self.species.magic);
@@ -68,8 +79,7 @@ Map.generate = function() {
     var self = this;
 
     // register involved species with all of the cells
-    self.env.range().forEach(function(coords) {
-        var cell = self.env.get(coords);
+    self.forEach(function(coords, cell) {
         cell.add(self.species.magic);
         cell.add(self.species.grass);
         cell.add(self.species.trees);
@@ -172,101 +182,12 @@ Map.advance = function(n) {
     return this;
 }
 
-
-// UNUSED PROTOTYPE STUFF
-/*
-
-// MARGINS / CAMERA
-Map.isInWindow = function(coords) {
-    var distance = Math.max(
-        Math.abs(coords.x - this.center.x),
-        Math.abs(coords.y - this.center.y)
-    )
-    return distance < this.window;
+Map.log = function() {
+    // For debugging purposes
+    var ascii = Utils.transpose(this.env.cells).map(function (r) {
+        return r.map(function(cell) {
+            return cell.species.id === 'blank' ? ' ' : cell.species.id[0];
+        }).join(' ');
+    }).join('\n');
+    console.log(ascii);
 }
-
-Map.getDistanceFromWindowEdge = function(coords) {
-    return {
-        north: (this.center.y - this.window) - coords.y,
-        west: (this.center.x - this.window) - coords.x,
-        south: coords.y - (this.center.y + this.window),
-        east: coords.x - (this.center.x + this.window)
-    }
-}
-
-
-
-// Different than isInWindow. Uses the rectangular renderer view
-Map.isInView = function(coords) {
-    return this.renderer.isInView(coords);
-}
-
-// ITEMS
-Map.placeItem = function(coords, item) {
-    var cell = this.env.get(coords);
-    cell.addItem(item);
-    // put it in the html
-    item.rendersTo(this.renderer.getCell(coords));
-}
-
-
-// RENDERING
-Map.render = function() { this.renderer.render(this.env); return this; }
-Map.refresh = function() { this.renderer.refresh(this.env); return this; }
-Map.refreshFull = function() { this.renderer.refresh(this.env, true); return this; }
-
-Map.refreshCell = function(coords, forceRefresh) {
-    if (!forceRefresh && !this.isInView(coords)) return this;
-    this.renderer.refreshCoords(this.env, coords);
-}
-
-Map.zoomFactor = 2;
-
-Map.zoomIn = function() {
-    this.dims.x *= Map.zoomFactor;
-    this.dims.y *= Map.zoomFactor;
-    this.window /= Map.zoomFactor;
-    this.refreshFull();
-    return this;
-}
-
-Map.zoomOut = function() {
-    this.dims.x /= Map.zoomFactor;
-    this.dims.y /= Map.zoomFactor;
-    this.window *= Map.zoomFactor;
-    this.refreshFull();
-    return this;
-}
-
-Map.recenter = function(coords) {
-    this.center.x = coords.x;
-    this.center.y = coords.y;
-    this.refreshFull();
-    return this;
-}
-
-Map.shiftView = function(dCoords) {
-    this.recenter({
-        x: this.center.x + dCoords.x,
-        y: this.center.y + dCoords.y
-    })
-    return this;
-}
-
-
-// ugh
-Map.getOffset = function() {
-    return this.renderer.getPixelOffset();
-}
-
-// more ugh. Pixels should be relative to the top left corner of the map itself, not the html element
-Map.getCoordsFromPixels = function(pixels) {
-    return {
-        x: Math.floor(pixels.x / this.dims.x),
-        y: Math.floor(pixels.y / this.dims.y),
-    }
-}
-
-// clump all this stuff together in a renderer
-Map.renderer = require('./renderer')
-*/

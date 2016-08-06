@@ -1,3 +1,4 @@
+var Events = window.Events;
 var Utils = window.Utils;
 var Inventory = require('./inventory');
 
@@ -12,6 +13,8 @@ module.exports = Character = function(params) {
 
     this.inventory = new Inventory(this);
     this.health = Settings.maxHealth;
+
+    Events.init(this);
 
     // Responses to species. These specify what happens when the char either walks onto a new species, or the current cell changes.
     this.speciesResponses = params.speciesResponses || {};

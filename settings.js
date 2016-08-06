@@ -25,7 +25,7 @@ Settings.cameraDeadzone = 0.4;
 
 // TEST SETTINGS - smaller map etc
 if (Settings.mode === 'test') {
-    Settings.mapSize = {x: 10, y:10};
+    Settings.mapSize = {x: 20, y:20};
     Settings.gameAnchor = [0.5, 0.2];
     Settings.gameDims = {x: 1000, y: 1000};
 }

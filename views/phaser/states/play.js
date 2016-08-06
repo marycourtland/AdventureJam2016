@@ -8,6 +8,7 @@ var game;
 var Context;
 
 var PhaserCell = require('../cell.js')
+var PhaserCharacter = require('../character.js')
 
 module.exports = Play = function (_game) { 
     game = _game;
@@ -77,6 +78,7 @@ Play.prototype = {
         game.playerSprite.body.collideWorldBounds = true;
         
         game.player = Context.Player(game.map);
+        var phaserPlayer = new PhaserCharacter(game.player, game.playerSprite);
 
         // TODO: this sprite issue is a huge mess; clean it up
         game.wizardSprite = game.add.isoSprite(
@@ -85,6 +87,7 @@ Play.prototype = {
             2, 'wizard', 0, game.mapGroup
         )
         game.wizard = Context.Wizard(game.map, game.wizardSprite);
+        var phaserWizard = new PhaserCharacter(game.wizard, game.wizardSprite);
 
         // CAMERA
         game.camera.follow(game.playerSprite);
@@ -106,7 +109,7 @@ Play.prototype = {
         bindInventoryEvents();
 
         // SPIN UP THE MAP
-        startMapIteration();
+        game.map.startIteration();
     },
 
     update: function () {
@@ -201,21 +204,5 @@ function onTap(pointer, doubleTap) {
     game.playModes.advance({coords: game.lastTap});
 
     // todo: place inventory item
-}
-
-function startMapIteration() {
-    var Map = Context.Map;
-
-    // this is just to kick off each cell
-    function getTimeout() {
-        // flat distribution because it' the first iteration
-        return Math.random() * Settings.mapIterationTimeout;
-    }
-
-    Map.env.range().forEach(function(coords) {
-        var cell = Map.getCell(coords);
-
-        window.setTimeout(function() { cell.iterate(); }, getTimeout());
-    })
 }
 
