@@ -3,7 +3,10 @@
   <head>
     <title>Neutralize</title>
     <meta charset="utf-8">
-    <link rel="stylesheet" type="text/css" href="style.css">
+    <link rel="stylesheet" type="text/css" href="views/topdown/style.css">
+    <script type="text/javascript" src="lib/utils.js"></script>
+    <script type="text/javascript" src="lib/events.js"></script>
+    <script type="text/javascript" src="lib/xy.js"></script>
     <script type="text/javascript" src="countspecies.js"></script>
     <script type="text/javascript" src="settings.js"></script>
     <script type="text/javascript" src="game-bundled.js"></script>
@@ -19,13 +22,13 @@
     <div id="hud" class='panel'>
       <a id='zoom-out-button' href='javascript: UI.zoomOut();'>Zoom Out</a>
       <a id='zoom-in-button' href='javascript: UI.zoomIn();'>Zoom In</a>
-      <a id='sleep-button' href='javascript: Map.advance().render();'>Sleep</a>
+      <a id='sleep-button' href='javascript: Map.advance(); game.render();'>Sleep</a>
       <span>Move with arrow keys</span>
       | Health: <span id='player-health'>10</span>
       <span id='info'></span>
     </div>
     <div id="title" style='display:none'>NEUTRALIZE</div>
-    <div id='game-inventory'>
+    <div id='game-inventory' style='display: none;'>
       <div class='slot' data-id='0'></div>
       <div class='slot' data-id='1'></div>
       <div class='slot' data-id='2'></div>

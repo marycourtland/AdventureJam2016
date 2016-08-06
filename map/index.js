@@ -1,6 +1,7 @@
+var Settings = window.Settings;
 var Env = require('./environment');
 var Species = require('./species');
-var Renderer = require('./renderer')
+//var Renderer = require('./renderer')
 var SpeciesData = require('./data/species') 
 
 module.exports = Map = {};
@@ -14,36 +15,87 @@ SpeciesData.forEach(function(s) {
 
 Map.init = function(params) {
     this.size = params.size;
-    this.dims = params.dims;
-    this.window = params.window; // what radius of tiles should comprise the camera window?
-
     this.center = {x: Math.floor(this.size.x/2), y: Math.floor(this.size.y/2)} // use Map.setCenter to change this
-
-    this.renderer = new Renderer(params.html, this.dims, this.center);
-
     this.env = new Env(this.size, this.species.blank);
 
-    this.generate();
-    this.render();
+    // Unused prototype stuff
+    //this.dims = params.dims;
+    //this.window = params.window; // what radius of tiles should comprise the camera window?
+    //this.renderer = new Renderer(params.html, this.dims, this.center);
+    //this.render();
+}
+
+Map.startIteration = function() {
+    // this is just the first timeout
+    function getTimeout(){
+        // flat distribution because it's the first iteration
+        return Math.random() * Settings.mapIterationTimeout
+    }
+
+    this.forEach(function(coords, cell) {
+        setTimeout(function() { cell.iterate(); }, getTimeout());
+    })
+}
+
+Map.generateTest = function() {
+    var self = this;
+    // register involved species with all of the cells
+    self.forEach(function(coords, cell) {
+        cell.add(self.species.trees2);
+        cell.add(self.species.grass);
+        cell.add(self.species.magic);
+        cell.add(self.species.trees);
+    })
+
+    //self.sow(self.species.trees2, 0.6);
+
+    /*
+    var rut_cells = [
+        {x: 1, y: 3},
+        {x: 2, y: 3},
+    ]
+    
+    rut_cells.forEach(function(coords) {
+        var cell = self.env.get(coords);
+        cell.rut('footsteps', 1);
+    })
+   */
+
+    //self.env.set({x:1,y:1}, self.species.trees)
+
+    self.rect(self.species.trees, {x:0, y:0}, {x:7, y:0});
+    //self.rect(self.species.trees2, {x:0, y:7}, {x:7, y:7});
+
+
+    self.rect(self.species.magic, {x:4, y:4}, {x:8, y:8});
+
+    this.env.advance(1);
 }
 
 
 Map.generate = function() {
+    if (Settings.mode === 'test') return this.generateTest();
+
     var self = this;
 
     // register involved species with all of the cells
-    self.env.range().forEach(function(coords) {
-        self.env.get(coords).add(self.species.magic)
-        self.env.get(coords).add(self.species.grass);
-        self.env.get(coords).add(self.species.trees);
+    self.forEach(function(coords, cell) {
+        cell.add(self.species.magic);
+        cell.add(self.species.grass);
+        cell.add(self.species.trees);
+        cell.add(self.species.trees2);
+        cell.add(self.species.neutralized);
     })
-
 
     self.sow(self.species.grass, 1/10);
     self.sow(self.species.flowers, 1/50)
     self.sow(self.species.trees, 1/30);
+    self.sow(self.species.trees2, 1/40);
+    self.env.advance(10);
 
-    self.env.advance(4);
+    // empty spot in the 0,0 corner
+    self.rect(self.species.grass, {x:0, y:0}, {x:10, y:10});
+    self.rect(self.species.magic, {x:2, y:2}, {x:4, y:4});
 
     self.env.advance(1);
 }
@@ -62,9 +114,25 @@ Map.diamondClump = function(coords, species) {
     ], species)
 }
 
+Map.rect = function(species, from, to) {
+    var clump = [];
+    for (var x = from.x; x <= to.x; x++) {
+        for (var y = from.y; y <= to.y; y++) {
+            clump.push({x:x, y:y});
+        }
+    }
+    return this.clump(from, clump, species);
+}
+
 // randomly set cells as the species
 Map.sow = function(species, frequency) {
     var self = this;
+
+    self.forEach(function(coords, cell) {
+        if (Math.random() > frequency) return;
+        self.env.set(coords, species);
+    })
+/*
     var numSeeds = self.size.x * self.size.y * frequency;
 
     // Pick some places to seed
@@ -74,7 +142,7 @@ Map.sow = function(species, frequency) {
     }
 
     seeds.forEach(function(coords) { self.env.set(coords, species); })
-
+*/
     return this
 }
 
@@ -114,95 +182,12 @@ Map.advance = function(n) {
     return this;
 }
 
-// MARGINS / CAMERA
-Map.isInWindow = function(coords) {
-    var distance = Math.max(
-        Math.abs(coords.x - this.center.x),
-        Math.abs(coords.y - this.center.y)
-    )
-    return distance < this.window;
+Map.log = function() {
+    // For debugging purposes
+    var ascii = Utils.transpose(this.env.cells).map(function (r) {
+        return r.map(function(cell) {
+            return cell.species.id === 'blank' ? ' ' : cell.species.id[0];
+        }).join(' ');
+    }).join('\n');
+    console.log(ascii);
 }
-
-Map.getDistanceFromWindowEdge = function(coords) {
-    return {
-        north: (this.center.y - this.window) - coords.y,
-        west: (this.center.x - this.window) - coords.x,
-        south: coords.y - (this.center.y + this.window),
-        east: coords.x - (this.center.x + this.window)
-    }
-}
-
-
-// Different than isInWindow. Uses the rectangular renderer view
-Map.isInView = function(coords) {
-    return this.renderer.isInView(coords);
-}
-
-// ITEMS
-Map.placeItem = function(coords, item) {
-    var cell = this.env.get(coords);
-    cell.addItem(item);
-    // put it in the html
-    item.rendersTo(this.renderer.getCell(coords));
-}
-
-
-// RENDERING
-Map.render = function() { this.renderer.render(this.env); return this; }
-Map.refresh = function() { this.renderer.refresh(this.env); return this; }
-Map.refreshFull = function() { this.renderer.refresh(this.env, true); return this; }
-
-Map.refreshCell = function(coords, forceRefresh) {
-    if (!forceRefresh && !this.isInView(coords)) return this;
-    this.renderer.refreshCoords(this.env, coords);
-}
-
-Map.zoomFactor = 2;
-
-Map.zoomIn = function() {
-    this.dims.x *= Map.zoomFactor;
-    this.dims.y *= Map.zoomFactor;
-    this.window /= Map.zoomFactor;
-    this.refreshFull();
-    return this;
-}
-
-Map.zoomOut = function() {
-    this.dims.x /= Map.zoomFactor;
-    this.dims.y /= Map.zoomFactor;
-    this.window *= Map.zoomFactor;
-    this.refreshFull();
-    return this;
-}
-
-Map.recenter = function(coords) {
-    this.center.x = coords.x;
-    this.center.y = coords.y;
-    this.refreshFull();
-    return this;
-}
-
-Map.shiftView = function(dCoords) {
-    this.recenter({
-        x: this.center.x + dCoords.x,
-        y: this.center.y + dCoords.y
-    })
-    return this;
-}
-
-
-// ugh
-Map.getOffset = function() {
-    return this.renderer.getPixelOffset();
-}
-
-// more ugh. Pixels should be relative to the top left corner of the map itself, not the html element
-Map.getCoordsFromPixels = function(pixels) {
-    return {
-        x: Math.floor(pixels.x / this.dims.x),
-        y: Math.floor(pixels.y / this.dims.y),
-    }
-}
-
-// clump all this stuff together in a renderer
-Map.renderer = require('./renderer')

@@ -3,28 +3,28 @@ var ToolChest = require('./items');
 
 var CELL_CHANGE_EVT = 'check_cell_for_magic';
 
-module.exports = Player = function(game) {
+module.exports = Player = function(map) {
     var player = new Character({
-        map: game.map,
+        map: map,
         id: 'player',
-        sprite: 'player',
 
         speciesResponses: {
             'magic': function() {
                 player.ouch();
             }
         },
+
+        trailingRuts: {
+            'footsteps': 1
+        }
     });
 
     // ugh, TODO clean this up
-    player.sprite.scaleTo(game.cellDims).place(game.html.characters);
+    //player.sprite.scaleTo(game.cellDims).place(game.html.characters);
     player.moveTo(Settings.playerStart);
 
-    // temporary
-    window.player = player;
-
     // start some grass where the player is
-    game.map.diamondClump(player.coords, game.map.species.grass)
+    map.diamondClump(player.coords, map.species.grass)
 
     // Starting inventory
     initInventory(player, {
@@ -34,7 +34,7 @@ module.exports = Player = function(game) {
         detector: 3
     })
 
-    player.inventory.rendersTo(game.html.inventory);
+    player.inventory.rendersTo(document.getElementById('game-inventory'));
 
     return player;
 }

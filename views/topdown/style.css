@@ -1,11 +1,11 @@
 @font-face {
   font-family: Stentiga;
-  src: url("fonts/stentiga/stentiga.ttf");
+  src: url("../../fonts/stentiga/stentiga.ttf");
 }
 
 @font-face {
   font-family: Zrnic;
-  src: url("fonts/zrnic/zrnic_rg.ttf");
+  src: url("../../fonts/zrnic/zrnic_rg.ttf");
 }
 
 body {
@@ -47,7 +47,6 @@ a {
   }
 
 #hud {
-    margin: 1rem !important;
 }
 
   #hud > * {
@@ -59,14 +58,29 @@ a {
     margin-right: 0;
   }
 
-/* phaser game renders here */
-#game, #game-shadow {
-  position: absolute;
-  top: 0;
-  left: 0;
-  z-index: -1
+
+#board-layers {
+  display: block;
+  width: 500px;
+  height: 500px;
+  margin: 3rem auto;
+  position: relative;
+  background-color: #0C1416;
+
+  /* experimental */
+  border: 10px solid #9EBA8A;
+  border-width: 10px 40px;
+  border-radius: 5px;
 }
 
+.board-layer {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 500px;
+  height: 500px;
+  overflow: hidden;
+}
 
 #mouse-overlay:hover,
 #game-inventory .slot:hover {
@@ -87,19 +101,15 @@ a {
   background-repeat: no-repeat;
 }
 
-
 /* Inventory: 10x2 array of slots */
 
 #game-inventory {
   width: 520px; /* 10*(50+1+1) */
-  margin: 1rem;
+  margin: 1em auto;
   font-size: 0;
   border-width: 4px 15px !important;
   border-radius: 3px;
   background-color: #9EBA8A;
-  position: absolute;
-  bottom: 0; 
-  left: 0;
 }
 
 #game-inventory,
@@ -122,20 +132,17 @@ a {
 [data-item-type] {
     background-size: 100%;
 }
-[data-item-type='neutralizer'] { background-image: url('images/items/neutralizer.png'); }
-[data-item-type='bomb'] { background-image: url('images/items/bomb.png'); }
-[data-item-type='camera'] { background-image: url('images/items/camera.png'); }
-[data-item-type='detector'] { background-image: url('images/items/detector.png'); }
-[data-item-type='neutralizer'] { background-image: url('images/items/neutralizer.png'); }
+[data-item-type='neutralizer'] { background-image: url('../../images/items/neutralizer.png'); }
+[data-item-type='bomb'] { background-image: url('../../images/items/bomb.png'); }
+[data-item-type='camera'] { background-image: url('../../images/items/camera.png'); }
+[data-item-type='detector'] { background-image: url('../../images/items/detector.png'); }
+[data-item-type='neutralizer'] { background-image: url('../../images/items/neutralizer.png'); }
 
 
 /* shadow border animated */
 
 #game-shadow {
-  box-shadow: inset 0 0 6em #283128;
-  z-index: 1;
-  width: 100%;
-  height: 100%
+  box-shadow: inset 0 0 8em black;
 }
 
 #game-shadow-animated {
@@ -177,4 +184,29 @@ a {
   50% { box-shadow: inset 0 0 12em black; }
   70% { box-shadow: inset 0 0 10em black; }
   100% { box-shadow: inset 0 0 6em black; }
+}
+
+
+
+/* Experimental: fullscreen map */
+#board-layers {
+    position: absolute;
+    top: 0;
+    left: 0;
+    margin: 0;
+    border-width: 0;
+    z-index: -1;
+    width: 100%;
+    height: 100%;
+}
+
+.board-layer {
+    width: 100%;
+    height: 100%;
+}
+
+#game-inventory {
+    position: absolute;
+    bottom: 1rem;
+    right: 1rem;
 }

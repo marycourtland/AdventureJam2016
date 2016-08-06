@@ -3,11 +3,22 @@ var SpeciesMask = require('./species-mask');
 
 module.exports = Species = function(params) {
     this.id = params.id || 'species' + Math.floor(Math.random()*1e8);
-    this.symbol = params.symbol || '';
-    this.color = params.color || 'black';
 
     // behavior
+    // TODO: fix passable for phaser
     this.passable = params.hasOwnProperty('passable') ? params.passable : true;
+
+    if (params.hasOwnProperty('speed')) {
+        this.speed = params.speed;
+    }
+
+    if (params.hasOwnProperty('timeToIteration')) {
+        this.timeToIteration = params.timeToIteration;
+    }
+
+    if (params.hasOwnProperty('forceNeighborIteration')) {
+        this.forceNeighborIteration = params.forceNeighborIteration;
+    }
 
     this.initRules(params.rules);
 
@@ -25,6 +36,12 @@ Species.prototype.initRules = function(rules) {
 
     // The default rules govern how the species spreads based on its own presence
     this.rules.default = new RuleSet(this.rules.default)   
+
+    // Ruts are like conditionals, but semantically different
+    this.rules.ruts = this.rules.ruts || [];
+    this.rules.ruts.forEach(function(rut) {
+        rut.rules = new RuleSet(rut.rules);
+    })
 
     // Conditional rules are based on other species
     this.rules.conditional = this.rules.conditional || [];
@@ -56,17 +73,39 @@ Species.prototype.nextState = function(cell, neighbors) {
     // TODO: make a way to compose things together (like self.mask and cell.getAge)
     var maskedAges = mapCoordmap(neighbors, function(cell) { return !!cell ? self.mask(cell) * cell.getAge() : 0 });
     var age = Math.ceil(coordmapAvg(maskedAges));
+
+    var iterationTime = Settings.mapIterationTimeout;
+    if (ruleset.hasOwnProperty('iterationTime')) {
+        iterationTime = ruleset.iterationTime;
+    }
     
-    return {state: nextState, age: age};
+    return {state: nextState, age: age, iterationTime: iterationTime};
 }
 
 
 Species.prototype.decideRuleset = function(cell, neighbors) {
     var winningRuleset = this.rules.default;
 
-    if (this.rules.conditional.length === 0) return winningRuleset;
+    if (this.rules.conditional.length + this.rules.ruts.length === 0)
+        return winningRuleset;
 
-    // Conditional rules are sorted from lowest priority to highest.
+    // RUTS
+    // If a rut is present, it can override other stuff
+    // - should be sorted from HIGHEST priority to lowest.
+    for (var i = 0; i < this.rules.ruts.length; i++) {
+        // The probability that this rut ends up affecting the cell
+        // is proportional to its intensity (0 to 1)
+        // TODO: this needs testing
+        var rut = this.rules.ruts[i];
+        var intensity = cell.ruts[rut.rut_id];
+        if (!intensity || Math.random() > intensity) continue;
+
+        winningRuleset = rut.rules;
+        return winningRuleset;
+    }
+
+    // CONDITIONAL RULES
+    // - should be sorted from lowest priority to highest.
 
     this.rules.conditional.forEach(function(condition) {
         var maskedNeighbors = mapCoordmap(neighbors, condition.mask);
@@ -81,7 +120,12 @@ Species.prototype.decideRuleset = function(cell, neighbors) {
         winningRuleset = condition.rules;
     })
 
+
     return winningRuleset;
+}
+
+Species.prototype.getIterationTime = function() {
+    return this.timeToIteration || Settings.mapIterationTimeout;    
 }
 
 // TODO make a coordmap object type...
