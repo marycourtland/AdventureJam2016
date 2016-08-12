@@ -30,6 +30,6 @@ UI.infoWrap = function(text, fn) {
     }
 }
 
-UI.zoomOut = UI.infoWrap('zooming...', function() { Map.zoomOut(); })
-UI.zoomIn = UI.infoWrap('zooming...', function() { Map.zoomIn(); })
+UI.zoomOut = UI.infoWrap('zooming...', function() { game.renderer.zoomOut(); })
+UI.zoomIn = UI.infoWrap('zooming...', function() { game.renderer.zoomIn(); })
 

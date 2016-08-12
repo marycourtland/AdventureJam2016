@@ -2,6 +2,8 @@
 // These are basically modes during the main gameplay state.
 // Sorry mode rhymes with node :)
 
+// Also. This should be view independent
+
 module.exports = GamePlayModes = {};
 var game;
 var currentData = {}; // blah, some scope, so that different modes can communicate w/ each other

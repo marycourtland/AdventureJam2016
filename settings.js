@@ -1,9 +1,15 @@
 // not included in browserify bundle
 window.Settings = {};
 
-Settings.mode = 'default';
-var modeMatch = window.location.search.match(/mode=([^?]*)/i);
-if (modeMatch && modeMatch[1]) Settings.mode = modeMatch[1].toLowerCase();
+// ok this could go in a lib somewhere
+function getUrlParam(key) {
+    var match = window.location.search.match(new RegExp(key + '=([^?&]*)', 'i'));
+    if (match && match[1]) return match[1];
+    else return null;
+}
+
+Settings.view = getUrlParam('view') || 'phaserIso';
+Settings.mode = getUrlParam('mode') || 'default';
 
 
 // === Feature flags
@@ -15,11 +21,11 @@ Settings.gameAnchor = [0.5, -0.5];
 Settings.gameAnchor = [0.5, 0.5];
 Settings.gameDims = {x: 4000, y: 4000}; // pixels
 Settings.cellDims = {x: 38, y:38}; // isometric pixels per cell
-Settings.cameraDeadzone = 0.6;  
+Settings.cameraDeadzone = 0.4;
 
 // TEST SETTINGS - smaller map etc
 if (Settings.mode === 'test') {
-    Settings.mapSize = {x: 10, y:10};
+    Settings.mapSize = {x: 20, y:20};
     Settings.gameAnchor = [0.5, 0.2];
     Settings.gameDims = {x: 1000, y: 1000};
 }
@@ -27,7 +33,7 @@ if (Settings.mode === 'test') {
 
 // === Map iteration
 // if the randomize switch is on, it only makes sense to do timeout at least 10sec, if not 20
-Settings.mapIterationTimeout    = 10000; // millis between map updates. Use 0 to disable automatic updates
+Settings.mapIterationTimeout    = 20000; // millis between map updates. Use 0 to disable automatic updates
 Settings.randomizeCellIteration = true;
 
 // === Characters
@@ -39,7 +45,7 @@ Settings.defaultSpeed = 500;
 
 if (Settings.mode === 'test') {
     Settings.playerStart = {x: 8, y: 1};
-    Settings.wizardStart = {x: 1, y: 8};
+    Settings.wizardStart = {x: 8, y: 9};
 }
 
 

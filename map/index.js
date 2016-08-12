@@ -1,7 +1,6 @@
 var Settings = window.Settings;
 var Env = require('./environment');
 var Species = require('./species');
-//var Renderer = require('./renderer')
 var SpeciesData = require('./data/species') 
 
 module.exports = Map = {};
@@ -17,39 +16,135 @@ Map.init = function(params) {
     this.size = params.size;
     this.center = {x: Math.floor(this.size.x/2), y: Math.floor(this.size.y/2)} // use Map.setCenter to change this
     this.env = new Env(this.size, this.species.blank);
+}
 
-    // Unused prototype stuff
-    //this.dims = params.dims;
-    //this.window = params.window; // what radius of tiles should comprise the camera window?
-    //this.renderer = new Renderer(params.html, this.dims, this.center);
-    //this.render();
+Map.startIteration = function() {
+    // this is just the first timeout
+    function getTimeout(){
+        // flat distribution because it's the first iteration
+        return Math.random() * Settings.mapIterationTimeout
+    }
+
+    this.forEach(function(coords, cell) {
+        setTimeout(function() { cell.iterate(); }, getTimeout());
+    })
 }
 
 Map.generateTest = function() {
     var self = this;
     // register involved species with all of the cells
-    self.env.range().forEach(function(coords) {
-        var cell = self.env.get(coords);
+    self.forEach(function(coords, cell) {
+        cell.add(self.species.trees2);
         cell.add(self.species.grass);
         cell.add(self.species.magic);
         cell.add(self.species.trees);
     })
 
-    self.sow(self.species.grass, 1);
-
+    // spiral fun!
     var rut_cells = [
-        {x: 1, y: 3},
-        {x: 2, y: 3},
+        // {x: 8, y: 9},
+        // {x: 8, y: 10},
+        // {x: 8, y: 11},
+        // {x: 8, y: 12},
+
+        {x: 9, y: 12},
+        {x: 10, y: 12},
+        {x: 11, y: 12},
+        {x: 12, y: 12},
+
+        {x: 12, y: 11},
+        {x: 12, y: 10},
+        {x: 12, y: 9},
+        {x: 12, y: 8},
+
+        {x: 12, y: 7},
+        {x: 11, y: 7},
+        {x: 10, y: 7},
+        {x: 9, y: 7},
+        {x: 8, y: 7},
+        {x: 7, y: 7},
+        {x: 6, y: 7},
+
+        {x: 6, y: 8},
+        {x: 6, y: 9},
+        {x: 6, y: 10},
+        {x: 6, y: 11},
+        {x: 6, y: 12},
+        {x: 6, y: 13},
+        {x: 6, y: 14},
+
+        {x: 7, y: 14},
+        {x: 8, y: 14},
+        {x: 9, y: 14},
+        {x: 10, y: 14},
+        {x: 11, y: 14},
+        {x: 12, y: 14},
+        {x: 13, y: 14},
+        {x: 14, y: 14},
+
+        {x: 14, y: 13},
+        {x: 14, y: 12},
+        {x: 14, y: 11},
+        {x: 14, y: 10},
+        {x: 14, y: 9},
+        {x: 14, y: 8},
+        {x: 14, y: 7},
+        {x: 14, y: 6},
+        {x: 14, y: 5},
+
+        {x: 13, y: 5},
+        {x: 12, y: 5},
+        {x: 11, y: 5},
+        {x: 10, y: 5},
+        {x: 9, y: 5},
+        {x: 8, y: 5},
+        {x: 7, y: 5},
+        {x: 6, y: 5},
+        {x: 5, y: 5},
+        {x: 4, y: 5},
+
+        {x: 4, y: 6},
+        {x: 4, y: 7},
+        {x: 4, y: 8},
+        {x: 4, y: 9},
+        {x: 4, y: 10},
+        {x: 4, y: 11},
+        {x: 4, y: 12},
+        {x: 4, y: 13},
+        {x: 4, y: 14},
+        {x: 4, y: 15},
+        {x: 4, y: 16},
+
+        {x: 5, y: 16},
+        {x: 6, y: 16},
+        {x: 7, y: 16},
+        {x: 8, y: 16},
+        {x: 9, y: 16},
+        {x: 10, y: 16},
+        {x: 11, y: 16},
+        {x: 12, y: 16},
+        {x: 13, y: 16},
+        {x: 14, y: 16},
+        {x: 15, y: 16},
+        {x: 16, y: 16},
     ]
     
     rut_cells.forEach(function(coords) {
         var cell = self.env.get(coords);
-        cell.rut('footsteps', 1);
+        cell.rut('magic', 1);
     })
 
-    self.env.set({x:1,y:1}, self.species.trees)
+    //self.env.set({x:1,y:1}, self.species.trees)
 
-    this.env.advance(2);
+    self.rect(self.species.trees, {x:0, y:0}, {x:7, y:0});
+    //self.rect(self.species.trees2, {x:0, y:7}, {x:7, y:7});
+
+
+    // self.rect(self.species.magic, {x:4, y:4}, {x:8, y:8});
+
+    // this.env.advance(1);
+    
+    self.getCell({x: 2, y:0}).rut('footsteps')
 }
 
 
@@ -59,8 +154,7 @@ Map.generate = function() {
     var self = this;
 
     // register involved species with all of the cells
-    self.env.range().forEach(function(coords) {
-        var cell = self.env.get(coords);
+    self.forEach(function(coords, cell) {
         cell.add(self.species.magic);
         cell.add(self.species.grass);
         cell.add(self.species.trees);
@@ -71,14 +165,14 @@ Map.generate = function() {
     self.sow(self.species.grass, 1/10);
     self.sow(self.species.flowers, 1/50)
     self.sow(self.species.trees, 1/30);
-    self.sow(self.species.trees2, 1/30);
-    self.env.advance(3);
+    self.sow(self.species.trees2, 1/40);
+    self.env.advance(10);
 
     // empty spot in the 0,0 corner
-    self.rect(self.species.grass, {x:0, y:0}, {x:6, y:6});
+    self.rect(self.species.grass, {x:0, y:0}, {x:10, y:10});
+    self.rect(self.species.magic, {x:2, y:2}, {x:4, y:4});
 
-    // here is some magic until the wizard is implemented
-    self.diamondClump(self.center, self.species.magic)
+    self.env.advance(1);
 }
 
 Map.diamondClump = function(coords, species) {
@@ -163,101 +257,12 @@ Map.advance = function(n) {
     return this;
 }
 
-
-// UNUSED PROTOTYPE STUFF
-/*
-
-// MARGINS / CAMERA
-Map.isInWindow = function(coords) {
-    var distance = Math.max(
-        Math.abs(coords.x - this.center.x),
-        Math.abs(coords.y - this.center.y)
-    )
-    return distance < this.window;
+Map.log = function() {
+    // For debugging purposes
+    var ascii = Utils.transpose(this.env.cells).map(function (r) {
+        return r.map(function(cell) {
+            return cell.species.id === 'blank' ? ' ' : cell.species.id[0];
+        }).join(' ');
+    }).join('\n');
+    console.log(ascii);
 }
-
-Map.getDistanceFromWindowEdge = function(coords) {
-    return {
-        north: (this.center.y - this.window) - coords.y,
-        west: (this.center.x - this.window) - coords.x,
-        south: coords.y - (this.center.y + this.window),
-        east: coords.x - (this.center.x + this.window)
-    }
-}
-
-
-
-// Different than isInWindow. Uses the rectangular renderer view
-Map.isInView = function(coords) {
-    return this.renderer.isInView(coords);
-}
-
-// ITEMS
-Map.placeItem = function(coords, item) {
-    var cell = this.env.get(coords);
-    cell.addItem(item);
-    // put it in the html
-    item.rendersTo(this.renderer.getCell(coords));
-}
-
-
-// RENDERING
-Map.render = function() { this.renderer.render(this.env); return this; }
-Map.refresh = function() { this.renderer.refresh(this.env); return this; }
-Map.refreshFull = function() { this.renderer.refresh(this.env, true); return this; }
-
-Map.refreshCell = function(coords, forceRefresh) {
-    if (!forceRefresh && !this.isInView(coords)) return this;
-    this.renderer.refreshCoords(this.env, coords);
-}
-
-Map.zoomFactor = 2;
-
-Map.zoomIn = function() {
-    this.dims.x *= Map.zoomFactor;
-    this.dims.y *= Map.zoomFactor;
-    this.window /= Map.zoomFactor;
-    this.refreshFull();
-    return this;
-}
-
-Map.zoomOut = function() {
-    this.dims.x /= Map.zoomFactor;
-    this.dims.y /= Map.zoomFactor;
-    this.window *= Map.zoomFactor;
-    this.refreshFull();
-    return this;
-}
-
-Map.recenter = function(coords) {
-    this.center.x = coords.x;
-    this.center.y = coords.y;
-    this.refreshFull();
-    return this;
-}
-
-Map.shiftView = function(dCoords) {
-    this.recenter({
-        x: this.center.x + dCoords.x,
-        y: this.center.y + dCoords.y
-    })
-    return this;
-}
-
-
-// ugh
-Map.getOffset = function() {
-    return this.renderer.getPixelOffset();
-}
-
-// more ugh. Pixels should be relative to the top left corner of the map itself, not the html element
-Map.getCoordsFromPixels = function(pixels) {
-    return {
-        x: Math.floor(pixels.x / this.dims.x),
-        y: Math.floor(pixels.y / this.dims.y),
-    }
-}
-
-// clump all this stuff together in a renderer
-Map.renderer = require('./renderer')
-*/

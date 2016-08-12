@@ -1,14 +1,25 @@
+var XY = window.XY;
 var Settings = window.Settings;
 var AssetData = require('../asset_data');
-var Map = require('../map');
-var GamePlayModes = require('../gameplay-modes');
-var Player = require('../player');
-var Wizard = require('../wizard');
-var XY = require('../xy');
 var game;
+
+
+// this holds player, wizard, etc
+var Context;
+
+var PhaserCell = require('../cell.js')
+var PhaserCharacter = require('../character.js')
 
 module.exports = Play = function (_game) { 
     game = _game;
+};
+
+Play.setContext = function(newContext) {
+    console.assert(!!newContext.Map);
+    console.assert(!!newContext.GamePlayModes);
+    console.assert(!!newContext.Player);
+    console.assert(!!newContext.Wizard);
+    Context = newContext;
 };
 
 Play.prototype = {
@@ -27,12 +38,12 @@ Play.prototype = {
             return sprite;
         }
 
-        game.map = Map;
+        game.map = Context.Map;
         game.map.init({
             size: Settings.mapSize
         })
 
-        game.playModes = GamePlayModes;
+        game.playModes = Context.GamePlayModes;
         game.playModes.init(game)
     },
 
@@ -44,8 +55,10 @@ Play.prototype = {
         game.physics.isoArcade.gravity.setTo(0, 0, 0);
 
         game.map.generate();
+
+        var phaserCells = [];
         game.map.forEach(function(coords, cell) {
-            cell.createSprites();
+            phaserCells.push(new PhaserCell(cell));
         })
         game.iso.simpleSort(game.mapGroup);
         
@@ -64,7 +77,8 @@ Play.prototype = {
         game.physics.isoArcade.enable(game.playerSprite);
         game.playerSprite.body.collideWorldBounds = true;
         
-        game.player = Player(game.map);
+        game.player = Context.Player(game.map);
+        var phaserPlayer = new PhaserCharacter(game.player, game.playerSprite);
 
         // TODO: this sprite issue is a huge mess; clean it up
         game.wizardSprite = game.add.isoSprite(
@@ -72,7 +86,8 @@ Play.prototype = {
             Settings.wizardStart.y * Settings.cellDims.y,
             2, 'wizard', 0, game.mapGroup
         )
-        game.wizard = Wizard(game.map, game.wizardSprite);
+        game.wizard = Context.Wizard(game.map, game.wizardSprite);
+        var phaserWizard = new PhaserCharacter(game.wizard, game.wizardSprite);
 
         // CAMERA
         game.camera.follow(game.playerSprite);
@@ -94,7 +109,7 @@ Play.prototype = {
         bindInventoryEvents();
 
         // SPIN UP THE MAP
-        startMapIteration();
+        game.map.startIteration();
     },
 
     update: function () {
@@ -127,7 +142,7 @@ function debugText() {
         '  coords:    ' + xyStr(game.player.coords),
         '  health:    ' + game.player.health,
         '  speed:     ' + game.player.speed,
-        '  underfoot: ' + Map.getCell(game.player.coords).species.id 
+        '  underfoot: ' + Context.Map.getCell(game.player.coords).species.id 
     ]
 
     var color = "#CDE6BB";
@@ -161,7 +176,7 @@ function handleMovement() {
     }
 
     if (game.input.activePointer.isDown && game.playModes.get() === 'idle') {
-        game.physics.isoArcade.moveToPointer(game.playerSprite, 500);
+        game.physics.isoArcade.moveToPointer(game.playerSprite, game.player.speed);
     }
     else {
        stop(); 
@@ -189,38 +204,5 @@ function onTap(pointer, doubleTap) {
     game.playModes.advance({coords: game.lastTap});
 
     // todo: place inventory item
-}
-
-function startMapIteration() {
-    Map.env.range().forEach(function(coords) {
-        var cell = Map.getCell(coords);
-        cell.iterationTimeout = null;
-        cell.iterate = function() {
-            if (Settings.mapIterationTimeout <= 0) return;
-
-            cell.advance();
-
-            // schedule another iteration
-            clearTimeout(cell.iterationTimeout);
-            cell.iterationTimeout = setTimeout(function() {
-                cell.iterate();
-            }, getTimeout() )
-        }
-
-        function getTimeout() {
-            // adjust the settings a bit, randomly...
-            var scale = 1 + 0.5 * (Math.random() * 2 - 1);
-            return Settings.mapIterationTimeout * scale;
-        }
-
-        // single-cell replacement for Advancerator
-        cell.advance = function() {
-            var neighbors = Map.env.neighbors(coords);
-            this.next(neighbors);
-            this.flush();
-        }
-
-        window.setTimeout(function() { cell.iterate(); }, getTimeout());
-    })
 }
 

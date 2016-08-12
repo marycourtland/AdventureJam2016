@@ -1,6 +1,6 @@
+var Utils = window.Utils;
 var Settings = window.Settings;
 var ToolChest = require('./items');
-var Utils = require('./utils');
 var Controls = require('./controls');
 var Wizard = require('./wizard');
 var Player = require('./player');

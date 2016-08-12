@@ -6,37 +6,51 @@
 // all the species and compute which one is dominant
 
 var SpeciesBattle = require('./species-battle')
-var Utils = require('../utils')
+var Events = window.Events;
+var Utils = window.Utils;
 
 module.exports = Cell = function(blank, coords) {
     this.species = null;
     this.coords = coords;
+    this.neighbors = [];
+    this.items = [];
 
     // species register contains:
     //  species
     //  age
-    //  sprite obj
     this.register = {}; // indexed by id
 
     // Ruts
     this.ruts = {}; // indexed by rut id
 
-    this.set(blank || '');
-
-    this.items = [];
-
     // the 'next' slot is just a holding pattern until the current iteration is finalized
     // use cell.next(species), then cell.flush() to set it
     this.nextSpecies = null;
 
+    this.iterationTime = Settings.mapIterationTimeout; // this will be overwritten after setting a species
 
-    // register callbacks when stuff happens
-    this.callbacks = {
-        change: {}
-    }
+    this.forcedIterationTime = -1;
+
+//    this.callbacks = {add:{}, change:{}}
+
+    this.set(blank || '');
 };
 
 Cell.prototype = {};
+
+Events.init(Cell.prototype);
+
+Cell.prototype.setNeighbors = function(neighbors) {
+    this.neighbors = neighbors || [];
+}
+
+Cell.prototype.forEachNeighbor = function(callback) {
+    this.neighbors.forEach(function(n) {
+        if (n.value) callback(n.value);
+    })
+} 
+
+
 
 // convenience, to get the species object
 Cell.prototype.get = function(species_id) {
@@ -54,105 +68,55 @@ Cell.prototype.getAge = function() {
 
 // sets the dominant species
 Cell.prototype.set = function(species) {
-    
-    if (!!this.species && !!species) {
-        if (this.species.id !== species.id) {
-            this.emit('change', {species: species})
-        }
-        else {
-            return; // no need to re-render the same species
-        }
+
+    if (!!this.species && !!species && this.species.id === species.id) {
+        return; // no need to re-set the same species
     }
-
-    this.hideAllExcept(species);
-
+    
     if (!!species) {
         this.species = species;
         this.add(species); // just in case it's not already set
+        this.emit('change', {species: species})
 
-        this.register[species.id].visible = true;
-        if (this.register[species.id].sprite) {
-            this.showSprite(species.id);
-            //this.register[species.id].sprite.visible = true;
+        // propagate rut activation
+        var ruts = species.getIndexedRuts();
+        for (var rut_id in ruts) {
+            this.forEachNeighbor(function(cell) {
+                cell.activateRut(rut_id);
+            })
         }
     }
-
-
-    // Make sure only this one is visible
-    // TODO: later there may be multiple sprites per cell visible...
 
     return this;
 }
 
-Cell.prototype.showSprite = function(id) {
-    var sprite = this.register[id].sprite;
-    if (sprite.alpha > 0) return;
-
-    // todo: stuff this in the species data
-    if (this.register[id].species.sprite.fade) {
-        window.game.add.tween(sprite).to(
-            { alpha: 1 },
-            200,
-            Phaser.Easing.Linear.None,
-            true, // autostart
-            0,    // delay
-            0     // loop 
-        );
-    }
-    else {
-        sprite.alpha = 1;
-    }
-}
-
-Cell.prototype.hide = function(id) {
-    var reg = this.register[id];
-    if (!reg) return;
-
-    reg.visible = false;
-
-    if (reg.sprite && reg.sprite.alpha > 0) {
-        if (reg.species.sprite.fade) {
-            window.game.add.tween(reg.sprite).to(
-                { alpha: 0 },
-                200,
-                Phaser.Easing.Linear.None,
-                true, // autostart
-                0,    // delay
-                0     // loop 
-            );
-        }
-        else {
-            reg.sprite.alpha = 0;
-        }
-    }
-}
-
-
-Cell.prototype.hideAllExcept = function(species) {
-    for (var id in this.register) {
-        if (!!species && species.id === id) continue;
-        this.hide(id);
-    }
-}
-
 // decide which species to be next
 // ** each registered species does its own computation
-Cell.prototype.next = function(neighbors) {
+Cell.prototype.next = function() {
+    this.refreshActiveRuts();
+
     var nextStates = {};
     for (var id in this.register) {
-        nextStates[id] = this.get(id).nextState(this, neighbors);
+        nextStates[id] = this.get(id).nextState(this, this.neighbors);
     }
 
     // Which species are contenders for dominance in this cell?
-    var contenders = Object.keys(nextStates).filter(function(id) { return nextStates[id].state === 1; }) 
+    var contenders = Object.keys(nextStates).filter(function(id) {
+        return nextStates[id].state === 1;
+    })
 
     // THE SPECIES BATTLE IT OUT...
     this.nextSpecies = this.get(SpeciesBattle.decide(contenders));
 
-    // Update age
-    if (this.nextSpecies)
-        this.register[this.nextSpecies.id].age = nextStates[this.nextSpecies.id].age;
-    
+    // Update age etc
+    if (this.nextSpecies) {
+        var nextState = nextStates[this.nextSpecies.id];
+        this.register[this.nextSpecies.id].age = nextState.age;
+        this.iterationTime = nextState.iterationTime;
+        if (this.nextSpecies.forceNeighborIteration) {
+            this.forceNeighborIteration();
+        }
+    }
 }
 
 Cell.prototype.flush = function() {
@@ -183,78 +147,159 @@ Cell.prototype.add = function(species) {
         species = this.get('blank'); // this SHOULD be one of the registered species
     }
 
-    if (!(species.id in this.register)) {
-        this.register[species.id] = {
-            species: species,
-            age: 0,
-            visible: false,
-            sprite: null
-        }
-        //this.createSpriteFor(species.id);
+    if (species.id in this.register) return; // It's already added. No need to re-add it.
+
+    this.register[species.id] = {
+        species: species,
+        age: 0
     }
 
     // make sure there's a dominant species
     if (Object.keys(this.register).length === 1 || !this.species) {
         this.species = species;
-        this.register[species.id].visible = true;
     }
 
-    // Sprite must be initialized, later
-    // TODO: check if sprites have already been initialized
-    // (this is for when we want to optimize for not front-loading the sprite-adding)
+    this.emit('add', {species: species})
 
     return this;
 }
 
-// SPRITES =======
+// ITERATION STUFF
 
-// This has to be done separately
-Cell.prototype.createSprites = function() {
-    // This will have to be turned off and on as needed
-    for (var species_id in this.register) {
-        this.createSpriteFor(species_id);
-    }
+
+// This is for when a cell gets manually set, and we have to pull various properties about it
+// e.g. the magic iteration time
+Cell.prototype.refreshTimeout = function() {
+    this.scheduleIteration();
+};
+
+Cell.prototype.scheduleIteration = function() {
+    clearTimeout(this.iterationTimeout);
+    this._timeout = this.getIterationTime();
+    this._t = new Date() + this._timeout; // the time at which the cell will iterate again
+
+    var self = this;
+    this.iterationTimeout = setTimeout(function() {
+        self.iterate();
+    }, self._timeout);
+
+    //reset the forced iteration
+    this.forcedIterationTime = -1;
 }
 
-Cell.prototype.createSpriteFor = function(id) {
-    var reg = this.register[id];
-    var sprite_id = reg.species.sprite.id;
-    if (Utils.isArray(sprite_id)) {
-        sprite_id = Utils.randomChoice(sprite_id)
+Cell.prototype.timeUntilIteration = function() {
+    if (!this._t) return Settings.mapIterationTimeout; // meh, default
+    return this._t - new Date();
+}
+
+
+Cell.prototype.getIterationTime = function() {
+    // we'll use the shortest possible time
+    var possibleTimes = [];
+
+    possibleTimes.push(this.timeUntilIteration());
+    possibleTimes.push(Settings.mapIterationTimeout); // this should be fairly long
+
+    // Sometimes, neighboring cells will want to force a faster iteration at their boundaries
+    if (this.forcedIterationTime > 0)
+        possibleTimes.push(this.forcedIterationTime);
+
+    // get the shortest iteration time for ALL possible species
+    for (var species_id in this.register) {
+        possibleTimes.push(this.get(species_id).getIterationTime(this.getActiveRuts()));
     }
 
-    // TODO: access game elsehow
-    reg.sprite = window.game.addMapSprite(this.coords, sprite_id);
-    
-    reg.sprite.alpha = reg.visible ? 1 : 0
+    possibleTimes = possibleTimes.filter(function(t) { return t >= 0; });
 
-    return reg.sprite;
+    var scale = 1 + 0.5 * (Math.random() * 2 - 1);
+    return Utils.arrayMin(possibleTimes) * scale;;
+}
+
+
+Cell.prototype.iterate = function() {
+    if (Settings.mapIterationTimeout <= 0) return;
+
+    this.advance();
+
+    // schedule another iteration
+    this.scheduleIteration();
+}
+
+// Single-cell replacement for Advancerator
+Cell.prototype.advance = function() {
+    this.next();
+
+    // Note: when the whole array of cells was being updated all at the same time,
+    // flush() was delayed. But now each cell updates itself independently, so
+    // we don't have to wait for the rest of the cells before calling flush().
+    this.flush();
+}
+
+// Neighboring cells use this method to try to speed up the iteration
+Cell.prototype.forceIterationTime = function(time) {
+    this.refreshActiveRuts();
+    if (this.forcedIterationTime > 0) return; // experimental
+    if (time > this.getIterationTime()) return;
+    if (time > this.forcedIterationTime && this.forcedIterationTime > 0) return;
+
+    this.forcedIterationTime = time;
+}
+
+// *This* cell might try to force *its* neighbors to iterate
+Cell.prototype.forceNeighborIteration = function() {
+    var time = this.getIterationTime();
+    this.forEachNeighbor(function(cell) {
+        cell.forceIterationTime(time);
+    })
 }
 
 // RUTS =======
 
 Cell.prototype.rut = function(rut_id, intensity) {
     if (typeof intensity === 'undefined') intensity = 1;
-    this.ruts[rut_id] = intensity; 
+    this.ruts[rut_id] = {
+        active: false,
+        intensity: intensity
+    } 
 }
 
-// EVENTS =======
+// ruts should only be active if any of the cells in the neighborhood
+// has the rut's species as dominant
+Cell.prototype.refreshActiveRuts = function() {
+    var activeRutIds = [];
+    this.forEachNeighbor(function(cell) {
+        if (!cell.species) return;
 
-Cell.prototype.on = function(event, callback_id, callback) {
-    this.callbacks[event][callback_id] = callback; 
-}
-
-Cell.prototype.off = function(event, callback_id) {
-    delete this.callbacks[event][callback_id];
-}
-
-Cell.prototype.emit = function(event, data) {
-    if (event in this.callbacks && Object.keys(this.callbacks[event]).length > 0) {
-        for (var cb in this.callbacks[event]) {
-            this.callbacks[event][cb](data);
+        for (var rut_id in cell.species.getIndexedRuts()) {
+            activeRutIds.push(rut_id);
         }
+    })
+
+    for (var rut_id in this.ruts) {
+        this.ruts[rut_id].active = !!(activeRutIds.indexOf(rut_id) !== -1);
     }
 }
+
+Cell.prototype.getActiveRuts = function() {
+    this.refreshActiveRuts();
+
+    var activeRuts = {};
+
+    for (var rut_id in this.ruts) {
+        if (this.ruts[rut_id].active && this.ruts[rut_id].intensity > 0)
+            activeRuts[rut_id] = this.ruts[rut_id];
+    }
+
+    return activeRuts;
+}
+
+Cell.prototype.activateRut = function(rut_id) {
+    if (rut_id in this.ruts) {
+        this.ruts[rut_id].active = true;
+        this.refreshTimeout();
+    }
+}
+
 
 // ITEMS =======
 

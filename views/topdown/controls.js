@@ -10,12 +10,12 @@ Controls.init = function(gameInstance) {
 Controls.bindEvents = function() {
     game.html.mouseOverlay.onclick = function(evt) {
         evt.stopPropagation();
-        var offset = game.map.getOffset();
+        var offset = game.renderer.getPixelOffset();
         var mousePos = {
-            x: evt.clientX - offset.x - game.map.renderer.bbox.left,
-            y: evt.clientY - offset.y - game.map.renderer.bbox.top
+            x: evt.clientX - offset.x - game.renderer.bbox.left,
+            y: evt.clientY - offset.y - game.renderer.bbox.top
         }
-        var coords = game.map.getCoordsFromPixels(mousePos);
+        var coords = game.renderer.getCoordsFromPixels(mousePos);
         game.state.advance({coords: coords});
     }
 

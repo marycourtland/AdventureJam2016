@@ -18,6 +18,7 @@
 module.exports = RuleSet = function(ruleParams) {
     ruleParams = ruleParams || {};
 
+    this.id = ruleParams.id;
     this.stateMap = ruleParams.stateMap || {};
 
     // TODO: this should really be a coordmap...
@@ -26,17 +27,21 @@ module.exports = RuleSet = function(ruleParams) {
         [1, 0, 1],
         [1, 1, 1]
     ]);
+
+    if (ruleParams.debug) this.debug = true;
 }
 
 RuleSet.prototype = {};
 
-RuleSet.prototype.transform = function(state, neighbors) {
+RuleSet.prototype.transform = function(state, neighbors, debug) {
     // If we try to transform anything unknown, things will just stay constant.
     if (!(state in this.stateMap)) { return state; }
 
     var sum = deepWeightedSum(neighbors, this.weights);
 
     if (sum >= this.stateMap[state].length) { return state; }
+
+    if (this.debug) console.debug(debug, '|',  this.id, state, sum, '>>>', this.stateMap[state][sum])
 
     return this.probabilisticState(this.stateMap[state][sum]);
 }

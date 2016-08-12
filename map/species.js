@@ -1,9 +1,9 @@
+var Utils = window.Utils;
 var RuleSet = require('./ruleset');
 var SpeciesMask = require('./species-mask');
 
 module.exports = Species = function(params) {
     this.id = params.id || 'species' + Math.floor(Math.random()*1e8);
-    this.sprite = params.sprite;
 
     // behavior
     // TODO: fix passable for phaser
@@ -13,9 +13,15 @@ module.exports = Species = function(params) {
         this.speed = params.speed;
     }
 
-    this.initRules(params.rules);
+    if (params.hasOwnProperty('timeToIteration')) {
+        this.timeToIteration = params.timeToIteration;
+    }
 
-    //this.ruleSet = new RuleSet(params.rules);
+    if (params.hasOwnProperty('forceNeighborIteration')) {
+        this.forceNeighborIteration = params.forceNeighborIteration;
+    }
+
+    this.initRules(params.rules);
 
     // This is a function to decide whether a cell hosts this species or not
     this.mask = SpeciesMask(this.id);
@@ -60,14 +66,24 @@ Species.prototype.nextState = function(cell, neighbors) {
     var maskedCell = this.mask(cell);
     var maskedNeighbors = mapCoordmap(neighbors, self.mask);
 
-    var nextState = ruleset.transform(maskedCell, maskedNeighbors);
+    var nextState = ruleset.transform(maskedCell, maskedNeighbors,
+        Math.round(cell.forcedIterationTime)/1000
+        + ' ' + 
+        Math.round(cell.t_temp)/1000
+            + ' ' + cell.coords.x + ',' + cell.coords.y + ' ' + this.id    
+    );
 
     // propagate age (this will only be used if nextState is 1)
     // TODO: make a way to compose things together (like self.mask and cell.getAge)
     var maskedAges = mapCoordmap(neighbors, function(cell) { return !!cell ? self.mask(cell) * cell.getAge() : 0 });
     var age = Math.ceil(coordmapAvg(maskedAges));
+
+    var iterationTime = Settings.mapIterationTimeout;
+    if (ruleset.hasOwnProperty('iterationTime')) {
+        iterationTime = ruleset.iterationTime;
+    }
     
-    return {state: nextState, age: age};
+    return {state: nextState, age: age, iterationTime: iterationTime};
 }
 
 
@@ -85,7 +101,7 @@ Species.prototype.decideRuleset = function(cell, neighbors) {
         // is proportional to its intensity (0 to 1)
         // TODO: this needs testing
         var rut = this.rules.ruts[i];
-        var intensity = cell.ruts[rut.rut_id];
+        var intensity = (rut.rut_id in cell.ruts) ? cell.ruts[rut.rut_id].intensity : 0;
         if (!intensity || Math.random() > intensity) continue;
 
         winningRuleset = rut.rules;
@@ -110,6 +126,39 @@ Species.prototype.decideRuleset = function(cell, neighbors) {
 
 
     return winningRuleset;
+}
+
+Species.prototype.getIterationTime = function(ruts) {
+    // Of all possible iteration times, pick the shortest.
+    var possibleTimes = [];
+    possibleTimes.push(this.timeToIteration || Settings.mapIterationTimeout);
+    
+    // for iteration times, ignore rut intensity. We're just looking for any possibility
+    // of a shorter iteration time.
+    ruts = ruts || {};
+    for (var rut_id in ruts) {
+        var rut = this.getRut(rut_id);
+        if (rut && rut.hasOwnProperty('timeToIteration')) possibleTimes.push(rut.timeToIteration);
+    }
+
+    return Utils.arrayMin(possibleTimes);
+}
+
+Species.prototype.getRut = function(rut_id) {
+    for (var i = 0; i < this.rules.ruts.length; i++) {
+        if (this.rules.ruts[i].rut_id === rut_id) return this.rules.ruts[i];
+    }
+    return null;
+}
+
+// meh, data structure juggling
+Species.prototype.getIndexedRuts = function() {
+    var ruts = {};
+    for (var i = 0; i < this.rules.ruts.length; i++) {
+        var rut_id = this.rules.ruts[i].rut_id;
+        ruts[rut_id] = this.rules.ruts[i];
+    }
+    return ruts;
 }
 
 // TODO make a coordmap object type...

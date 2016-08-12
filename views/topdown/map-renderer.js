@@ -1,17 +1,25 @@
-module.exports = Renderer = function(html, dims, center) {
+var AssetData = require('./asset-data');
+
+module.exports = MapRenderer = {};
+
+MapRenderer.init = function(map, params) {
+    this.map = map;
+    this.window = params.window;
+
     // Direct references. So the parent should not overwrite them.
-    this.html = html;
-    this.dims = dims;
-    this.centerCoords = center;
-    this.bbox = html.getBoundingClientRect();
+    this.html = params.html;
+    this.dims = params.dims;
+    this.centerCoords = this.map.center;
+    this.bbox = params.html.getBoundingClientRect();
     this.centerPx = {
         x: this.bbox.width / 2,
         y: this.bbox.height / 2
     }
-    this.viewsize = {
+    this.viewSize = {
         x: this.bbox.width / this.dims.x,
         y: this.bbox.height / this.dims.y
     }
+    this.zoomFactor = 2; // /shrug
 }
 
 // Settings
@@ -22,32 +30,55 @@ cellIdPrefix = cellClass + cellIdDelimiter;
 
 // Methods
 
-Renderer.prototype = {};
-
-Renderer.prototype.coordsToId = function(coords) {
+MapRenderer.coordsToId = function(coords) {
     return cellIdPrefix + coords.x + cellIdDelimiter + coords.y
 }
-Renderer.prototype.idToCoords = function(id) {
+MapRenderer.idToCoords = function(id) {
     var coordArray = id.slice(cellIdPrefix.length).split(cellIdDelimiter);
     return {x: coordArray[0], y: coordArray[1] }
 }
 
-Renderer.prototype.createCell = function(cellObject) {
+// more ugh. Pixels should be relative to the top left corner of the map itself, not the html element
+ MapRenderer.getCoordsFromPixels = function(pixels) {
+    return {
+        x: Math.floor(pixels.x / this.dims.x),
+        y: Math.floor(pixels.y / this.dims.y),
+    }
+}
+
+MapRenderer.createCell = function(cellObject) {
     var cellElement = document.createElement('div');
     cellElement.setAttribute('class', cellClass);
     this.styleCell(cellElement, cellObject);
+    this.bindCellEvents(cellObject);
     return cellElement;
 }
 
-Renderer.prototype.styleCell = function(cellElement, cellObject) {
+MapRenderer.styleCell = function(cellElement, cellObject) {
+    var assetData = AssetData[cellObject.species.id];
     cellElement.style.width = this.dims.x + 'px';
     cellElement.style.height = this.dims.y + 'px';
     cellElement.style.lineHeight = this.dims.y + 'px';
-    cellElement.style.backgroundColor = cellObject.species.getColor();
-    cellElement.innerHTML = cellObject.species.getSymbol();
+    cellElement.style.backgroundColor = assetData.color; 
+    cellElement.innerHTML = assetData.symbol;
+
+    // highlight ruts
+    if (Object.keys(cellObject.ruts).length > 0) {
+        cellElement.style.border = '1px solid red';
+        cellElement.style.width = (this.dims.x - 2) + 'px';
+        cellElement.style.height = (this.dims.y - 2) + 'px';
+
+        var rut_string = '';
+        for (var r in cellObject.getActiveRuts()) {
+           rut_string += r[0].toUpperCase(); 
+        }
+
+        cellElement.innerHTML = rut_string;
+        cellElement.style.color = 'red'
+    }
 }
 
-Renderer.prototype.positionCell = function(cellElement, coords) {
+MapRenderer.positionCell = function(cellElement, coords) {
     cellElement.setAttribute('id',  this.coordsToId(coords));
 
     var position = {
@@ -60,11 +91,18 @@ Renderer.prototype.positionCell = function(cellElement, coords) {
     return cellElement;
 }
 
-Renderer.prototype.getCell = function(coords) {
+MapRenderer.bindCellEvents = function(cellObject) {
+    var self = this;
+    cellObject.on('change', 'refresh', function(data) {
+       self.refreshCell(cellObject.coords) 
+    })
+}
+
+MapRenderer.getCell = function(coords) {
     return document.getElementById(this.coordsToId(coords));
 }
 
-Renderer.prototype.render = function(env) {
+MapRenderer.render = function(env) {
     var self = this;
 
     self.rescale();
@@ -78,8 +116,9 @@ Renderer.prototype.render = function(env) {
     })
 }
 
-Renderer.prototype.refresh = function(env, fullRefresh) {
+MapRenderer.refresh = function(env, fullRefresh) {
     var self = this;
+    env = env || this.map.env;
 
     self.rescale();
 
@@ -92,7 +131,7 @@ Renderer.prototype.refresh = function(env, fullRefresh) {
     return this;
 }
 
-Renderer.prototype.refreshCoords = function(env, coords) {
+MapRenderer.refreshCoords = function(env, coords) {
     var cellObject = env.get(coords);
     var cellElement = document.getElementById(this.coordsToId(coords));
     this.styleCell(cellElement, cellObject)
@@ -100,7 +139,7 @@ Renderer.prototype.refreshCoords = function(env, coords) {
     return this;
 }
 
-Renderer.prototype.rescale = function() {
+MapRenderer.rescale = function() {
     // argh
     this.viewSize = {
         x: this.bbox.width / this.dims.x,
@@ -110,7 +149,7 @@ Renderer.prototype.rescale = function() {
 }
 
 // Returns the number of pixels between the html's NW corner and the map's NW corner (at 0,0) 
-Renderer.prototype.getPixelOffset = function() {
+MapRenderer.getPixelOffset = function() {
     return {
         x: this.centerPx.x + -this.centerCoords.x * this.dims.x,
         y: this.centerPx.y + -this.centerCoords.y * this.dims.y
@@ -118,7 +157,7 @@ Renderer.prototype.getPixelOffset = function() {
 }
 
 // Returns cell coords, not pixels
-Renderer.prototype.getViewBbox = function() {
+MapRenderer.getViewBbox = function() {
     return {
         x1: this.centerCoords.x - this.viewSize.x/2,
         x2: this.centerCoords.x + this.viewSize.x/2,
@@ -128,10 +167,41 @@ Renderer.prototype.getViewBbox = function() {
 }
 
 // Returns whether a cell coords is in view or not
-Renderer.prototype.isInView = function(coords) {
+MapRenderer.isInView = function(coords) {
     var bbox = this.getViewBbox();
     return coords.x > bbox.x1
         && coords.x < bbox.x2
         && coords.y > bbox.y1
         && coords.y < bbox.y2;
+}
+
+
+MapRenderer.isInWindow = function(coords) {
+    var distance = Math.max(
+            Math.abs(coords.x - this.map.center.x),
+            Math.abs(coords.y - this.map.center.y)
+        )   
+    return distance < this.window;
+
+}
+
+MapRenderer.refreshCell = function(coords, forceRefresh) {
+    if (!forceRefresh && !this.isInView(coords)) return this;
+    this.refreshCoords(this.map.env, coords);
+}
+
+MapRenderer.zoomOut = function() {
+    this.dims.x /= this.zoomFactor;
+    this.dims.y /= this.zoomFactor;
+    //this.window *= this.zoomFactor;
+    this.refresh()
+    return this;
+}
+
+MapRenderer.zoomIn = function() {
+    this.dims.x *= this.zoomFactor;
+    this.dims.y *= this.zoomFactor;
+    //this.window /= this.zoomFactor;
+    this.refresh()
+    return this;
 }
