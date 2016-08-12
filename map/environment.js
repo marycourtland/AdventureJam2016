@@ -21,6 +21,13 @@ Env.prototype.init = function(blank_cell) {
         }
     }
 
+    // storing the neighbors on each cell has to happen after everything's initialized
+    for (var x = 0; x < this.size.x; x++) {
+        for (var y = 0; y < this.size.y; y++) {
+            this.cells[x][y].setNeighbors(this.neighbors(XY(x,y)));
+        }
+    }
+
     return this;
 }
 

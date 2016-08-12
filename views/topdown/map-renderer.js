@@ -61,6 +61,21 @@ MapRenderer.styleCell = function(cellElement, cellObject) {
     cellElement.style.lineHeight = this.dims.y + 'px';
     cellElement.style.backgroundColor = assetData.color; 
     cellElement.innerHTML = assetData.symbol;
+
+    // highlight ruts
+    if (Object.keys(cellObject.ruts).length > 0) {
+        cellElement.style.border = '1px solid red';
+        cellElement.style.width = (this.dims.x - 2) + 'px';
+        cellElement.style.height = (this.dims.y - 2) + 'px';
+
+        var rut_string = '';
+        for (var r in cellObject.getActiveRuts()) {
+           rut_string += r[0].toUpperCase(); 
+        }
+
+        cellElement.innerHTML = rut_string;
+        cellElement.style.color = 'red'
+    }
 }
 
 MapRenderer.positionCell = function(cellElement, coords) {

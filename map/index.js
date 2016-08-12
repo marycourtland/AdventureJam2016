@@ -1,7 +1,6 @@
 var Settings = window.Settings;
 var Env = require('./environment');
 var Species = require('./species');
-//var Renderer = require('./renderer')
 var SpeciesData = require('./data/species') 
 
 module.exports = Map = {};
@@ -17,12 +16,6 @@ Map.init = function(params) {
     this.size = params.size;
     this.center = {x: Math.floor(this.size.x/2), y: Math.floor(this.size.y/2)} // use Map.setCenter to change this
     this.env = new Env(this.size, this.species.blank);
-
-    // Unused prototype stuff
-    //this.dims = params.dims;
-    //this.window = params.window; // what radius of tiles should comprise the camera window?
-    //this.renderer = new Renderer(params.html, this.dims, this.center);
-    //this.render();
 }
 
 Map.startIteration = function() {
@@ -47,19 +40,99 @@ Map.generateTest = function() {
         cell.add(self.species.trees);
     })
 
-    //self.sow(self.species.trees2, 0.6);
-
-    /*
+    // spiral fun!
     var rut_cells = [
-        {x: 1, y: 3},
-        {x: 2, y: 3},
+        // {x: 8, y: 9},
+        // {x: 8, y: 10},
+        // {x: 8, y: 11},
+        // {x: 8, y: 12},
+
+        {x: 9, y: 12},
+        {x: 10, y: 12},
+        {x: 11, y: 12},
+        {x: 12, y: 12},
+
+        {x: 12, y: 11},
+        {x: 12, y: 10},
+        {x: 12, y: 9},
+        {x: 12, y: 8},
+
+        {x: 12, y: 7},
+        {x: 11, y: 7},
+        {x: 10, y: 7},
+        {x: 9, y: 7},
+        {x: 8, y: 7},
+        {x: 7, y: 7},
+        {x: 6, y: 7},
+
+        {x: 6, y: 8},
+        {x: 6, y: 9},
+        {x: 6, y: 10},
+        {x: 6, y: 11},
+        {x: 6, y: 12},
+        {x: 6, y: 13},
+        {x: 6, y: 14},
+
+        {x: 7, y: 14},
+        {x: 8, y: 14},
+        {x: 9, y: 14},
+        {x: 10, y: 14},
+        {x: 11, y: 14},
+        {x: 12, y: 14},
+        {x: 13, y: 14},
+        {x: 14, y: 14},
+
+        {x: 14, y: 13},
+        {x: 14, y: 12},
+        {x: 14, y: 11},
+        {x: 14, y: 10},
+        {x: 14, y: 9},
+        {x: 14, y: 8},
+        {x: 14, y: 7},
+        {x: 14, y: 6},
+        {x: 14, y: 5},
+
+        {x: 13, y: 5},
+        {x: 12, y: 5},
+        {x: 11, y: 5},
+        {x: 10, y: 5},
+        {x: 9, y: 5},
+        {x: 8, y: 5},
+        {x: 7, y: 5},
+        {x: 6, y: 5},
+        {x: 5, y: 5},
+        {x: 4, y: 5},
+
+        {x: 4, y: 6},
+        {x: 4, y: 7},
+        {x: 4, y: 8},
+        {x: 4, y: 9},
+        {x: 4, y: 10},
+        {x: 4, y: 11},
+        {x: 4, y: 12},
+        {x: 4, y: 13},
+        {x: 4, y: 14},
+        {x: 4, y: 15},
+        {x: 4, y: 16},
+
+        {x: 5, y: 16},
+        {x: 6, y: 16},
+        {x: 7, y: 16},
+        {x: 8, y: 16},
+        {x: 9, y: 16},
+        {x: 10, y: 16},
+        {x: 11, y: 16},
+        {x: 12, y: 16},
+        {x: 13, y: 16},
+        {x: 14, y: 16},
+        {x: 15, y: 16},
+        {x: 16, y: 16},
     ]
     
     rut_cells.forEach(function(coords) {
         var cell = self.env.get(coords);
-        cell.rut('footsteps', 1);
+        cell.rut('magic', 1);
     })
-   */
 
     //self.env.set({x:1,y:1}, self.species.trees)
 
@@ -67,9 +140,11 @@ Map.generateTest = function() {
     //self.rect(self.species.trees2, {x:0, y:7}, {x:7, y:7});
 
 
-    self.rect(self.species.magic, {x:4, y:4}, {x:8, y:8});
+    // self.rect(self.species.magic, {x:4, y:4}, {x:8, y:8});
 
-    this.env.advance(1);
+    // this.env.advance(1);
+    
+    self.getCell({x: 2, y:0}).rut('footsteps')
 }
 
 

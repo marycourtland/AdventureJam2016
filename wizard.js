@@ -13,7 +13,7 @@ module.exports = Wizard = function(map) {
         },
 
         trailingRuts: {
-            'magic': 1
+//            'magic': 1
         }
     });
     

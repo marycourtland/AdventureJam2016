@@ -37,14 +37,15 @@ speciesData.push({
     id: 'magic',
     symbol: '&#8960;',
     color: '#4C24A3',
-    timeToIteration: 1000,
     forceNeighborIteration: true,
     rules: {
         default: GrowthRules.magic,
         ruts: [
             {
                 rut_id: 'magic',
-                rules: GrowthRules.magicCrazy
+                timeToIteration: 100,
+                forceNeighborIteration: true,
+                rules: GrowthRules.absoluteActivation
             }
         ]
     }

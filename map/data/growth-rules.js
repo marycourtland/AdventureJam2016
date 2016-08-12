@@ -1,5 +1,6 @@
 module.exports = GrowthRules = {
     magic: {
+        id: 'magic',
         stateMap: {
             0: [0.001, 0.2, 0.1, 1, 1, 1, 1, 1, 0],
             1: [0, 0, 0, 1, 0, 1, 1, 0, 0]
@@ -13,6 +14,7 @@ module.exports = GrowthRules = {
 
     // mostly used with ruts?
     magicCrazy: {
+        id: 'magicCrazy',
         stateMap: {
             0: [0.5, 1, 1, 1, 1, 1, 1, 1, 1],
             1: [0, 0, 0, 0, 0, 0, 0, 0, 0]
@@ -23,9 +25,22 @@ module.exports = GrowthRules = {
             [1, 1, 1]
         ]
     },
+    absoluteActivation: {
+        id: 'absoluteActivation',
+        stateMap: {
+            0: [0, 1, 1, 1, 1, 1, 1, 1, 1],
+            1: [1, 1, 1, 1, 1, 1, 1, 1, 1],
+        },
+        weights: [
+            [1, 1, 1],
+            [1, 0, 1],
+            [1, 1, 1]
+        ]
+    },
 
     // When plants are old enough, they become stable - less likely to grow, slightly likely to die
     plantsStable: {
+        id: 'plantsStable',
         stateMap: {
             0: [  0,   0,   0, 0,   0, 0.1, 0.1, 1, 1, 1, 1,    1],
             1: [0.9, 0.9, 0.8, 1,   1,   1,   1, 1, 1, 1, 1, 0.95]
@@ -38,6 +53,7 @@ module.exports = GrowthRules = {
     },
 
     plants: {
+        id: 'plants',
         stateMap: {
             0: [0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1],
             1: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
@@ -50,6 +66,7 @@ module.exports = GrowthRules = {
     },
 
     plantsCatalyzed: {
+        id: 'plantsCatalyzed',
         stateMap: {
             0: [0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
             1: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
@@ -61,6 +78,7 @@ module.exports = GrowthRules = {
         ]
     },
     plantsDying: {
+        id: 'plantsDying',
         stateMap: {
             0: [0, 0, 0, 0, 0, 0, 0, 0, 0],
             1: [0, 0, 0, 0, 0, 1, 1, 1, 1]
@@ -72,6 +90,7 @@ module.exports = GrowthRules = {
         ]
     },
     completeDeath: {
+        id: 'completeDeath',
         stateMap: {
             0: [0, 0, 0, 0, 0, 0, 0, 0, 0],
             1: [0, 0, 0, 0, 0, 0, 0, 0, 0]

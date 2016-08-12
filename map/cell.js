@@ -12,6 +12,7 @@ var Utils = window.Utils;
 module.exports = Cell = function(blank, coords) {
     this.species = null;
     this.coords = coords;
+    this.neighbors = [];
     this.items = [];
 
     // species register contains:
@@ -39,6 +40,18 @@ Cell.prototype = {};
 
 Events.init(Cell.prototype);
 
+Cell.prototype.setNeighbors = function(neighbors) {
+    this.neighbors = neighbors || [];
+}
+
+Cell.prototype.forEachNeighbor = function(callback) {
+    this.neighbors.forEach(function(n) {
+        if (n.value) callback(n.value);
+    })
+} 
+
+
+
 // convenience, to get the species object
 Cell.prototype.get = function(species_id) {
     if (!(species_id in this.register)) return null;
@@ -64,6 +77,14 @@ Cell.prototype.set = function(species) {
         this.species = species;
         this.add(species); // just in case it's not already set
         this.emit('change', {species: species})
+
+        // propagate rut activation
+        var ruts = species.getIndexedRuts();
+        for (var rut_id in ruts) {
+            this.forEachNeighbor(function(cell) {
+                cell.activateRut(rut_id);
+            })
+        }
     }
 
     return this;
@@ -71,14 +92,18 @@ Cell.prototype.set = function(species) {
 
 // decide which species to be next
 // ** each registered species does its own computation
-Cell.prototype.next = function(neighbors) {
+Cell.prototype.next = function() {
+    this.refreshActiveRuts();
+
     var nextStates = {};
     for (var id in this.register) {
-        nextStates[id] = this.get(id).nextState(this, neighbors);
+        nextStates[id] = this.get(id).nextState(this, this.neighbors);
     }
 
     // Which species are contenders for dominance in this cell?
-    var contenders = Object.keys(nextStates).filter(function(id) { return nextStates[id].state === 1; }) 
+    var contenders = Object.keys(nextStates).filter(function(id) {
+        return nextStates[id].state === 1;
+    })
 
     // THE SPECIES BATTLE IT OUT...
     this.nextSpecies = this.get(SpeciesBattle.decide(contenders));
@@ -150,23 +175,44 @@ Cell.prototype.refreshTimeout = function() {
 
 Cell.prototype.scheduleIteration = function() {
     clearTimeout(this.iterationTimeout);
+    this._timeout = this.getIterationTime();
+    this._t = new Date() + this._timeout; // the time at which the cell will iterate again
+
     var self = this;
     this.iterationTimeout = setTimeout(function() {
         self.iterate();
-    }, this.getIterationTime());
+    }, self._timeout);
 
     //reset the forced iteration
     this.forcedIterationTime = -1;
 }
 
+Cell.prototype.timeUntilIteration = function() {
+    if (!this._t) return Settings.mapIterationTimeout; // meh, default
+    return this._t - new Date();
+}
+
 
 Cell.prototype.getIterationTime = function() {
+    // we'll use the shortest possible time
+    var possibleTimes = [];
+
+    possibleTimes.push(this.timeUntilIteration());
+    possibleTimes.push(Settings.mapIterationTimeout); // this should be fairly long
+
     // Sometimes, neighboring cells will want to force a faster iteration at their boundaries
-    if (this.forcedIterationTime > 0) { return this.forcedIterationTime; }
+    if (this.forcedIterationTime > 0)
+        possibleTimes.push(this.forcedIterationTime);
+
+    // get the shortest iteration time for ALL possible species
+    for (var species_id in this.register) {
+        possibleTimes.push(this.get(species_id).getIterationTime(this.getActiveRuts()));
+    }
+
+    possibleTimes = possibleTimes.filter(function(t) { return t >= 0; });
 
     var scale = 1 + 0.5 * (Math.random() * 2 - 1);
-    if (!this.species) return Settings.mapIterationTimeout * scale;
-    return this.species.getIterationTime() * scale;
+    return Utils.arrayMin(possibleTimes) * scale;;
 }
 
 
@@ -181,8 +227,7 @@ Cell.prototype.iterate = function() {
 
 // Single-cell replacement for Advancerator
 Cell.prototype.advance = function() {
-    var neighbors = Map.env.neighbors(this.coords);
-    this.next(neighbors);
+    this.next();
 
     // Note: when the whole array of cells was being updated all at the same time,
     // flush() was delayed. But now each cell updates itself independently, so
@@ -192,6 +237,7 @@ Cell.prototype.advance = function() {
 
 // Neighboring cells use this method to try to speed up the iteration
 Cell.prototype.forceIterationTime = function(time) {
+    this.refreshActiveRuts();
     if (this.forcedIterationTime > 0) return; // experimental
     if (time > this.getIterationTime()) return;
     if (time > this.forcedIterationTime && this.forcedIterationTime > 0) return;
@@ -202,10 +248,8 @@ Cell.prototype.forceIterationTime = function(time) {
 // *This* cell might try to force *its* neighbors to iterate
 Cell.prototype.forceNeighborIteration = function() {
     var time = this.getIterationTime();
-    var neighbors = Map.env.neighbors(this.coords);
-    neighbors.forEach(function(n) {
-        var cell = n.value;
-        if (!!cell) cell.forceIterationTime(time);
+    this.forEachNeighbor(function(cell) {
+        cell.forceIterationTime(time);
     })
 }
 
@@ -213,8 +257,49 @@ Cell.prototype.forceNeighborIteration = function() {
 
 Cell.prototype.rut = function(rut_id, intensity) {
     if (typeof intensity === 'undefined') intensity = 1;
-    this.ruts[rut_id] = intensity; 
+    this.ruts[rut_id] = {
+        active: false,
+        intensity: intensity
+    } 
 }
+
+// ruts should only be active if any of the cells in the neighborhood
+// has the rut's species as dominant
+Cell.prototype.refreshActiveRuts = function() {
+    var activeRutIds = [];
+    this.forEachNeighbor(function(cell) {
+        if (!cell.species) return;
+
+        for (var rut_id in cell.species.getIndexedRuts()) {
+            activeRutIds.push(rut_id);
+        }
+    })
+
+    for (var rut_id in this.ruts) {
+        this.ruts[rut_id].active = !!(activeRutIds.indexOf(rut_id) !== -1);
+    }
+}
+
+Cell.prototype.getActiveRuts = function() {
+    this.refreshActiveRuts();
+
+    var activeRuts = {};
+
+    for (var rut_id in this.ruts) {
+        if (this.ruts[rut_id].active && this.ruts[rut_id].intensity > 0)
+            activeRuts[rut_id] = this.ruts[rut_id];
+    }
+
+    return activeRuts;
+}
+
+Cell.prototype.activateRut = function(rut_id) {
+    if (rut_id in this.ruts) {
+        this.ruts[rut_id].active = true;
+        this.refreshTimeout();
+    }
+}
+
 
 // ITEMS =======
 

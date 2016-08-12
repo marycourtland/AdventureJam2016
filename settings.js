@@ -45,7 +45,7 @@ Settings.defaultSpeed = 500;
 
 if (Settings.mode === 'test') {
     Settings.playerStart = {x: 8, y: 1};
-    Settings.wizardStart = {x: 1, y: 8};
+    Settings.wizardStart = {x: 8, y: 9};
 }
 
 
