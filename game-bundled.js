@@ -1,83 +1,7 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
-// Tree sprites are from
-// http://opengameart.org/content/tree-collection-v26-bleeds-game-art
-// Bleed - http://remusprites.carbonmade.com/
-
-module.exports = AssetData = {
-    blue: {
-        url:     'images/colors/blue2.png',
-        anchors: [0.5, 0.5],
-    },
-    red: {
-        url:     'images/colors/red.png',
-        anchors: [0.5, 0.5],
-    },
-    green: {
-        url:     'images/colors/green.png',
-        anchors: [0.5, 0.5],
-    },
-    player: {
-        url:     'images/player-forward.png',
-        anchors: [0.5, 1.0],
-    },
-    wizard: {
-        url:     'images/wizard-forward.png',
-        anchors: [0.5, 1.0],
-    },
-	neutralizer1: {
-        url:    'images/neutralizer1.png',
-        anchors: [0.5, 2/3],
-    },
-	neutralizer2: {
-        url:    'images/neutralizer2.png',
-        anchors: [0.5, 2/3],
-    },
-	neutralizer3: {
-        url:    'images/neutralizer3.png',
-        anchors: [0.5, 2/3],
-    },
-	magic: {
-        url:    'images/magic-over-dirt.png',
-        anchors: [0.5, 2/3],
-    },
-	dirt: {
-        url:    'images/ground-dirt.png',
-        anchors: [0.5, 2/3],
-    },
-	grass: {
-        url:    'images/ground-grass.png',
-        anchors: [0.5, 2/3],
-    },
-	flower: {
-        // todo: do a real image for this
-        url:    'images/ground-grass.png',
-        anchors: [0.5, 2/3],
-    },
-	tree1: {
-        url:    'images/tree_01_grass.png',
-        anchors: [0.5, 2/3],
-    },
-	tree2: {
-        url:    'images/tree_02_grass.png',
-        anchors: [0.5, 0.75],
-    },
-	tree8: {
-        url:    'images/tree_08_grass.png',
-        anchors: [0.5, 2/3],
-    },
-	tree11: {
-        url:    'images/tree_11_grass.png',
-        anchors: [0.5, 2/3],
-    },
-	tree13: {
-        url:    'images/tree_13_grass.png',
-        anchors: [0.5, 0.75],
-    }
-}
-
-},{}],2:[function(require,module,exports){
+var Events = window.Events;
+var Utils = window.Utils;
 var Inventory = require('./inventory');
-var Utils = require('../utils');
 
 var CHAR_SPECIES_LISTENER_PREFIX = 'character-species-listener-';
 
@@ -90,6 +14,8 @@ module.exports = Character = function(params) {
 
     this.inventory = new Inventory(this);
     this.health = Settings.maxHealth;
+
+    Events.init(this);
 
     // Responses to species. These specify what happens when the char either walks onto a new species, or the current cell changes.
     this.speciesResponses = params.speciesResponses || {};
@@ -214,7 +140,7 @@ Character.prototype.use = function(item, coords) {
     item.useAt(coords);
 }
 
-},{"../utils":30,"./inventory":3}],3:[function(require,module,exports){
+},{"./inventory":2}],2:[function(require,module,exports){
 module.exports = Inventory = function(char) {
     this.char = char;
     this.items = {};
@@ -282,7 +208,7 @@ Inventory.prototype.refresh = function() {
     }
 }
 
-},{}],4:[function(require,module,exports){
+},{}],3:[function(require,module,exports){
 module.exports = Walker = function(char, getNextDir, onStep) {
     this.char = char;
     this.timeout = null;
@@ -325,10 +251,12 @@ Walker.prototype.step = function() {
     }, this.timeTillNextStep());
 }
 
-},{}],5:[function(require,module,exports){
+},{}],4:[function(require,module,exports){
 // Game modes are called 'modes' to avoid conflict with phaser game states.
 // These are basically modes during the main gameplay state.
 // Sorry mode rhymes with node :)
+
+// Also. This should be view independent
 
 module.exports = GamePlayModes = {};
 var game;
@@ -414,24 +342,30 @@ GamePlayModes.modes.usingItem.getNext = function(data) {
 }
 
 
-},{}],6:[function(require,module,exports){
+},{}],5:[function(require,module,exports){
 var Settings = window.Settings;
-var GameStates = require('./states');
+var Views = require('./views');
 
-window.game = null;
+// view-independent modules
+var Context = {
+    Map: require('./map'),
+    GamePlayModes: require('./gameplay-modes'),
+    Items: require('./items'),
+    Player: require('./player'),
+    Wizard: require('./wizard')
+}
+
+window.game = {};
 
 window.onload = function() {
-    window.game = new Phaser.Game(window.innerWidth, window.innerHeight, Phaser.AUTO, 'game', null, true, false);
+    if (!(Settings.view in Views)) {
+        alert('Pick one of these for the game view: ' + Object.keys(Views).join(', '));
+        return;
+    } 
+    Views[Settings.view].load(Context);
+}
 
-    for (var state in GameStates) {
-        game.state.add(state, GameStates[state]);
-    }
-
-    game.state.start('Boot');
-};
-
-
-},{"./states":27}],7:[function(require,module,exports){
+},{"./gameplay-modes":4,"./items":10,"./map":18,"./player":23,"./views":24,"./wizard":40}],6:[function(require,module,exports){
 module.exports = Bomb = {};
 Bomb.id = 'bomb';
 
@@ -440,13 +374,13 @@ Bomb.useAt = function(coords) {
     map.diamondClump(coords, map.species.neutralized);
 }
 
-},{}],8:[function(require,module,exports){
+},{}],7:[function(require,module,exports){
 // Empty placeholder object. TODO
 
 module.exports = Box = {};
 Box.id = 'box';
 
-},{}],9:[function(require,module,exports){
+},{}],8:[function(require,module,exports){
 // Empty placeholder object. TODO
 
 module.exports = Camera= {};
@@ -459,7 +393,7 @@ Camera.useAt = function(coords) {
 
 }
 
-},{}],10:[function(require,module,exports){
+},{}],9:[function(require,module,exports){
 // Empty placeholder object. TODO
 
 module.exports = Detector = {};
@@ -470,7 +404,7 @@ Detector.useAt = function(coords) {
     map.placeItem(coords, this);
 }
 
-},{}],11:[function(require,module,exports){
+},{}],10:[function(require,module,exports){
 // this is sort of a manager object
 // Usage:
 // var box_instance = ToolChest.make(ToolChest.types.box);
@@ -518,7 +452,7 @@ ToolChest.make = function(type) { return new ToolChest.Item(type); }
 ToolChest._next_id = 0;
 ToolChest.nextID = function() { return this._next_id++; }
 
-},{"./bomb.js":7,"./box.js":8,"./camera.js":9,"./detector.js":10,"./neutralizer.js":12,"./type-template":13}],12:[function(require,module,exports){
+},{"./bomb.js":6,"./box.js":7,"./camera.js":8,"./detector.js":9,"./neutralizer.js":11,"./type-template":12}],11:[function(require,module,exports){
 module.exports = Neutralizer = {};
 Neutralizer.id = 'neutralizer';
 
@@ -528,7 +462,7 @@ Neutralizer.useAt = function(coords) {
     map.set(coords, map.species.neutralized)
 }
 
-},{}],13:[function(require,module,exports){
+},{}],12:[function(require,module,exports){
 // Methods that should be callable for each item type.
 module.exports = TypeTemplate = {};
 
@@ -564,7 +498,7 @@ TypeTemplate.refresh = function() {
 }
 
 
-},{}],14:[function(require,module,exports){
+},{}],13:[function(require,module,exports){
 // This is the procedure which executes the advancing of the environment species
 // from one iteration to the next.
 //
@@ -587,7 +521,7 @@ module.exports = Advancerator = function(env) {
     })
 }
 
-},{}],15:[function(require,module,exports){
+},{}],14:[function(require,module,exports){
 // A cell (location on the grid) can have multiple species living in it.
 // But one of them is dominant (which will be displayed)
 //
@@ -596,37 +530,51 @@ module.exports = Advancerator = function(env) {
 // all the species and compute which one is dominant
 
 var SpeciesBattle = require('./species-battle')
-var Utils = require('../utils')
+var Events = window.Events;
+var Utils = window.Utils;
 
 module.exports = Cell = function(blank, coords) {
     this.species = null;
     this.coords = coords;
+    this.neighbors = [];
+    this.items = [];
 
     // species register contains:
     //  species
     //  age
-    //  sprite obj
     this.register = {}; // indexed by id
 
     // Ruts
     this.ruts = {}; // indexed by rut id
 
-    this.set(blank || '');
-
-    this.items = [];
-
     // the 'next' slot is just a holding pattern until the current iteration is finalized
     // use cell.next(species), then cell.flush() to set it
     this.nextSpecies = null;
 
+    this.iterationTime = Settings.mapIterationTimeout; // this will be overwritten after setting a species
 
-    // register callbacks when stuff happens
-    this.callbacks = {
-        change: {}
-    }
+    this.forcedIterationTime = -1;
+
+//    this.callbacks = {add:{}, change:{}}
+
+    this.set(blank || '');
 };
 
 Cell.prototype = {};
+
+Events.init(Cell.prototype);
+
+Cell.prototype.setNeighbors = function(neighbors) {
+    this.neighbors = neighbors || [];
+}
+
+Cell.prototype.forEachNeighbor = function(callback) {
+    this.neighbors.forEach(function(n) {
+        if (n.value) callback(n.value);
+    })
+} 
+
+
 
 // convenience, to get the species object
 Cell.prototype.get = function(species_id) {
@@ -644,105 +592,55 @@ Cell.prototype.getAge = function() {
 
 // sets the dominant species
 Cell.prototype.set = function(species) {
-    
-    if (!!this.species && !!species) {
-        if (this.species.id !== species.id) {
-            this.emit('change', {species: species})
-        }
-        else {
-            return; // no need to re-render the same species
-        }
+
+    if (!!this.species && !!species && this.species.id === species.id) {
+        return; // no need to re-set the same species
     }
-
-    this.hideAllExcept(species);
-
+    
     if (!!species) {
         this.species = species;
         this.add(species); // just in case it's not already set
+        this.emit('change', {species: species})
 
-        this.register[species.id].visible = true;
-        if (this.register[species.id].sprite) {
-            this.showSprite(species.id);
-            //this.register[species.id].sprite.visible = true;
+        // propagate rut activation
+        var ruts = species.getIndexedRuts();
+        for (var rut_id in ruts) {
+            this.forEachNeighbor(function(cell) {
+                cell.activateRut(rut_id);
+            })
         }
     }
-
-
-    // Make sure only this one is visible
-    // TODO: later there may be multiple sprites per cell visible...
 
     return this;
 }
 
-Cell.prototype.showSprite = function(id) {
-    var sprite = this.register[id].sprite;
-    if (sprite.alpha > 0) return;
-
-    // todo: stuff this in the species data
-    if (this.register[id].species.sprite.fade) {
-        window.game.add.tween(sprite).to(
-            { alpha: 1 },
-            200,
-            Phaser.Easing.Linear.None,
-            true, // autostart
-            0,    // delay
-            0     // loop 
-        );
-    }
-    else {
-        sprite.alpha = 1;
-    }
-}
-
-Cell.prototype.hide = function(id) {
-    var reg = this.register[id];
-    if (!reg) return;
-
-    reg.visible = false;
-
-    if (reg.sprite && reg.sprite.alpha > 0) {
-        if (reg.species.sprite.fade) {
-            window.game.add.tween(reg.sprite).to(
-                { alpha: 0 },
-                200,
-                Phaser.Easing.Linear.None,
-                true, // autostart
-                0,    // delay
-                0     // loop 
-            );
-        }
-        else {
-            reg.sprite.alpha = 0;
-        }
-    }
-}
-
-
-Cell.prototype.hideAllExcept = function(species) {
-    for (var id in this.register) {
-        if (!!species && species.id === id) continue;
-        this.hide(id);
-    }
-}
-
 // decide which species to be next
 // ** each registered species does its own computation
-Cell.prototype.next = function(neighbors) {
+Cell.prototype.next = function() {
+    this.refreshActiveRuts();
+
     var nextStates = {};
     for (var id in this.register) {
-        nextStates[id] = this.get(id).nextState(this, neighbors);
+        nextStates[id] = this.get(id).nextState(this, this.neighbors);
     }
 
     // Which species are contenders for dominance in this cell?
-    var contenders = Object.keys(nextStates).filter(function(id) { return nextStates[id].state === 1; }) 
+    var contenders = Object.keys(nextStates).filter(function(id) {
+        return nextStates[id].state === 1;
+    })
 
     // THE SPECIES BATTLE IT OUT...
     this.nextSpecies = this.get(SpeciesBattle.decide(contenders));
 
-    // Update age
-    if (this.nextSpecies)
-        this.register[this.nextSpecies.id].age = nextStates[this.nextSpecies.id].age;
-    
+    // Update age etc
+    if (this.nextSpecies) {
+        var nextState = nextStates[this.nextSpecies.id];
+        this.register[this.nextSpecies.id].age = nextState.age;
+        this.iterationTime = nextState.iterationTime;
+        if (this.nextSpecies.forceNeighborIteration) {
+            this.forceNeighborIteration();
+        }
+    }
 }
 
 Cell.prototype.flush = function() {
@@ -773,78 +671,159 @@ Cell.prototype.add = function(species) {
         species = this.get('blank'); // this SHOULD be one of the registered species
     }
 
-    if (!(species.id in this.register)) {
-        this.register[species.id] = {
-            species: species,
-            age: 0,
-            visible: false,
-            sprite: null
-        }
-        //this.createSpriteFor(species.id);
+    if (species.id in this.register) return; // It's already added. No need to re-add it.
+
+    this.register[species.id] = {
+        species: species,
+        age: 0
     }
 
     // make sure there's a dominant species
     if (Object.keys(this.register).length === 1 || !this.species) {
         this.species = species;
-        this.register[species.id].visible = true;
     }
 
-    // Sprite must be initialized, later
-    // TODO: check if sprites have already been initialized
-    // (this is for when we want to optimize for not front-loading the sprite-adding)
+    this.emit('add', {species: species})
 
     return this;
 }
 
-// SPRITES =======
+// ITERATION STUFF
 
-// This has to be done separately
-Cell.prototype.createSprites = function() {
-    // This will have to be turned off and on as needed
-    for (var species_id in this.register) {
-        this.createSpriteFor(species_id);
-    }
+
+// This is for when a cell gets manually set, and we have to pull various properties about it
+// e.g. the magic iteration time
+Cell.prototype.refreshTimeout = function() {
+    this.scheduleIteration();
+};
+
+Cell.prototype.scheduleIteration = function() {
+    clearTimeout(this.iterationTimeout);
+    this._timeout = this.getIterationTime();
+    this._t = new Date() + this._timeout; // the time at which the cell will iterate again
+
+    var self = this;
+    this.iterationTimeout = setTimeout(function() {
+        self.iterate();
+    }, self._timeout);
+
+    //reset the forced iteration
+    this.forcedIterationTime = -1;
 }
 
-Cell.prototype.createSpriteFor = function(id) {
-    var reg = this.register[id];
-    var sprite_id = reg.species.sprite.id;
-    if (Utils.isArray(sprite_id)) {
-        sprite_id = Utils.randomChoice(sprite_id)
+Cell.prototype.timeUntilIteration = function() {
+    if (!this._t) return Settings.mapIterationTimeout; // meh, default
+    return this._t - new Date();
+}
+
+
+Cell.prototype.getIterationTime = function() {
+    // we'll use the shortest possible time
+    var possibleTimes = [];
+
+    possibleTimes.push(this.timeUntilIteration());
+    possibleTimes.push(Settings.mapIterationTimeout); // this should be fairly long
+
+    // Sometimes, neighboring cells will want to force a faster iteration at their boundaries
+    if (this.forcedIterationTime > 0)
+        possibleTimes.push(this.forcedIterationTime);
+
+    // get the shortest iteration time for ALL possible species
+    for (var species_id in this.register) {
+        possibleTimes.push(this.get(species_id).getIterationTime(this.getActiveRuts()));
     }
 
-    // TODO: access game elsehow
-    reg.sprite = window.game.addMapSprite(this.coords, sprite_id);
-    
-    reg.sprite.alpha = reg.visible ? 1 : 0
+    possibleTimes = possibleTimes.filter(function(t) { return t >= 0; });
 
-    return reg.sprite;
+    var scale = 1 + 0.5 * (Math.random() * 2 - 1);
+    return Utils.arrayMin(possibleTimes) * scale;;
+}
+
+
+Cell.prototype.iterate = function() {
+    if (Settings.mapIterationTimeout <= 0) return;
+
+    this.advance();
+
+    // schedule another iteration
+    this.scheduleIteration();
+}
+
+// Single-cell replacement for Advancerator
+Cell.prototype.advance = function() {
+    this.next();
+
+    // Note: when the whole array of cells was being updated all at the same time,
+    // flush() was delayed. But now each cell updates itself independently, so
+    // we don't have to wait for the rest of the cells before calling flush().
+    this.flush();
+}
+
+// Neighboring cells use this method to try to speed up the iteration
+Cell.prototype.forceIterationTime = function(time) {
+    this.refreshActiveRuts();
+    if (this.forcedIterationTime > 0) return; // experimental
+    if (time > this.getIterationTime()) return;
+    if (time > this.forcedIterationTime && this.forcedIterationTime > 0) return;
+
+    this.forcedIterationTime = time;
+}
+
+// *This* cell might try to force *its* neighbors to iterate
+Cell.prototype.forceNeighborIteration = function() {
+    var time = this.getIterationTime();
+    this.forEachNeighbor(function(cell) {
+        cell.forceIterationTime(time);
+    })
 }
 
 // RUTS =======
 
 Cell.prototype.rut = function(rut_id, intensity) {
     if (typeof intensity === 'undefined') intensity = 1;
-    this.ruts[rut_id] = intensity; 
+    this.ruts[rut_id] = {
+        active: false,
+        intensity: intensity
+    } 
 }
 
-// EVENTS =======
+// ruts should only be active if any of the cells in the neighborhood
+// has the rut's species as dominant
+Cell.prototype.refreshActiveRuts = function() {
+    var activeRutIds = [];
+    this.forEachNeighbor(function(cell) {
+        if (!cell.species) return;
 
-Cell.prototype.on = function(event, callback_id, callback) {
-    this.callbacks[event][callback_id] = callback; 
-}
-
-Cell.prototype.off = function(event, callback_id) {
-    delete this.callbacks[event][callback_id];
-}
-
-Cell.prototype.emit = function(event, data) {
-    if (event in this.callbacks && Object.keys(this.callbacks[event]).length > 0) {
-        for (var cb in this.callbacks[event]) {
-            this.callbacks[event][cb](data);
+        for (var rut_id in cell.species.getIndexedRuts()) {
+            activeRutIds.push(rut_id);
         }
+    })
+
+    for (var rut_id in this.ruts) {
+        this.ruts[rut_id].active = !!(activeRutIds.indexOf(rut_id) !== -1);
     }
 }
+
+Cell.prototype.getActiveRuts = function() {
+    this.refreshActiveRuts();
+
+    var activeRuts = {};
+
+    for (var rut_id in this.ruts) {
+        if (this.ruts[rut_id].active && this.ruts[rut_id].intensity > 0)
+            activeRuts[rut_id] = this.ruts[rut_id];
+    }
+
+    return activeRuts;
+}
+
+Cell.prototype.activateRut = function(rut_id) {
+    if (rut_id in this.ruts) {
+        this.ruts[rut_id].active = true;
+        this.refreshTimeout();
+    }
+}
+
 
 // ITEMS =======
 
@@ -852,11 +831,12 @@ Cell.prototype.addItem = function(coords, item) {
     this.items.push(item);
 }
 
-},{"../utils":30,"./species-battle":21}],16:[function(require,module,exports){
+},{"./species-battle":20}],15:[function(require,module,exports){
 module.exports = GrowthRules = {
     magic: {
+        id: 'magic',
         stateMap: {
-            0: [0.001, 0.1, 0, 1, 1, 1, 1, 1, 0],
+            0: [0.001, 0.2, 0.1, 1, 1, 1, 1, 1, 0],
             1: [0, 0, 0, 1, 0, 1, 1, 0, 0]
         },
         weights: [
@@ -868,6 +848,7 @@ module.exports = GrowthRules = {
 
     // mostly used with ruts?
     magicCrazy: {
+        id: 'magicCrazy',
         stateMap: {
             0: [0.5, 1, 1, 1, 1, 1, 1, 1, 1],
             1: [0, 0, 0, 0, 0, 0, 0, 0, 0]
@@ -878,9 +859,22 @@ module.exports = GrowthRules = {
             [1, 1, 1]
         ]
     },
+    absoluteActivation: {
+        id: 'absoluteActivation',
+        stateMap: {
+            0: [0, 1, 1, 1, 1, 1, 1, 1, 1],
+            1: [1, 1, 1, 1, 1, 1, 1, 1, 1],
+        },
+        weights: [
+            [1, 1, 1],
+            [1, 0, 1],
+            [1, 1, 1]
+        ]
+    },
 
     // When plants are old enough, they become stable - less likely to grow, slightly likely to die
     plantsStable: {
+        id: 'plantsStable',
         stateMap: {
             0: [  0,   0,   0, 0,   0, 0.1, 0.1, 1, 1, 1, 1,    1],
             1: [0.9, 0.9, 0.8, 1,   1,   1,   1, 1, 1, 1, 1, 0.95]
@@ -893,6 +887,7 @@ module.exports = GrowthRules = {
     },
 
     plants: {
+        id: 'plants',
         stateMap: {
             0: [0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1],
             1: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
@@ -905,6 +900,7 @@ module.exports = GrowthRules = {
     },
 
     plantsCatalyzed: {
+        id: 'plantsCatalyzed',
         stateMap: {
             0: [0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
             1: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
@@ -916,6 +912,7 @@ module.exports = GrowthRules = {
         ]
     },
     plantsDying: {
+        id: 'plantsDying',
         stateMap: {
             0: [0, 0, 0, 0, 0, 0, 0, 0, 0],
             1: [0, 0, 0, 0, 0, 1, 1, 1, 1]
@@ -927,6 +924,7 @@ module.exports = GrowthRules = {
         ]
     },
     completeDeath: {
+        id: 'completeDeath',
         stateMap: {
             0: [0, 0, 0, 0, 0, 0, 0, 0, 0],
             1: [0, 0, 0, 0, 0, 0, 0, 0, 0]
@@ -934,206 +932,185 @@ module.exports = GrowthRules = {
     }
 }
 
-},{}],17:[function(require,module,exports){
+},{}],16:[function(require,module,exports){
 var GrowthRules = require('./growth-rules')
 
 // Conditional growth rules are sorted by priority, low > high.
 
-module.exports = speciesData = [
-    // TESTING ONLY
-    {
-        id: 'blue',
-        symbol: '~',
-        color: '#5F4F29',
-        sprite: {id: 'blue'}
-    },
-    {
-        id: 'red',
-        symbol: '~',
-        color: '#5F4F29',
-        sprite: {id: 'red'}
-    },
-    {
-        id: 'green',
-        symbol: '~',
-        color: '#5F4F29',
-        sprite: {id: 'green'}
-    },
+module.exports = speciesData = [];
 
-    // REAL SPECIES
-    {
-        id: 'blank',
-        symbol: '~',
-        color: '#5F4F29',
-        sprite: {id: 'dirt'}
-    },
-    {
-        id: 'neutralized',
-        symbol: 'x',
-        color: '#422121',
-        sprite: {
-            id: ['neutralizer1', 'neutralizer2', 'neutralizer3'],
-            fade: true
-        }
-    },
+// TESTING ONLY
+speciesData.push({
+    id: 'blue',
+    symbol: '~',
+    color: '#5F4F29',
+});
+speciesData.push({
+    id: 'red',
+    symbol: '~',
+    color: '#5F4F29',
+});
+speciesData.push({
+    id: 'green',
+    symbol: '~',
+    color: '#5F4F29',
+});
 
-    {
-        id: 'magic',
-        symbol: '&#8960;',
-        color: '#4C24A3',
-        sprite: {
-            id: 'magic',
-            fade: true
-        },
-        rules: {
-            default: GrowthRules.magic,
-            ruts: [
-                {
-                    rut_id: 'magic',
-                    rules: GrowthRules.magicCrazy
-                }
-            ]
-        }
-    },
+// REAL SPECIES
+speciesData.push({
+    id: 'blank',
+    symbol: '~',
+    color: '#5F4F29',
+});
+speciesData.push({
+    id: 'neutralized',
+    symbol: 'x',
+    color: '#422121',
+});
 
-    {
-        id: 'grass',
-        symbol: '&#8756;',
-        color: '#46CF46', 
-        sprite: {id: 'grass'},
-        rules: {
-            default: GrowthRules.plants,
-            conditional: [
-                {
-                    min_neighbors: 1,
-                    species_id: 'magic',
-                    rules: GrowthRules.plantsDying
-                }
-            ],
-            ruts: [
-                {
-                    rut_id: 'footsteps',
-                    rules: GrowthRules.completeDeath
-                }
-            ]
-        }
-    },
+speciesData.push({
+    id: 'magic',
+    symbol: '&#8960;',
+    color: '#4C24A3',
+    forceNeighborIteration: true,
+    rules: {
+        default: GrowthRules.magic,
+        ruts: [
+            {
+                rut_id: 'magic',
+                timeToIteration: 100,
+                forceNeighborIteration: true,
+                rules: GrowthRules.absoluteActivation
+            }
+        ]
+    }
+});
 
-    {
-        id: 'flowers',
-        symbol: '&#9880;',
-        color: '#E46511',
-        sprite: {
-            id: 'flower',
-            fade: true
-        },
-        rules: {
-            default: GrowthRules.plants,
-            conditional: [
-                {
-                    min_neighbors: 1,
-                    species_id: 'magic',
-                    rules: GrowthRules.plantsDying
-                }
-            ],
-            ruts: [
-                {
-                    rut_id: 'footsteps',
-                    rules: GrowthRules.completeDeath
-                }
-            ]
-        }
-    },
+speciesData.push({
+    id: 'grass',
+    symbol: '&#8756;',
+    color: '#46CF46', 
+    rules: {
+        default: GrowthRules.plants,
+        conditional: [
+            {
+                min_neighbors: 1,
+                species_id: 'magic',
+                rules: GrowthRules.plantsDying
+            }
+        ],
+        ruts: [
+            {
+                rut_id: 'footsteps',
+                rules: GrowthRules.completeDeath
+            }
+        ]
+    }
+});
 
-    {
-        id: 'trees',
-        symbol: '&psi;',
-        color: '#174925',
-        sprite: {
-            id: ['tree1', 'tree8', 'tree11', 'tree13'],
-            fade: true
-        },
-        speed: 200,
-        passable: false,
-        rules: {
-            default: GrowthRules.plants,
-            ruts: [
-                {
-                    rut_id: 'footsteps',
-                    rules: GrowthRules.completeDeath
-                }
-            ],
-            conditional: [
-                // the presence of grass catalyzes tree growth
-                {
-                    species_id: 'grass',
-                    min_neighbors: 4,
-                    rules: GrowthRules.plantsCatalyzed
-                },
+speciesData.push({
+    id: 'flowers',
+    symbol: '&#9880;',
+    color: '#E46511',
+    rules: {
+        default: GrowthRules.plants,
+        conditional: [
+            {
+                min_neighbors: 1,
+                species_id: 'magic',
+                rules: GrowthRules.plantsDying
+            }
+        ],
+        ruts: [
+            {
+                rut_id: 'footsteps',
+                rules: GrowthRules.completeDeath
+            }
+        ]
+    }
+});
 
-                // tree growth stabilizes when the trees are old
-                {
-                    species_id: 'trees',
-                    min_age: 3,
-                    rules: GrowthRules.plantsStable
-                },
+speciesData.push({
+    id: 'trees',
+    symbol: '&psi;',
+    color: '#174925',
+    speed: 200,
+    passable: true,
+    rules: {
+        default: GrowthRules.plants,
+        ruts: [
+            {
+                rut_id: 'footsteps',
+                rules: GrowthRules.completeDeath
+            }
+        ],
+        conditional: [
+            // the presence of grass catalyzes tree growth
+            {
+                species_id: 'grass',
+                min_neighbors: 4,
+                rules: GrowthRules.plantsCatalyzed
+            },
 
-                {
-                    min_neighbors: 1,
-                    species_id: 'magic',
-                    rules: GrowthRules.plantsDying
-                }
-            ]
-        }
-    },
+            // tree growth stabilizes when the trees are old
+            {
+                species_id: 'trees',
+                min_age: 3,
+                rules: GrowthRules.plantsStable
+            },
 
-    // Pine trees - SAME RULES ETC AS THE OTHER TREES
-    // Just separated out for some interest/variety
-    {
-        id: 'trees2',
-        symbol: '&psi;',
-        color: '#174925',
-        sprite: {
-            id: ['tree2'],
-            fade: true
-        },
-        speed: 200,
-        passable: false,
-        rules: {
-            default: GrowthRules.plants,
-            conditional: [
-                // the presence of grass catalyzes tree growth
-                {
-                    species_id: 'grass',
-                    min_neighbors: 4,
-                    rules: GrowthRules.plantsCatalyzed
-                },
+            {
+                min_neighbors: 1,
+                species_id: 'magic',
+                rules: GrowthRules.plantsDying
+            }
+        ]
+    }
+});
 
-                // tree growth stabilizes when the trees are old
-                {
-                    species_id: 'trees2',
-                    min_age: 3,
-                    rules: GrowthRules.plantsStable
-                },
+// Pine trees - SAME RULES ETC AS THE OTHER TREES
+// Just separated out for some interest/variety
+speciesData.push({
+    id: 'trees2',
+    symbol: '&psi;',
+    color: '#174925',
+    speed: 200,
+    passable: true,
+    rules: {
+        default: GrowthRules.plants,
+        conditionalnope: [
+            // the presence of grass catalyzes tree growth
+            {
+                species_id: 'grass',
+                min_neighbors: 4,
+                rules: GrowthRules.plantsCatalyzed
+            },
 
-                {
-                    min_neighbors: 1,
-                    species_id: 'magic',
-                    rules: GrowthRules.plantsDying
-                }
-            ]
-        }
-    },
+            // tree growth stabilizes when the trees are old
+            {
+                species_id: 'trees2',
+                min_age: 3,
+                rules: GrowthRules.plantsStable
+            },
 
-]
+            {
+                min_neighbors: 1,
+                species_id: 'magic',
+                rules: GrowthRules.plantsDying
+            }
+        ]
+    }
+});
 
-},{"./growth-rules":16}],18:[function(require,module,exports){
+
+
+},{"./growth-rules":15}],17:[function(require,module,exports){
 // Example:
 // env = new Env({x:30, y:30});
 
+var XY = window.XY;
 var Cell = require('./cell.js')
 var Advancerator = require('./advancerator.js');
-var XY = require('../xy');
 
 module.exports = Env = function(size, blank_cell) {
     this.size = size;
@@ -1148,6 +1125,13 @@ Env.prototype.init = function(blank_cell) {
         this.cells.push([]);
         for (var y = 0; y < this.size.y; y++) {
             this.cells[x][y] = new Cell(blank_cell, XY(x, y));
+        }
+    }
+
+    // storing the neighbors on each cell has to happen after everything's initialized
+    for (var x = 0; x < this.size.x; x++) {
+        for (var y = 0; y < this.size.y; y++) {
+            this.cells[x][y].setNeighbors(this.neighbors(XY(x,y)));
         }
     }
 
@@ -1221,11 +1205,10 @@ Env.prototype.randomCoords = function() {
     }
 }
 
-},{"../xy":32,"./advancerator.js":14,"./cell.js":15}],19:[function(require,module,exports){
+},{"./advancerator.js":13,"./cell.js":14}],18:[function(require,module,exports){
 var Settings = window.Settings;
 var Env = require('./environment');
 var Species = require('./species');
-//var Renderer = require('./renderer')
 var SpeciesData = require('./data/species') 
 
 module.exports = Map = {};
@@ -1241,39 +1224,135 @@ Map.init = function(params) {
     this.size = params.size;
     this.center = {x: Math.floor(this.size.x/2), y: Math.floor(this.size.y/2)} // use Map.setCenter to change this
     this.env = new Env(this.size, this.species.blank);
+}
 
-    // Unused prototype stuff
-    //this.dims = params.dims;
-    //this.window = params.window; // what radius of tiles should comprise the camera window?
-    //this.renderer = new Renderer(params.html, this.dims, this.center);
-    //this.render();
+Map.startIteration = function() {
+    // this is just the first timeout
+    function getTimeout(){
+        // flat distribution because it's the first iteration
+        return Math.random() * Settings.mapIterationTimeout
+    }
+
+    this.forEach(function(coords, cell) {
+        setTimeout(function() { cell.iterate(); }, getTimeout());
+    })
 }
 
 Map.generateTest = function() {
     var self = this;
     // register involved species with all of the cells
-    self.env.range().forEach(function(coords) {
-        var cell = self.env.get(coords);
+    self.forEach(function(coords, cell) {
+        cell.add(self.species.trees2);
         cell.add(self.species.grass);
         cell.add(self.species.magic);
         cell.add(self.species.trees);
     })
 
-    self.sow(self.species.grass, 1);
-
+    // spiral fun!
     var rut_cells = [
-        {x: 1, y: 3},
-        {x: 2, y: 3},
+        // {x: 8, y: 9},
+        // {x: 8, y: 10},
+        // {x: 8, y: 11},
+        // {x: 8, y: 12},
+
+        {x: 9, y: 12},
+        {x: 10, y: 12},
+        {x: 11, y: 12},
+        {x: 12, y: 12},
+
+        {x: 12, y: 11},
+        {x: 12, y: 10},
+        {x: 12, y: 9},
+        {x: 12, y: 8},
+
+        {x: 12, y: 7},
+        {x: 11, y: 7},
+        {x: 10, y: 7},
+        {x: 9, y: 7},
+        {x: 8, y: 7},
+        {x: 7, y: 7},
+        {x: 6, y: 7},
+
+        {x: 6, y: 8},
+        {x: 6, y: 9},
+        {x: 6, y: 10},
+        {x: 6, y: 11},
+        {x: 6, y: 12},
+        {x: 6, y: 13},
+        {x: 6, y: 14},
+
+        {x: 7, y: 14},
+        {x: 8, y: 14},
+        {x: 9, y: 14},
+        {x: 10, y: 14},
+        {x: 11, y: 14},
+        {x: 12, y: 14},
+        {x: 13, y: 14},
+        {x: 14, y: 14},
+
+        {x: 14, y: 13},
+        {x: 14, y: 12},
+        {x: 14, y: 11},
+        {x: 14, y: 10},
+        {x: 14, y: 9},
+        {x: 14, y: 8},
+        {x: 14, y: 7},
+        {x: 14, y: 6},
+        {x: 14, y: 5},
+
+        {x: 13, y: 5},
+        {x: 12, y: 5},
+        {x: 11, y: 5},
+        {x: 10, y: 5},
+        {x: 9, y: 5},
+        {x: 8, y: 5},
+        {x: 7, y: 5},
+        {x: 6, y: 5},
+        {x: 5, y: 5},
+        {x: 4, y: 5},
+
+        {x: 4, y: 6},
+        {x: 4, y: 7},
+        {x: 4, y: 8},
+        {x: 4, y: 9},
+        {x: 4, y: 10},
+        {x: 4, y: 11},
+        {x: 4, y: 12},
+        {x: 4, y: 13},
+        {x: 4, y: 14},
+        {x: 4, y: 15},
+        {x: 4, y: 16},
+
+        {x: 5, y: 16},
+        {x: 6, y: 16},
+        {x: 7, y: 16},
+        {x: 8, y: 16},
+        {x: 9, y: 16},
+        {x: 10, y: 16},
+        {x: 11, y: 16},
+        {x: 12, y: 16},
+        {x: 13, y: 16},
+        {x: 14, y: 16},
+        {x: 15, y: 16},
+        {x: 16, y: 16},
     ]
     
     rut_cells.forEach(function(coords) {
         var cell = self.env.get(coords);
-        cell.rut('footsteps', 1);
+        cell.rut('magic', 1);
     })
 
-    self.env.set({x:1,y:1}, self.species.trees)
+    //self.env.set({x:1,y:1}, self.species.trees)
 
-    this.env.advance(2);
+    self.rect(self.species.trees, {x:0, y:0}, {x:7, y:0});
+    //self.rect(self.species.trees2, {x:0, y:7}, {x:7, y:7});
+
+
+    // self.rect(self.species.magic, {x:4, y:4}, {x:8, y:8});
+
+    // this.env.advance(1);
+    
+    self.getCell({x: 2, y:0}).rut('footsteps')
 }
 
 
@@ -1283,8 +1362,7 @@ Map.generate = function() {
     var self = this;
 
     // register involved species with all of the cells
-    self.env.range().forEach(function(coords) {
-        var cell = self.env.get(coords);
+    self.forEach(function(coords, cell) {
         cell.add(self.species.magic);
         cell.add(self.species.grass);
         cell.add(self.species.trees);
@@ -1295,14 +1373,14 @@ Map.generate = function() {
     self.sow(self.species.grass, 1/10);
     self.sow(self.species.flowers, 1/50)
     self.sow(self.species.trees, 1/30);
-    self.sow(self.species.trees2, 1/30);
-    self.env.advance(3);
+    self.sow(self.species.trees2, 1/40);
+    self.env.advance(10);
 
     // empty spot in the 0,0 corner
-    self.rect(self.species.grass, {x:0, y:0}, {x:6, y:6});
+    self.rect(self.species.grass, {x:0, y:0}, {x:10, y:10});
+    self.rect(self.species.magic, {x:2, y:2}, {x:4, y:4});
 
-    // here is some magic until the wizard is implemented
-    self.diamondClump(self.center, self.species.magic)
+    self.env.advance(1);
 }
 
 Map.diamondClump = function(coords, species) {
@@ -1387,106 +1465,17 @@ Map.advance = function(n) {
     return this;
 }
 
-
-// UNUSED PROTOTYPE STUFF
-/*
-
-// MARGINS / CAMERA
-Map.isInWindow = function(coords) {
-    var distance = Math.max(
-        Math.abs(coords.x - this.center.x),
-        Math.abs(coords.y - this.center.y)
-    )
-    return distance < this.window;
+Map.log = function() {
+    // For debugging purposes
+    var ascii = Utils.transpose(this.env.cells).map(function (r) {
+        return r.map(function(cell) {
+            return cell.species.id === 'blank' ? ' ' : cell.species.id[0];
+        }).join(' ');
+    }).join('\n');
+    console.log(ascii);
 }
 
-Map.getDistanceFromWindowEdge = function(coords) {
-    return {
-        north: (this.center.y - this.window) - coords.y,
-        west: (this.center.x - this.window) - coords.x,
-        south: coords.y - (this.center.y + this.window),
-        east: coords.x - (this.center.x + this.window)
-    }
-}
-
-
-
-// Different than isInWindow. Uses the rectangular renderer view
-Map.isInView = function(coords) {
-    return this.renderer.isInView(coords);
-}
-
-// ITEMS
-Map.placeItem = function(coords, item) {
-    var cell = this.env.get(coords);
-    cell.addItem(item);
-    // put it in the html
-    item.rendersTo(this.renderer.getCell(coords));
-}
-
-
-// RENDERING
-Map.render = function() { this.renderer.render(this.env); return this; }
-Map.refresh = function() { this.renderer.refresh(this.env); return this; }
-Map.refreshFull = function() { this.renderer.refresh(this.env, true); return this; }
-
-Map.refreshCell = function(coords, forceRefresh) {
-    if (!forceRefresh && !this.isInView(coords)) return this;
-    this.renderer.refreshCoords(this.env, coords);
-}
-
-Map.zoomFactor = 2;
-
-Map.zoomIn = function() {
-    this.dims.x *= Map.zoomFactor;
-    this.dims.y *= Map.zoomFactor;
-    this.window /= Map.zoomFactor;
-    this.refreshFull();
-    return this;
-}
-
-Map.zoomOut = function() {
-    this.dims.x /= Map.zoomFactor;
-    this.dims.y /= Map.zoomFactor;
-    this.window *= Map.zoomFactor;
-    this.refreshFull();
-    return this;
-}
-
-Map.recenter = function(coords) {
-    this.center.x = coords.x;
-    this.center.y = coords.y;
-    this.refreshFull();
-    return this;
-}
-
-Map.shiftView = function(dCoords) {
-    this.recenter({
-        x: this.center.x + dCoords.x,
-        y: this.center.y + dCoords.y
-    })
-    return this;
-}
-
-
-// ugh
-Map.getOffset = function() {
-    return this.renderer.getPixelOffset();
-}
-
-// more ugh. Pixels should be relative to the top left corner of the map itself, not the html element
-Map.getCoordsFromPixels = function(pixels) {
-    return {
-        x: Math.floor(pixels.x / this.dims.x),
-        y: Math.floor(pixels.y / this.dims.y),
-    }
-}
-
-// clump all this stuff together in a renderer
-Map.renderer = require('./renderer')
-*/
-
-},{"./data/species":17,"./environment":18,"./species":23}],20:[function(require,module,exports){
+},{"./data/species":16,"./environment":17,"./species":22}],19:[function(require,module,exports){
 // EXAMPLE:
 //
 // var ruleset = new RuleSet({
@@ -1507,6 +1496,7 @@ Map.renderer = require('./renderer')
 module.exports = RuleSet = function(ruleParams) {
     ruleParams = ruleParams || {};
 
+    this.id = ruleParams.id;
     this.stateMap = ruleParams.stateMap || {};
 
     // TODO: this should really be a coordmap...
@@ -1515,17 +1505,21 @@ module.exports = RuleSet = function(ruleParams) {
         [1, 0, 1],
         [1, 1, 1]
     ]);
+
+    if (ruleParams.debug) this.debug = true;
 }
 
 RuleSet.prototype = {};
 
-RuleSet.prototype.transform = function(state, neighbors) {
+RuleSet.prototype.transform = function(state, neighbors, debug) {
     // If we try to transform anything unknown, things will just stay constant.
     if (!(state in this.stateMap)) { return state; }
 
     var sum = deepWeightedSum(neighbors, this.weights);
 
     if (sum >= this.stateMap[state].length) { return state; }
+
+    if (this.debug) console.debug(debug, '|',  this.id, state, sum, '>>>', this.stateMap[state][sum])
 
     return this.probabilisticState(this.stateMap[state][sum]);
 }
@@ -1570,7 +1564,7 @@ function indexWeights(deepArray) {
     return output;
 }
 
-},{}],21:[function(require,module,exports){
+},{}],20:[function(require,module,exports){
 // This module is for deciding the winning species in a cell!
 // 
 // For now, it's just 'which species is higher in the pecking order'
@@ -1581,6 +1575,7 @@ module.exports = SpeciesBattle = {
         'blank',
         'grass',
         'flowers',
+        'trees2',
         'trees',
         'magic',
         'neutralized'
@@ -1598,7 +1593,7 @@ module.exports = SpeciesBattle = {
     }
 }
 
-},{}],22:[function(require,module,exports){
+},{}],21:[function(require,module,exports){
 // THE POINT OF THIS MODULE IS....
 //
 //    ... To take a cell object and decide whether it has a species in it.
@@ -1616,13 +1611,13 @@ module.exports = SpeciesMask = function(species_id) {
     }
 }
 
-},{}],23:[function(require,module,exports){
+},{}],22:[function(require,module,exports){
+var Utils = window.Utils;
 var RuleSet = require('./ruleset');
 var SpeciesMask = require('./species-mask');
 
 module.exports = Species = function(params) {
     this.id = params.id || 'species' + Math.floor(Math.random()*1e8);
-    this.sprite = params.sprite;
 
     // behavior
     // TODO: fix passable for phaser
@@ -1632,9 +1627,15 @@ module.exports = Species = function(params) {
         this.speed = params.speed;
     }
 
-    this.initRules(params.rules);
+    if (params.hasOwnProperty('timeToIteration')) {
+        this.timeToIteration = params.timeToIteration;
+    }
 
-    //this.ruleSet = new RuleSet(params.rules);
+    if (params.hasOwnProperty('forceNeighborIteration')) {
+        this.forceNeighborIteration = params.forceNeighborIteration;
+    }
+
+    this.initRules(params.rules);
 
     // This is a function to decide whether a cell hosts this species or not
     this.mask = SpeciesMask(this.id);
@@ -1679,14 +1680,24 @@ Species.prototype.nextState = function(cell, neighbors) {
     var maskedCell = this.mask(cell);
     var maskedNeighbors = mapCoordmap(neighbors, self.mask);
 
-    var nextState = ruleset.transform(maskedCell, maskedNeighbors);
+    var nextState = ruleset.transform(maskedCell, maskedNeighbors,
+        Math.round(cell.forcedIterationTime)/1000
+        + ' ' + 
+        Math.round(cell.t_temp)/1000
+            + ' ' + cell.coords.x + ',' + cell.coords.y + ' ' + this.id    
+    );
 
     // propagate age (this will only be used if nextState is 1)
     // TODO: make a way to compose things together (like self.mask and cell.getAge)
     var maskedAges = mapCoordmap(neighbors, function(cell) { return !!cell ? self.mask(cell) * cell.getAge() : 0 });
     var age = Math.ceil(coordmapAvg(maskedAges));
+
+    var iterationTime = Settings.mapIterationTimeout;
+    if (ruleset.hasOwnProperty('iterationTime')) {
+        iterationTime = ruleset.iterationTime;
+    }
     
-    return {state: nextState, age: age};
+    return {state: nextState, age: age, iterationTime: iterationTime};
 }
 
 
@@ -1704,7 +1715,7 @@ Species.prototype.decideRuleset = function(cell, neighbors) {
         // is proportional to its intensity (0 to 1)
         // TODO: this needs testing
         var rut = this.rules.ruts[i];
-        var intensity = cell.ruts[rut.rut_id];
+        var intensity = (rut.rut_id in cell.ruts) ? cell.ruts[rut.rut_id].intensity : 0;
         if (!intensity || Math.random() > intensity) continue;
 
         winningRuleset = rut.rules;
@@ -1731,6 +1742,39 @@ Species.prototype.decideRuleset = function(cell, neighbors) {
     return winningRuleset;
 }
 
+Species.prototype.getIterationTime = function(ruts) {
+    // Of all possible iteration times, pick the shortest.
+    var possibleTimes = [];
+    possibleTimes.push(this.timeToIteration || Settings.mapIterationTimeout);
+    
+    // for iteration times, ignore rut intensity. We're just looking for any possibility
+    // of a shorter iteration time.
+    ruts = ruts || {};
+    for (var rut_id in ruts) {
+        var rut = this.getRut(rut_id);
+        if (rut && rut.hasOwnProperty('timeToIteration')) possibleTimes.push(rut.timeToIteration);
+    }
+
+    return Utils.arrayMin(possibleTimes);
+}
+
+Species.prototype.getRut = function(rut_id) {
+    for (var i = 0; i < this.rules.ruts.length; i++) {
+        if (this.rules.ruts[i].rut_id === rut_id) return this.rules.ruts[i];
+    }
+    return null;
+}
+
+// meh, data structure juggling
+Species.prototype.getIndexedRuts = function() {
+    var ruts = {};
+    for (var i = 0; i < this.rules.ruts.length; i++) {
+        var rut_id = this.rules.ruts[i].rut_id;
+        ruts[rut_id] = this.rules.ruts[i];
+    }
+    return ruts;
+}
+
 // TODO make a coordmap object type...
 function mapCoordmap(coordmap, mapFunction) {
     return coordmap.map(function(coordmapItem) {
@@ -1750,7 +1794,7 @@ function coordmapAvg(coordmap) {
     return coordmapSum(coordmap) / coordmap.length;
 }
 
-},{"./ruleset":20,"./species-mask":22}],24:[function(require,module,exports){
+},{"./ruleset":19,"./species-mask":21}],23:[function(require,module,exports){
 var Character = require('./character');
 var ToolChest = require('./items');
 
@@ -1800,7 +1844,320 @@ function initInventory(player, inventoryCounts) {
     }
 }
 
-},{"./character":2,"./items":11}],25:[function(require,module,exports){
+},{"./character":1,"./items":10}],24:[function(require,module,exports){
+module.exports = Views = {
+    topdown: require('./topdown'),
+    phaserIso: require('./phaser')
+}
+
+},{"./phaser":29,"./topdown":37}],25:[function(require,module,exports){
+// Tree sprites are from
+// http://opengameart.org/content/tree-collection-v26-bleeds-game-art
+// Bleed - http://remusprites.carbonmade.com/
+
+module.exports = AssetData = {
+    blue: {
+        url:     'images/colors/blue2.png',
+        anchors: [0.5, 0.5],
+    },
+    red: {
+        url:     'images/colors/red.png',
+        anchors: [0.5, 0.5],
+    },
+    green: {
+        url:     'images/colors/green.png',
+        anchors: [0.5, 0.5],
+    },
+    player: {
+        url:     'images/player-forward.png',
+        anchors: [0.5, 1.0],
+    },
+    wizard: {
+        url:     'images/wizard-forward.png',
+        anchors: [0.5, 1.0],
+    },
+	neutralizer1: {
+        url:    'images/neutralizer1.png',
+        anchors: [0.5, 2/3],
+    },
+	neutralizer2: {
+        url:    'images/neutralizer2.png',
+        anchors: [0.5, 2/3],
+    },
+	neutralizer3: {
+        url:    'images/neutralizer3.png',
+        anchors: [0.5, 2/3],
+    },
+	magic: {
+        url:    'images/magic-over-dirt.png',
+        anchors: [0.5, 2/3],
+    },
+	dirt: {
+        url:    'images/ground-dirt.png',
+        anchors: [0.5, 2/3],
+    },
+	grass: {
+        url:    'images/ground-grass.png',
+        anchors: [0.5, 2/3],
+    },
+	flower: {
+        // todo: do a real image for this
+        url:    'images/ground-grass.png',
+        anchors: [0.5, 2/3],
+    },
+	tree1: {
+        url:    'images/tree_01_grass.png',
+        anchors: [0.5, 2/3],
+    },
+	tree2: {
+        url:    'images/tree_02_grass.png',
+        anchors: [0.5, 0.75],
+    },
+	tree8: {
+        url:    'images/tree_08_grass.png',
+        anchors: [0.5, 2/3],
+    },
+	tree11: {
+        url:    'images/tree_11_grass.png',
+        anchors: [0.5, 2/3],
+    },
+	tree13: {
+        url:    'images/tree_13_grass.png',
+        anchors: [0.5, 0.75],
+    }
+}
+
+},{}],26:[function(require,module,exports){
+var SpeciesSprites = require('./data/species-sprites')
+var Utils = window.Utils;
+
+module.exports = PhaserCell = function(cell) {
+    this.cell = cell;
+
+    // Cache each sprite so we're not creating them on the fly
+    this.register = {};
+    for (var species_id in this.cell.register) {
+        this.register[species_id] = {
+            sprite: null,
+
+            // At the moment, we're only showing 1 species per cell.
+            // Whichever is marked as the dominant species, via cell.species
+            visible: this.cell.species.id === species_id
+        }
+    }
+
+    // TODO: set visible=false appropriately
+
+    this.createSprites();
+    this.bindEvents();
+}
+
+PhaserCell.prototype = {};
+
+PhaserCell.prototype.bindEvents = function() {
+    var self = this;
+    this.cell.on('change', 'phaserRefresh', function(data) {
+        self.onChange(data.species);
+    })
+
+    // Todo: if appropriate, bind createSpriteFor to 'add' event
+}
+
+PhaserCell.prototype.onChange = function(species) {
+    // set sprite of this 
+    this.hideAllExcept(species);
+    this.showSprite(species);
+}
+
+PhaserCell.prototype.createSprites = function() {
+    for (var species_id in this.register) {
+        this.createSpriteFor(species_id);
+    } 
+}
+
+window.alls = [];
+
+PhaserCell.prototype.createSpriteFor = function(species_id) {
+    var sprite_id = SpeciesSprites[species_id].id;
+
+    if (Utils.isArray(sprite_id)) {
+        sprite_id = Utils.randomChoice(sprite_id);
+    }   
+
+    // TODO: access game elsehow
+    var reg = this.register[species_id];
+    reg.sprite = window.game.addMapSprite(this.cell.coords, sprite_id);
+        
+    reg.sprite.alpha = reg.visible ? 1 : 0;
+
+    window.alls.push(reg.sprite);
+
+    return reg.sprite;
+}
+
+PhaserCell.prototype.showSprite = function(species) {
+    //console.log('showSprite', this.cell.coords.x, this.cell.coords.y, species.id);
+    var reg = this.register[species.id];
+    if (!reg) return; // species is not registered yet
+    if (!reg.sprite) return;          // sprite not initialized...
+    if (reg.sprite.alpha > 0) return; // sprite already visible
+
+    if (SpeciesSprites[species.id].fade) {
+        window.game.add.tween(reg.sprite).to(
+            { alpha: 1 },
+            200,
+            Phaser.Easing.Linear.None,
+            true, // autostart
+            0,    // delay
+            0     // loop 
+        );
+    }
+    else {
+        reg.sprite.alpha = 1;
+    }
+}
+
+PhaserCell.prototype.hideSprite = function(species_id) {
+    var reg = this.register[species_id];
+    if (!reg) return;        // species is not registered yet
+    if (!reg.sprite) return; // sprite is not initialized yets
+    if (reg.sprite.alpha === 0) return; // sprite is already hidden
+
+    if (SpeciesSprites[species_id].fade) {
+        window.game.add.tween(reg.sprite).to(
+            { alpha: 0 },
+            200,
+            Phaser.Easing.Linear.None,
+            true, //autostart
+            0,    //delay
+            0     //loop
+        );
+    }
+    else {
+        reg.sprite.alpha = 0;
+    }
+}
+
+PhaserCell.prototype.hideAllExcept = function(species) {
+    for (var id in this.register) {
+        if (!!species.id && species.id === id) continue;
+        this.hideSprite(id);
+    }
+}
+
+
+},{"./data/species-sprites":28}],27:[function(require,module,exports){
+module.exports = PhaserCharacter = function(character, sprite) {
+    this.character = character;
+    this.sprite = sprite;
+
+    //this.createSprites(); // TODO
+    this.bindEvents();
+}
+
+PhaserCharacter.prototype = {};
+
+PhaserCharacter.prototype.bindEvents = function() {
+    var self = this;
+    
+    this.character.on('moveDiscrete', 'phaserMoveDiscrete', function(data) {
+        self.onMoveDiscrete(data);
+    })
+}
+
+PhaserCharacter.prototype.onMoveDiscrete = function() {
+    // move sprite with no animation
+    //this.sprite.isoX = this.character.coords.x * Settings.cellDims.x;
+    //this.sprite.isoY = this.character.coords.y * Settings.cellDims.y;
+ 
+    // move sprite WITH animation
+    var tween = window.game.add.tween(this.sprite);
+    tween.to(
+        {
+            isoX: this.character.coords.x * Settings.cellDims.x - 30, // argh
+            isoY: this.character.coords.y * Settings.cellDims.y - 23, // argh
+        },
+        400,
+        Phaser.Easing.Sinusoidal.InOut,
+        true, 0, 0
+    )
+    tween.onComplete.add(function() {
+        // character has finished moving
+    })
+}
+
+PhaserCharacter.prototype.createSprites = function() {
+}
+
+},{}],28:[function(require,module,exports){
+// Index of which sprites to show for each species.
+
+module.exports = SpeciesSprites = {};
+
+// test species 
+SpeciesSprites['blue'] =  { id: 'blue' }
+SpeciesSprites['red'] =   { id: 'red' }
+SpeciesSprites['green'] = { id: 'green' }
+
+
+// actual species
+SpeciesSprites['blank'] = {
+    id: 'dirt'
+}
+
+SpeciesSprites['dirt'] = {
+    id: 'dirt'
+}
+
+SpeciesSprites['neutralized'] = {
+    id: ['neutralizer1', 'neutralizer2', 'neutralizer3'],
+    fade: true
+}
+
+SpeciesSprites['magic'] = {
+    id: 'magic',
+    fade: true
+}
+
+SpeciesSprites['grass'] = {
+    id: 'grass'
+}
+
+SpeciesSprites['flowers'] = {
+    id: 'flower',
+    fade: true
+}
+
+SpeciesSprites['trees'] = {
+    id: ['tree1', 'tree8', 'tree11'],
+    fade: true
+}
+
+SpeciesSprites['trees2'] = {
+    id: ['tree2', 'tree13'],
+    fade: true
+}
+
+},{}],29:[function(require,module,exports){
+module.exports = phaserIso = {};
+
+phaserIso.load = function(Context) {
+    var GameStates = require('./states');
+
+    window.game = new Phaser.Game(window.innerWidth, window.innerHeight, Phaser.AUTO, 'game', null, true, false);
+
+    for (var stateName in GameStates) {
+        var state = GameStates[stateName];
+        if (typeof state.setContext === 'function') state.setContext(Context);
+        game.state.add(stateName, state);
+    }
+
+
+    game.state.start('Boot');
+};
+
+
+},{"./states":32}],30:[function(require,module,exports){
 var Settings = window.Settings;
 var AssetData = require('../asset_data');
 
@@ -1832,7 +2189,7 @@ Boot.prototype = {
     }
 }
 
-},{"../asset_data":1}],26:[function(require,module,exports){
+},{"../asset_data":25}],31:[function(require,module,exports){
 var game;
 
 module.exports = End = function (_game) { 
@@ -1848,7 +2205,7 @@ End.prototype = {
     },
 };
 
-},{}],27:[function(require,module,exports){
+},{}],32:[function(require,module,exports){
 module.exports = GameStates = {
     Boot: require('./boot.js'),
     Menu: require('./menu.js'),
@@ -1856,7 +2213,7 @@ module.exports = GameStates = {
     End:  require('./end.js'),
 }
 
-},{"./boot.js":25,"./end.js":26,"./menu.js":28,"./play.js":29}],28:[function(require,module,exports){
+},{"./boot.js":30,"./end.js":31,"./menu.js":33,"./play.js":34}],33:[function(require,module,exports){
 var game;
 
 module.exports = Menu = function (_game) { 
@@ -1872,18 +2229,29 @@ Menu.prototype = {
     },
 };
 
-},{}],29:[function(require,module,exports){
+},{}],34:[function(require,module,exports){
+var XY = window.XY;
 var Settings = window.Settings;
 var AssetData = require('../asset_data');
-var Map = require('../map');
-var GamePlayModes = require('../gameplay-modes');
-var Player = require('../player');
-var Wizard = require('../wizard');
-var XY = require('../xy');
 var game;
+
+
+// this holds player, wizard, etc
+var Context;
+
+var PhaserCell = require('../cell.js')
+var PhaserCharacter = require('../character.js')
 
 module.exports = Play = function (_game) { 
     game = _game;
+};
+
+Play.setContext = function(newContext) {
+    console.assert(!!newContext.Map);
+    console.assert(!!newContext.GamePlayModes);
+    console.assert(!!newContext.Player);
+    console.assert(!!newContext.Wizard);
+    Context = newContext;
 };
 
 Play.prototype = {
@@ -1902,12 +2270,12 @@ Play.prototype = {
             return sprite;
         }
 
-        game.map = Map;
+        game.map = Context.Map;
         game.map.init({
             size: Settings.mapSize
         })
 
-        game.playModes = GamePlayModes;
+        game.playModes = Context.GamePlayModes;
         game.playModes.init(game)
     },
 
@@ -1919,8 +2287,10 @@ Play.prototype = {
         game.physics.isoArcade.gravity.setTo(0, 0, 0);
 
         game.map.generate();
+
+        var phaserCells = [];
         game.map.forEach(function(coords, cell) {
-            cell.createSprites();
+            phaserCells.push(new PhaserCell(cell));
         })
         game.iso.simpleSort(game.mapGroup);
         
@@ -1939,7 +2309,8 @@ Play.prototype = {
         game.physics.isoArcade.enable(game.playerSprite);
         game.playerSprite.body.collideWorldBounds = true;
         
-        game.player = Player(game.map);
+        game.player = Context.Player(game.map);
+        var phaserPlayer = new PhaserCharacter(game.player, game.playerSprite);
 
         // TODO: this sprite issue is a huge mess; clean it up
         game.wizardSprite = game.add.isoSprite(
@@ -1947,7 +2318,8 @@ Play.prototype = {
             Settings.wizardStart.y * Settings.cellDims.y,
             2, 'wizard', 0, game.mapGroup
         )
-        game.wizard = Wizard(game.map, game.wizardSprite);
+        game.wizard = Context.Wizard(game.map, game.wizardSprite);
+        var phaserWizard = new PhaserCharacter(game.wizard, game.wizardSprite);
 
         // CAMERA
         game.camera.follow(game.playerSprite);
@@ -1969,7 +2341,7 @@ Play.prototype = {
         bindInventoryEvents();
 
         // SPIN UP THE MAP
-        startMapIteration();
+        game.map.startIteration();
     },
 
     update: function () {
@@ -2002,7 +2374,7 @@ function debugText() {
         '  coords:    ' + xyStr(game.player.coords),
         '  health:    ' + game.player.health,
         '  speed:     ' + game.player.speed,
-        '  underfoot: ' + Map.getCell(game.player.coords).species.id 
+        '  underfoot: ' + Context.Map.getCell(game.player.coords).species.id 
     ]
 
     var color = "#CDE6BB";
@@ -2036,7 +2408,7 @@ function handleMovement() {
     }
 
     if (game.input.activePointer.isDown && game.playModes.get() === 'idle') {
-        game.physics.isoArcade.moveToPointer(game.playerSprite, 500);
+        game.physics.isoArcade.moveToPointer(game.playerSprite, game.player.speed);
     }
     else {
        stop(); 
@@ -2066,72 +2438,499 @@ function onTap(pointer, doubleTap) {
     // todo: place inventory item
 }
 
-function startMapIteration() {
-    Map.env.range().forEach(function(coords) {
-        var cell = Map.getCell(coords);
-        cell.iterationTimeout = null;
-        cell.iterate = function() {
-            if (Settings.mapIterationTimeout <= 0) return;
 
-            cell.advance();
+},{"../asset_data":25,"../cell.js":26,"../character.js":27}],35:[function(require,module,exports){
+// Tree sprites are from
+// http://opengameart.org/content/tree-collection-v26-bleeds-game-art
+// Bleed - http://remusprites.carbonmade.com/
 
-            // schedule another iteration
-            clearTimeout(cell.iterationTimeout);
-            cell.iterationTimeout = setTimeout(function() {
-                cell.iterate();
-            }, getTimeout() )
+module.exports = AssetData = {
+    blue: {
+        symbol:  '~',
+        color:   '#00B'
+    },
+    red: {
+        symbol:  '~',
+        color:   '#B00'
+    },
+    green: {
+        symbol:  '~',
+        color:   '#0B0'
+    },
+    blank: {
+        symbol:  '~',
+        color:   '#5F4F29'
+    },
+	neutralized: {
+        symbol:  'x',
+        color:   '#422121'
+    },
+	magic: {
+        symbol: '&#8960;',
+        color:  '#4C24A3'
+    },
+	dirt: {
+        symbol: '&#8960;',
+        color:  '#4C24A3'
+    },
+	grass: {
+        symbol: '&#8756;',
+        color:  '#46CF46'
+    },
+	flowers: {
+        symbol: '&#9880;',
+        color:  '#E46511'
+    },
+	trees: {
+        symbol: '&psi;',
+        color:  '#174925'
+    },
+	trees2: {
+        symbol: '&#;',
+        symbol: '&psi;',
+    }
+}
+
+},{}],36:[function(require,module,exports){
+module.exports = Controls = {};
+
+var game;
+
+Controls.init = function(gameInstance) {
+    game = gameInstance;
+    this.bindEvents();
+}
+
+Controls.bindEvents = function() {
+    game.html.mouseOverlay.onclick = function(evt) {
+        evt.stopPropagation();
+        var offset = game.renderer.getPixelOffset();
+        var mousePos = {
+            x: evt.clientX - offset.x - game.renderer.bbox.left,
+            y: evt.clientY - offset.y - game.renderer.bbox.top
         }
+        var coords = game.renderer.getCoordsFromPixels(mousePos);
+        game.state.advance({coords: coords});
+    }
 
-        function getTimeout() {
-            // adjust the settings a bit, randomly...
-            var scale = 1 + 0.5 * (Math.random() * 2 - 1);
-            return Settings.mapIterationTimeout * scale;
+    document.body.onclick = function() {
+        game.state.advance({});
+    }
+    
+    this.bindInventory();
+    this.bindMovement();
+}
+
+Controls.bindMovement = function() {
+    var keyboardCallbacks = {
+        37: Controls.handlers.left,
+        39: Controls.handlers.right,
+        38: Controls.handlers.up,
+        40: Controls.handlers.down
+    }
+
+    window.addEventListener('keydown', function(event) {
+        var keycode = event.fake || window.event ? event.keyCode : event.which;
+        if (keycode in keyboardCallbacks) keyboardCallbacks[keycode]();
+    });
+}
+
+Controls.bindInventory = function() {
+    var self = this;
+    var slots = Array.apply(Array, game.html.inventory.getElementsByClassName('slot'));
+    slots.forEach(function(slotHtml) {
+        slotHtml.onclick = function(evt) {
+            evt.stopPropagation();
+            self.handlers.inventory(slotHtml.dataset.itemId);
         }
-
-        // single-cell replacement for Advancerator
-        cell.advance = function() {
-            var neighbors = Map.env.neighbors(coords);
-            this.next(neighbors);
-            this.flush();
-        }
-
-        window.setTimeout(function() { cell.iterate(); }, getTimeout());
     })
 }
 
+Controls.handlers = {};
 
-},{"../asset_data":1,"../gameplay-modes":5,"../map":19,"../player":24,"../wizard":31,"../xy":32}],30:[function(require,module,exports){
-module.exports = Utils = {};
+// INVENTORY
 
-Utils.dirs = { 
-    'n': {x: 0, y: -1},
-    's': {x: 0, y: 1},
-    'w': {x: -1, y:0},
-    'e': {x: 1, y:0}
+Controls.handlers.inventory = function(itemId) {
+    game.state.advance({item: itemId});
 }
 
-Utils.randomChoice = function(array) {
-    if (!Utils.isArray(array) && typeof array === 'object') array = Object.keys(array);
-    return array[Math.floor(Math.random() * array.length)];
+
+// MOVEMENT
+
+Controls.handlers.left = function() {
+    game.player.move(Utils.dirs['w']);
+    game.refreshView();
+},
+
+Controls.handlers.right = function() {
+    game.player.move(Utils.dirs['e']);
+    game.refreshView();
+},
+
+Controls.handlers.up = function() {
+    game.player.move(Utils.dirs['n']);
+    game.refreshView();
+},
+
+Controls.handlers.down = function() {
+    game.player.move(Utils.dirs['s']);
+    game.refreshView();
 }
 
-Utils.isArray = function(array) {
-    return array.constructor === [].constructor;
+},{}],37:[function(require,module,exports){
+// OLD PROTOTYPE CODE
+// WARNING: SUPER MESSY
+
+var Utils = window.Utils;
+var Settings = window.Settings;
+window.UI = require('./ui');
+var MapRenderer = require('./map-renderer');
+var Controls = require('./controls');
+
+var game = window.game;
+var Context = null;
+var ToolChest, Wizard, Player; // these will get instantiated in setContext()
+
+module.exports = topdown = {}; 
+
+topdown.load = function(globalContext) {
+    setContext(globalContext);
+    configGame(window.game);
+    init();
 }
 
-Utils.distance = function(coords1, coords2) {
-    return Math.sqrt(
-        Math.pow(coords1.x - coords2.x, 2) +
-        Math.pow(coords1.y - coords2.y, 2)
-    )
+function setContext(newContext) {
+    Context = newContext;
+    ToolChest = Context.Items; 
+    Wizard = Context.Wizard;
+    Player = Context.Player;
+
+    var game = window.game;
+    game.state = Context.GamePlayModes; // NOT THE SAME AS IT WAS BEFORE
+    game.map = Context.Map;
+
+    //game.size = Settings.gameSize; 
+    game.size = Settings.mapSize; 
+
+    game.cellDims = Settings.cellDims;
+    window.TC = ToolChest;
 }
 
-},{}],31:[function(require,module,exports){
+
+var init = UI.infoWrap('loading...', function() {
+    var game = window.game;
+    game.html = {
+        board: document.getElementById('game'),
+        characters: document.getElementById('game-characters'),
+        inventory: document.getElementById('game-inventory'),
+        mouseOverlay: document.getElementById('mouse-overlay')
+    }
+
+    game.map.init({
+        size: game.size,
+    });
+
+    game.map.generate();
+
+    MapRenderer.init(game.map, {
+        window: 10,
+        dims: game.cellDims,
+        html: game.html.board
+    })
+
+    // some interfaces with other stuff
+    game.render = function() { MapRenderer.render(game.map.env); }
+    game.renderer = MapRenderer;
+
+    game.render();
+
+    // Characters
+    // TODO: separate character rendering and then don't pass charElement in here
+    game.wizard = Wizard(game.map);
+    game.player = Player(game.map);
+
+    game.refreshView();
+    game.state.init(game);
+    Controls.init(game);
+
+    game.map.startIteration();
+});
+
+function configGame(game) {
+    game.refreshView = function() {
+        if (!MapRenderer.isInWindow(game.player.coords)) {
+            game.map.recenter(game.player.coords);
+            game.player.refresh();
+            game.wizard.refresh();
+        }
+    }
+
+    game.refreshView2 = function() {
+        var d = Map.getDistanceFromWindowEdge(game.player.coords);
+        if (d.north > 0 || d.south > 0 || d.west > 0 || d.east > 0) {
+            //console.log('d:', d)
+            if (d.north > 0) game.map.shiftView({x:0, y:-d.north});
+            if (d.south > 0) game.map.shiftView({x:0, y: d.south});
+            if (d.west > 0) game.map.shiftView({x:-d.west, y:0});
+            if (d.east > 0) game.map.shiftView({x: d.east, y:0});
+            game.player.refresh();
+            game.wizard.refresh();
+        }
+    }
+}
+
+},{"./controls":36,"./map-renderer":38,"./ui":39}],38:[function(require,module,exports){
+var AssetData = require('./asset-data');
+
+module.exports = MapRenderer = {};
+
+MapRenderer.init = function(map, params) {
+    this.map = map;
+    this.window = params.window;
+
+    // Direct references. So the parent should not overwrite them.
+    this.html = params.html;
+    this.dims = params.dims;
+    this.centerCoords = this.map.center;
+    this.bbox = params.html.getBoundingClientRect();
+    this.centerPx = {
+        x: this.bbox.width / 2,
+        y: this.bbox.height / 2
+    }
+    this.viewSize = {
+        x: this.bbox.width / this.dims.x,
+        y: this.bbox.height / this.dims.y
+    }
+    this.zoomFactor = 2; // /shrug
+}
+
+// Settings
+cellClass = 'cell'
+cellIdDelimiter = '_'
+cellIdPrefix = cellClass + cellIdDelimiter;
+
+
+// Methods
+
+MapRenderer.coordsToId = function(coords) {
+    return cellIdPrefix + coords.x + cellIdDelimiter + coords.y
+}
+MapRenderer.idToCoords = function(id) {
+    var coordArray = id.slice(cellIdPrefix.length).split(cellIdDelimiter);
+    return {x: coordArray[0], y: coordArray[1] }
+}
+
+// more ugh. Pixels should be relative to the top left corner of the map itself, not the html element
+ MapRenderer.getCoordsFromPixels = function(pixels) {
+    return {
+        x: Math.floor(pixels.x / this.dims.x),
+        y: Math.floor(pixels.y / this.dims.y),
+    }
+}
+
+MapRenderer.createCell = function(cellObject) {
+    var cellElement = document.createElement('div');
+    cellElement.setAttribute('class', cellClass);
+    this.styleCell(cellElement, cellObject);
+    this.bindCellEvents(cellObject);
+    return cellElement;
+}
+
+MapRenderer.styleCell = function(cellElement, cellObject) {
+    var assetData = AssetData[cellObject.species.id];
+    cellElement.style.width = this.dims.x + 'px';
+    cellElement.style.height = this.dims.y + 'px';
+    cellElement.style.lineHeight = this.dims.y + 'px';
+    cellElement.style.backgroundColor = assetData.color; 
+    cellElement.innerHTML = assetData.symbol;
+
+    // highlight ruts
+    if (Object.keys(cellObject.ruts).length > 0) {
+        cellElement.style.border = '1px solid red';
+        cellElement.style.width = (this.dims.x - 2) + 'px';
+        cellElement.style.height = (this.dims.y - 2) + 'px';
+
+        var rut_string = '';
+        for (var r in cellObject.getActiveRuts()) {
+           rut_string += r[0].toUpperCase(); 
+        }
+
+        cellElement.innerHTML = rut_string;
+        cellElement.style.color = 'red'
+    }
+}
+
+MapRenderer.positionCell = function(cellElement, coords) {
+    cellElement.setAttribute('id',  this.coordsToId(coords));
+
+    var position = {
+        x: this.centerPx.x + (-this.centerCoords.x + coords.x) * this.dims.x,
+        y: this.centerPx.y + (-this.centerCoords.y + coords.y) * this.dims.y
+    }
+
+    cellElement.style.left = position.x + 'px';
+    cellElement.style.top = position.y + 'px';
+    return cellElement;
+}
+
+MapRenderer.bindCellEvents = function(cellObject) {
+    var self = this;
+    cellObject.on('change', 'refresh', function(data) {
+       self.refreshCell(cellObject.coords) 
+    })
+}
+
+MapRenderer.getCell = function(coords) {
+    return document.getElementById(this.coordsToId(coords));
+}
+
+MapRenderer.render = function(env) {
+    var self = this;
+
+    self.rescale();
+
+    self.html.innerHTML = '';
+
+    env.range().forEach(function(coords) {
+        var cellElement = self.createCell(env.get(coords));
+        self.positionCell(cellElement, coords);
+        self.html.appendChild(cellElement);
+    })
+}
+
+MapRenderer.refresh = function(env, fullRefresh) {
+    var self = this;
+    env = env || this.map.env;
+
+    self.rescale();
+
+    var coordsToRefresh = env.range();
+
+    // TODO: this is super buggy with cells that used to be in view but aren't anymore
+    if (!fullRefresh) coordsToRefresh = coordsToRefresh.filter(function(crd) { return self.isInView(crd); });
+ 
+    coordsToRefresh.forEach(function(coords) { self.refreshCoords(env, coords); })
+    return this;
+}
+
+MapRenderer.refreshCoords = function(env, coords) {
+    var cellObject = env.get(coords);
+    var cellElement = document.getElementById(this.coordsToId(coords));
+    this.styleCell(cellElement, cellObject)
+    this.positionCell(cellElement, coords);
+    return this;
+}
+
+MapRenderer.rescale = function() {
+    // argh
+    this.viewSize = {
+        x: this.bbox.width / this.dims.x,
+        y: this.bbox.height / this.dims.y
+    };
+    return this;
+}
+
+// Returns the number of pixels between the html's NW corner and the map's NW corner (at 0,0) 
+MapRenderer.getPixelOffset = function() {
+    return {
+        x: this.centerPx.x + -this.centerCoords.x * this.dims.x,
+        y: this.centerPx.y + -this.centerCoords.y * this.dims.y
+    }
+}
+
+// Returns cell coords, not pixels
+MapRenderer.getViewBbox = function() {
+    return {
+        x1: this.centerCoords.x - this.viewSize.x/2,
+        x2: this.centerCoords.x + this.viewSize.x/2,
+        y1: this.centerCoords.y - this.viewSize.y/2,
+        y2: this.centerCoords.y + this.viewSize.y/2,
+    }
+}
+
+// Returns whether a cell coords is in view or not
+MapRenderer.isInView = function(coords) {
+    var bbox = this.getViewBbox();
+    return coords.x > bbox.x1
+        && coords.x < bbox.x2
+        && coords.y > bbox.y1
+        && coords.y < bbox.y2;
+}
+
+
+MapRenderer.isInWindow = function(coords) {
+    var distance = Math.max(
+            Math.abs(coords.x - this.map.center.x),
+            Math.abs(coords.y - this.map.center.y)
+        )   
+    return distance < this.window;
+
+}
+
+MapRenderer.refreshCell = function(coords, forceRefresh) {
+    if (!forceRefresh && !this.isInView(coords)) return this;
+    this.refreshCoords(this.map.env, coords);
+}
+
+MapRenderer.zoomOut = function() {
+    this.dims.x /= this.zoomFactor;
+    this.dims.y /= this.zoomFactor;
+    //this.window *= this.zoomFactor;
+    this.refresh()
+    return this;
+}
+
+MapRenderer.zoomIn = function() {
+    this.dims.x *= this.zoomFactor;
+    this.dims.y *= this.zoomFactor;
+    //this.window /= this.zoomFactor;
+    this.refresh()
+    return this;
+}
+
+},{"./asset-data":35}],39:[function(require,module,exports){
+// UI/HUD
+
+module.exports = UI = {};
+
+UI.infoTimeout = null;
+
+// Display info text for the specified lifetime
+// If lifetime isn't specified, then the text will stay up forever (until something else is shown)
+UI.info = function(text, lifetime) {
+
+    document.getElementById('info').textContent = text;
+
+    clearTimeout(UI.infoTimeout);
+    if (typeof lifetime === 'number') {
+        UI.infoTimeout = setTimeout(function() {
+            UI.info('', false);
+        }, lifetime)
+    }
+}
+
+// Display info text only while the given function is executing
+UI.infoWrap = function(text, fn) {
+    return function() {
+        UI.info(text);
+
+        setTimeout(function() {
+            fn();
+            UI.info('');
+        }, 0)
+    }
+}
+
+UI.zoomOut = UI.infoWrap('zooming...', function() { game.renderer.zoomOut(); })
+UI.zoomIn = UI.infoWrap('zooming...', function() { game.renderer.zoomIn(); })
+
+
+},{}],40:[function(require,module,exports){
+var Utils = window.Utils;
 var Character = require('./character');
-var Utils = require('./utils');
 var Walking = require('./character/walking');
 
-module.exports = Wizard = function(map, sprite) {
+module.exports = Wizard = function(map) {
     var wizard = new Character({
         map: map,
         id: 'wizard',
@@ -2142,11 +2941,11 @@ module.exports = Wizard = function(map, sprite) {
         },
 
         trailingRuts: {
-            'magic': 1
+//            'magic': 1
         }
     });
-
-    // create the sprite (Character does not do that)
+    
+    Events.init(wizard);
 
     // make sure wizard is beyond a certain point
     //var startingCoords = {x: -1, y: -1};
@@ -2178,26 +2977,16 @@ module.exports = Wizard = function(map, sprite) {
         },
         function onStep(dir) {
             //wizard.faceDirection(dir);
+            
+            // Note for the Phaser view: this movement happens before the animation, so it looks a bit
+            // janky. The magic appears on the next tile before the wizard appears to arrive on the tile.
+            // Maybe the phaser view could send a 'finished moving' signal back?
+            // But it's hard to keep different views decoupled, in that case.
+            
+            wizard.emit('moveDiscrete', {});
 
-            // move sprite
-            //sprite.isoX = wizard.coords.x * Settings.cellDims.x;
-            //sprite.isoY = wizard.coords.y * Settings.cellDims.y;
-
-            var tween = window.game.add.tween(sprite)
-                
-            tween.to(
-                {
-                    isoX: wizard.coords.x * Settings.cellDims.x - 30, // argh
-                    isoY: wizard.coords.y * Settings.cellDims.y - 23, // argh
-                },
-                400,
-                //Phaser.Easing.Linear.None,
-                Phaser.Easing.Sinusoidal.InOut,
-                true, 0, 0
-            )
-            tween.onComplete.add(function() {
-                map.env.set(wizard.coords, map.species.magic)
-            })
+            wizard.map.env.set(wizard.coords, wizard.map.species.magic);
+            wizard.map.getCell(wizard.coords).refreshTimeout();
 
             // make sure the wizard trails magic
             wizard.lastStep = dir;
@@ -2208,14 +2997,4 @@ module.exports = Wizard = function(map, sprite) {
     return wizard;
 }
 
-},{"./character":2,"./character/walking":4,"./utils":30}],32:[function(require,module,exports){
-module.exports = function(x, y) {
-    return new XY(x, y);
-}
-
-var XY = function(x, y) {
-    this.x = x;
-    this.y = y;
-}
-
-},{}]},{},[6]);
+},{"./character":1,"./character/walking":3}]},{},[5]);
