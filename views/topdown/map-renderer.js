@@ -205,3 +205,18 @@ MapRenderer.zoomIn = function() {
     this.refresh()
     return this;
 }
+
+MapRenderer.recenter = function(coords) {
+    this.centerCoords.x = coords.x;
+    this.centerCoords.y = coords.y;
+    this.refresh();
+    return this;
+}
+
+MapRenderer.shiftView = function(dCoords) {
+    this.recenter({
+        x: this.centerCoords.x + dCoords.x,
+        y: this.centerCoords.y + dCoords.y
+    })
+    return this;
+}

@@ -79,7 +79,7 @@ var init = UI.infoWrap('loading...', function() {
 function configGame(game) {
     game.refreshView = function() {
         if (!MapRenderer.isInWindow(game.player.coords)) {
-            game.map.recenter(game.player.coords);
+            MapRenderer.recenter(game.player.coords);
             game.player.refresh();
             game.wizard.refresh();
         }
@@ -89,10 +89,10 @@ function configGame(game) {
         var d = Map.getDistanceFromWindowEdge(game.player.coords);
         if (d.north > 0 || d.south > 0 || d.west > 0 || d.east > 0) {
             //console.log('d:', d)
-            if (d.north > 0) game.map.shiftView({x:0, y:-d.north});
-            if (d.south > 0) game.map.shiftView({x:0, y: d.south});
-            if (d.west > 0) game.map.shiftView({x:-d.west, y:0});
-            if (d.east > 0) game.map.shiftView({x: d.east, y:0});
+            if (d.north > 0) MapRenderer.shiftView({x:0, y:-d.north});
+            if (d.south > 0) MapRenderer.shiftView({x:0, y: d.south});
+            if (d.west > 0) MapRenderer.shiftView({x:-d.west, y:0});
+            if (d.east > 0) MapRenderer.shiftView({x: d.east, y:0});
             game.player.refresh();
             game.wizard.refresh();
         }
