@@ -2,13 +2,14 @@ module.exports = Controls = {};
 
 var game;
 
-Controls.init = function(gameInstance) {
+Controls.init = function(gameInstance, params) {
     game = gameInstance;
+    this.html = params.html;
     this.bindEvents();
 }
 
 Controls.bindEvents = function() {
-    game.html.mouseOverlay.onclick = function(evt) {
+    this.html.mouseOverlay.onclick = function(evt) {
         evt.stopPropagation();
         var offset = game.renderer.getPixelOffset();
         var mousePos = {
@@ -43,7 +44,7 @@ Controls.bindMovement = function() {
 
 Controls.bindInventory = function() {
     var self = this;
-    var slots = Array.apply(Array, game.html.inventory.getElementsByClassName('slot'));
+    var slots = Array.apply(Array, this.html.inventory.getElementsByClassName('slot'));
     slots.forEach(function(slotHtml) {
         slotHtml.onclick = function(evt) {
             evt.stopPropagation();
