@@ -70,6 +70,8 @@ Character.prototype.moveTo = function(coords) {
     for (var rut_id in this.trailingRuts) {
         newCell.rut(rut_id, this.trailingRuts[rut_id]);
     }
+    
+    this.emit('refresh');
 
     return this;
 }
@@ -79,8 +81,6 @@ Character.prototype.move = function(diff) {
 
     this.moveTo({x: this.coords.x + diff.x, y: this.coords.y + diff.y});
     //this.faceDirection(diff);
-
-    this.emit('moveDiscrete', {});
 
     return this;
 }

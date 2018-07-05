@@ -169,8 +169,8 @@ Map.generate = function() {
     self.env.advance(10);
 
     // empty spot in the 0,0 corner
-    self.rect(self.species.grass, {x:0, y:0}, {x:10, y:10});
-    self.rect(self.species.magic, {x:2, y:2}, {x:4, y:4});
+    // self.rect(self.species.grass, {x:0, y:0}, {x:10, y:10});
+    // self.rect(self.species.magic, {x:2, y:2}, {x:4, y:4});
 
     self.env.advance(1);
 }

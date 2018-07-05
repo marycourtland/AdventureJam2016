@@ -57,8 +57,11 @@ var init = UI.infoWrap('loading...', function() {
     // Renderers
     game.viewParams = {
         window: 10,
+        size: game.size,
         dims: game.cellDims,
+        margin: 2,
         html: {
+            container: document.getElementById('board-layers'),
             board: document.getElementById('game'),
             characters: document.getElementById('game-characters'),
             inventory: document.getElementById('game-inventory'),
@@ -66,7 +69,7 @@ var init = UI.infoWrap('loading...', function() {
         }
     }
 
-    game.view = new TopDownView();
+    game.view = new TopDownView(game.viewParams);
     game.renderer = new MapRenderer(game.map);
 
     game.view.addRenderer(game.renderer);
@@ -75,15 +78,12 @@ var init = UI.infoWrap('loading...', function() {
 
     game.view.init(game.viewParams)
 
+    game.view.recenter(game.player.coords);
     game.wizard.refresh();
     game.player.refresh();
 
-    // some interfaces with other stuff
-    game.render = function() { game.renderer.render(game.map.env); }
+    game.view.render();
 
-    game.render();
-
-    game.refreshView();
     game.state.init(game);
     Controls.init(game, game.viewParams);
 
@@ -91,24 +91,26 @@ var init = UI.infoWrap('loading...', function() {
 });
 
 function configGame(game) {
-    game.refreshView = function() {
-        if (!game.renderer.isInWindow(game.player.coords)) {
-            game.renderer.recenter(game.player.coords);
+    game.refreshView2 = function() {
+        if (!game.view.isInView(game.player.coords)) {
+            game.view.recenter(game.player.coords);
             game.player.refresh();
             game.wizard.refresh();
         }
     }
 
-    game.refreshView2 = function() {
-        var d = Map.getDistanceFromWindowEdge(game.player.coords);
-        if (d.north > 0 || d.south > 0 || d.west > 0 || d.east > 0) {
+    game.refreshView = function() {
+        var margin = 3;
+        var d = game.view.getDistanceFromWindowEdge(game.player.coords);
+        if (d.north < margin || d.south < margin || d.west < margin || d.east < margin) {
             //console.log('d:', d)
-            if (d.north > 0) game.renderer.shiftView({x:0, y:-d.north});
-            if (d.south > 0) game.renderer.shiftView({x:0, y: d.south});
-            if (d.west > 0) game.renderer.shiftView({x:-d.west, y:0});
-            if (d.east > 0) game.renderer.shiftView({x: d.east, y:0});
+            if (d.north < margin) game.view.shiftView({x:0, y:-1});
+            if (d.south < margin) game.view.shiftView({x:0, y: 1});
+            if (d.west < margin) game.view.shiftView({x:-1, y:0});
+            if (d.east < margin) game.view.shiftView({x: 1, y:0});
             game.player.refresh();
             game.wizard.refresh();
         }
     }
 }
+

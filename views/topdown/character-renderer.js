@@ -9,7 +9,6 @@ var CharacterRenderer = module.exports = function(spriteId, character) {
     var spriteData = SpriteData[spriteId];
     console.assert(!!spriteData, "spriteId doesn't exist: " + spriteId);
     this.sprite = new Sprite(spriteData).setFrame(Object.keys(spriteData.frames)[0]);
-
 }
 
 CharacterRenderer.prototype = new BaseRenderer();
@@ -22,18 +21,22 @@ CharacterRenderer.prototype.onInit = function(params) {
 }
 
 CharacterRenderer.prototype.moveTo = function(coords) {
-    var pixelPosition = this.getPixelsFromCoords(coords, 'middle');
+    var pixelPosition = this.view.getPixelsFromCoords(coords, {cellAnchor:'middle'});
     this.sprite.moveTo(pixelPosition);
 }
 
 CharacterRenderer.prototype.bindEvents = function() {
     var self = this;
-    
-    this.character.on('moveDiscrete', 'topdownMoveDiscrete', function(data) {
-        self.onMoveDiscrete(data);
+
+    this.character.on('refresh', 'topdownRefresh', function(data) {
+        self.refresh(data);
     })
 }
 
-CharacterRenderer.prototype.onMoveDiscrete = function() {
+CharacterRenderer.prototype.refresh = function() {
+    this.render(); // ???
+}
+
+CharacterRenderer.prototype.render = function() {
     this.moveTo(this.character.coords);
 }
