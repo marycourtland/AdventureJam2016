@@ -5,7 +5,7 @@
 
 
 module.exports = Advancerator = function(env) {
-    var range = env.range();
+    var range = env.shuffledRange();
 
     // compute the next iteration 
     range.forEach(function(coords) {
