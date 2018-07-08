@@ -22,6 +22,8 @@ module.exports = SpeciesBattle = {
         ids.sort(function(id1, id2) {
             return self.peckingOrder.indexOf(id2) - self.peckingOrder.indexOf(id1);
         })
+
+        //return ids[Math.floor(Math.random()*ids.length)];
         return ids[0];
     }
 }

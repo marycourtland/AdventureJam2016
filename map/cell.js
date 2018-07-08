@@ -76,6 +76,7 @@ Cell.prototype.set = function(species) {
     if (!!species) {
         this.species = species;
         this.add(species); // just in case it's not already set
+        this.register[species.id].age = Math.max(this.register[species.id].age, 1)
         this.emit('change', {species: species})
 
         // propagate rut activation
@@ -96,22 +97,25 @@ Cell.prototype.next = function() {
     this.refreshActiveRuts();
 
     var nextStates = {};
-    for (var id in this.register) {
-        nextStates[id] = this.get(id).nextState(this, this.neighbors);
+    for (var species_id in this.register) {
+        nextStates[species_id] = this.get(species_id).nextState(this, this.neighbors);
     }
 
     // Which species are contenders for dominance in this cell?
-    var contenders = Object.keys(nextStates).filter(function(id) {
-        return nextStates[id].state === 1;
+    var contenders = Object.keys(nextStates).filter(function(species_id) {
+        return nextStates[species_id].state === 1;
     })
 
     // THE SPECIES BATTLE IT OUT...
     this.nextSpecies = this.get(SpeciesBattle.decide(contenders));
 
-    // Update age etc
+    // Update ages for all species in the register
+    for (var species_id in this.register) {
+        this.register[species_id].age = nextStates[species_id].age;
+    }
+
     if (this.nextSpecies) {
         var nextState = nextStates[this.nextSpecies.id];
-        this.register[this.nextSpecies.id].age = nextState.age;
         this.iterationTime = nextState.iterationTime;
         if (this.nextSpecies.forceNeighborIteration) {
             this.forceNeighborIteration();
@@ -120,28 +124,34 @@ Cell.prototype.next = function() {
 }
 
 Cell.prototype.flush = function() {
-    // increment age?
     var previousSpeciesId = this.species ? this.species.id : null;
 
     if (!this.nextSpecies)
         this.nextSpecies = this.register.blank.species;
 
-    if (!!this.nextSpecies) { 
-        // if the species is incumbent, increment its age.
-        if (previousSpeciesId === this.nextSpecies.id) {
-            this.register[this.nextSpecies.id].age += 1;
-        }
-        else if (!!previousSpeciesId) {
-            // reset of the age of the newly-dead species to 0
-            this.register[previousSpeciesId].age = 0;
-        }
-    }
+    // The following block was from when the species age was only incremented
+    // if it was the dominant species (cell.species).
+
+    // if (!!this.nextSpecies) { 
+    //     // if the species is incumbent, increment its age.
+    //     if (previousSpeciesId === this.nextSpecies.id) {
+    //         this.register[this.nextSpecies.id].age += 1;
+    //     }
+    //     else if (!!previousSpeciesId) {
+    //         // reset of the age of the newly-dead species to 0
+    //         this.register[previousSpeciesId].age = 0;
+    //     }
+    // }
+
+
 
     this.set(this.nextSpecies);
 
 }
 
-Cell.prototype.add = function(species) {
+Cell.prototype.add = function(species, age) {
+    age = age || 0;
+
     if (!species) {
         // this happens when a species dies
         species = this.get('blank'); // this SHOULD be one of the registered species
@@ -151,7 +161,7 @@ Cell.prototype.add = function(species) {
 
     this.register[species.id] = {
         species: species,
-        age: 0
+        age: age
     }
 
     // make sure there's a dominant species

@@ -67,6 +67,16 @@ Env.prototype.range = function() {
     return coords;
 }
 
+// Returns a list of all possible coordinates
+Env.prototype.shuffledRange = function() {
+    var coords = this.range();
+    var shuffled = [];
+    for (var i = 0; i < coords.length; i++) {
+        shuffled.push(coords[Math.floor(Math.random*coords.length)]);
+    }
+    return coords;
+}
+
 Env.prototype.neighbors = function(coords) {
     var neighbors = [
         {x:-1, y:-1},

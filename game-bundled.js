@@ -1,4 +1,4 @@
-(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
+(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
 var Events = window.Events;
 var Utils = window.Utils;
 var Inventory = require('./inventory');
@@ -43,6 +43,11 @@ Character.prototype.canBeAt = function(coords) {
 }
 
 Character.prototype.moveTo = function(coords) {
+    // no need to do stuff if we're already there
+    if (this.coords.x === coords.x && this.coords.y === coords.y) {
+        return this;
+    }
+
     // make sure we're allowed to move to this spot
     if (!this.canBeAt(coords)) return this;
 
@@ -66,6 +71,8 @@ Character.prototype.moveTo = function(coords) {
     for (var rut_id in this.trailingRuts) {
         newCell.rut(rut_id, this.trailingRuts[rut_id]);
     }
+    
+    this.emit('refresh');
 
     return this;
 }
@@ -75,6 +82,7 @@ Character.prototype.move = function(diff) {
 
     this.moveTo({x: this.coords.x + diff.x, y: this.coords.y + diff.y});
     //this.faceDirection(diff);
+
     return this;
 }
 
@@ -365,7 +373,7 @@ window.onload = function() {
     Views[Settings.view].load(Context);
 }
 
-},{"./gameplay-modes":4,"./items":10,"./map":18,"./player":23,"./views":24,"./wizard":40}],6:[function(require,module,exports){
+},{"./gameplay-modes":4,"./items":10,"./map":18,"./player":23,"./views":24,"./wizard":45}],6:[function(require,module,exports){
 module.exports = Bomb = {};
 Bomb.id = 'bomb';
 
@@ -506,7 +514,7 @@ TypeTemplate.refresh = function() {
 
 
 module.exports = Advancerator = function(env) {
-    var range = env.range();
+    var range = env.shuffledRange();
 
     // compute the next iteration 
     range.forEach(function(coords) {
@@ -600,6 +608,7 @@ Cell.prototype.set = function(species) {
     if (!!species) {
         this.species = species;
         this.add(species); // just in case it's not already set
+        this.register[species.id].age = Math.max(this.register[species.id].age, 1)
         this.emit('change', {species: species})
 
         // propagate rut activation
@@ -620,22 +629,25 @@ Cell.prototype.next = function() {
     this.refreshActiveRuts();
 
     var nextStates = {};
-    for (var id in this.register) {
-        nextStates[id] = this.get(id).nextState(this, this.neighbors);
+    for (var species_id in this.register) {
+        nextStates[species_id] = this.get(species_id).nextState(this, this.neighbors);
     }
 
     // Which species are contenders for dominance in this cell?
-    var contenders = Object.keys(nextStates).filter(function(id) {
-        return nextStates[id].state === 1;
+    var contenders = Object.keys(nextStates).filter(function(species_id) {
+        return nextStates[species_id].state === 1;
     })
 
     // THE SPECIES BATTLE IT OUT...
     this.nextSpecies = this.get(SpeciesBattle.decide(contenders));
 
-    // Update age etc
+    // Update ages for all species in the register
+    for (var species_id in this.register) {
+        this.register[species_id].age = nextStates[species_id].age;
+    }
+
     if (this.nextSpecies) {
         var nextState = nextStates[this.nextSpecies.id];
-        this.register[this.nextSpecies.id].age = nextState.age;
         this.iterationTime = nextState.iterationTime;
         if (this.nextSpecies.forceNeighborIteration) {
             this.forceNeighborIteration();
@@ -644,28 +656,34 @@ Cell.prototype.next = function() {
 }
 
 Cell.prototype.flush = function() {
-    // increment age?
     var previousSpeciesId = this.species ? this.species.id : null;
 
     if (!this.nextSpecies)
         this.nextSpecies = this.register.blank.species;
 
-    if (!!this.nextSpecies) { 
-        // if the species is incumbent, increment its age.
-        if (previousSpeciesId === this.nextSpecies.id) {
-            this.register[this.nextSpecies.id].age += 1;
-        }
-        else if (!!previousSpeciesId) {
-            // reset of the age of the newly-dead species to 0
-            this.register[previousSpeciesId].age = 0;
-        }
-    }
+    // The following block was from when the species age was only incremented
+    // if it was the dominant species (cell.species).
+
+    // if (!!this.nextSpecies) { 
+    //     // if the species is incumbent, increment its age.
+    //     if (previousSpeciesId === this.nextSpecies.id) {
+    //         this.register[this.nextSpecies.id].age += 1;
+    //     }
+    //     else if (!!previousSpeciesId) {
+    //         // reset of the age of the newly-dead species to 0
+    //         this.register[previousSpeciesId].age = 0;
+    //     }
+    // }
+
+
 
     this.set(this.nextSpecies);
 
 }
 
-Cell.prototype.add = function(species) {
+Cell.prototype.add = function(species, age) {
+    age = age || 0;
+
     if (!species) {
         // this happens when a species dies
         species = this.get('blank'); // this SHOULD be one of the registered species
@@ -675,7 +693,7 @@ Cell.prototype.add = function(species) {
 
     this.register[species.id] = {
         species: species,
-        age: 0
+        age: age
     }
 
     // make sure there's a dominant species
@@ -872,12 +890,25 @@ module.exports = GrowthRules = {
         ]
     },
 
-    // When plants are old enough, they become stable - less likely to grow, slightly likely to die
-    plantsStable: {
-        id: 'plantsStable',
+    trees: {
+        id: 'trees',
+        stateMap: {
+            0: [0, 0, 0, 0, 0.4, 0.4, 0.6, 0.6, 1, 1, 1, 1],
+            1: [0.6, 0.7, 0.8, 0.9, 1,   1,   1,   1,   1, 1, 1, 1]
+        },
+        weights: [
+            [1, 2, 1],
+            [2, 0, 2],
+            [1, 2, 1]
+        ]
+    },
+
+    // When trees are old enough, they become stable - less likely to grow, slightly likely to die
+    treesStable: {
+        id: 'treesStable',
         stateMap: {
             0: [  0,   0,   0, 0,   0, 0.1, 0.1, 1, 1, 1, 1,    1],
-            1: [0.9, 0.9, 0.8, 1,   1,   1,   1, 1, 1, 1, 1, 0.95]
+            1: [0.8, 0.9, 0.9, 1,   1,   1,   1, 1, 1, 1, 1, 0.95]
         },
         weights: [
             [1, 2, 1],
@@ -993,6 +1024,17 @@ speciesData.push({
     rules: {
         default: GrowthRules.plants,
         conditional: [
+            // the presence of trees catalyzes smaller plants' growth
+            {
+                species_id: 'trees',
+                min_neighbors: 3,
+                rules: GrowthRules.plantsCatalyzed
+            },
+            {
+                species_id: 'trees2',
+                min_neighbors: 3,
+                rules: GrowthRules.plantsCatalyzed
+            },
             {
                 min_neighbors: 1,
                 species_id: 'magic',
@@ -1015,6 +1057,17 @@ speciesData.push({
     rules: {
         default: GrowthRules.plants,
         conditional: [
+            // the presence of trees catalyzes smaller plants' growth
+            {
+                species_id: 'trees',
+                min_neighbors: 3,
+                rules: GrowthRules.plantsCatalyzed
+            },
+            {
+                species_id: 'trees2',
+                min_neighbors: 3,
+                rules: GrowthRules.plantsCatalyzed
+            },
             {
                 min_neighbors: 1,
                 species_id: 'magic',
@@ -1037,7 +1090,7 @@ speciesData.push({
     speed: 200,
     passable: true,
     rules: {
-        default: GrowthRules.plants,
+        default: GrowthRules.trees,
         ruts: [
             {
                 rut_id: 'footsteps',
@@ -1045,18 +1098,11 @@ speciesData.push({
             }
         ],
         conditional: [
-            // the presence of grass catalyzes tree growth
-            {
-                species_id: 'grass',
-                min_neighbors: 4,
-                rules: GrowthRules.plantsCatalyzed
-            },
-
             // tree growth stabilizes when the trees are old
             {
                 species_id: 'trees',
-                min_age: 3,
-                rules: GrowthRules.plantsStable
+                min_age: 10,
+                rules: GrowthRules.treesStable
             },
 
             {
@@ -1077,20 +1123,13 @@ speciesData.push({
     speed: 200,
     passable: true,
     rules: {
-        default: GrowthRules.plants,
+        default: GrowthRules.trees,
         conditionalnope: [
-            // the presence of grass catalyzes tree growth
-            {
-                species_id: 'grass',
-                min_neighbors: 4,
-                rules: GrowthRules.plantsCatalyzed
-            },
-
             // tree growth stabilizes when the trees are old
             {
                 species_id: 'trees2',
-                min_age: 3,
-                rules: GrowthRules.plantsStable
+                min_age: 10,
+                rules: GrowthRules.treesStable
             },
 
             {
@@ -1170,6 +1209,16 @@ Env.prototype.range = function() {
         for (var y=0; y < this.size.y; y++) {
             coords.push({x:x, y:y});
         }
+    }
+    return coords;
+}
+
+// Returns a list of all possible coordinates
+Env.prototype.shuffledRange = function() {
+    var coords = this.range();
+    var shuffled = [];
+    for (var i = 0; i < coords.length; i++) {
+        shuffled.push(coords[Math.floor(Math.random*coords.length)]);
     }
     return coords;
 }
@@ -1363,7 +1412,6 @@ Map.generate = function() {
 
     // register involved species with all of the cells
     self.forEach(function(coords, cell) {
-        cell.add(self.species.magic);
         cell.add(self.species.grass);
         cell.add(self.species.trees);
         cell.add(self.species.trees2);
@@ -1372,15 +1420,20 @@ Map.generate = function() {
 
     self.sow(self.species.grass, 1/10);
     self.sow(self.species.flowers, 1/50)
-    self.sow(self.species.trees, 1/30);
-    self.sow(self.species.trees2, 1/40);
+    self.sow(self.species.trees, 1/10);
+    self.sow(self.species.trees2, 1/30);
+
     self.env.advance(10);
 
-    // empty spot in the 0,0 corner
-    self.rect(self.species.grass, {x:0, y:0}, {x:10, y:10});
-    self.rect(self.species.magic, {x:2, y:2}, {x:4, y:4});
+    self.forEach(function(coords, cell) {
+        cell.add(self.species.magic);
+    })
 
-    self.env.advance(1);
+    // empty spot in the 0,0 corner
+    // self.rect(self.species.grass, {x:0, y:0}, {x:10, y:10});
+    // self.rect(self.species.magic, {x:2, y:2}, {x:4, y:4});
+
+    self.env.advance(2);
 }
 
 Map.diamondClump = function(coords, species) {
@@ -1589,6 +1642,8 @@ module.exports = SpeciesBattle = {
         ids.sort(function(id1, id2) {
             return self.peckingOrder.indexOf(id2) - self.peckingOrder.indexOf(id1);
         })
+
+        //return ids[Math.floor(Math.random()*ids.length)];
         return ids[0];
     }
 }
@@ -1607,7 +1662,9 @@ var masks = {
 module.exports = SpeciesMask = function(species_id) {
     return function(cell) {
         if (!cell || !cell.species) return masks[false];
-        return masks[cell.species.id === species_id];
+        if (!cell.register[species_id]) return masks[false];
+        //return masks[cell.species.id === species_id];
+        return masks[cell.register[species_id].age > 0]
     }
 }
 
@@ -1688,9 +1745,7 @@ Species.prototype.nextState = function(cell, neighbors) {
     );
 
     // propagate age (this will only be used if nextState is 1)
-    // TODO: make a way to compose things together (like self.mask and cell.getAge)
-    var maskedAges = mapCoordmap(neighbors, function(cell) { return !!cell ? self.mask(cell) * cell.getAge() : 0 });
-    var age = Math.ceil(coordmapAvg(maskedAges));
+    var age = nextState == 1 ? (cell.register[this.id].age + 1) : 0;
 
     var iterationTime = Settings.mapIterationTimeout;
     if (ruleset.hasOwnProperty('iterationTime')) {
@@ -1850,7 +1905,7 @@ module.exports = Views = {
     phaserIso: require('./phaser')
 }
 
-},{"./phaser":29,"./topdown":37}],25:[function(require,module,exports){
+},{"./phaser":29,"./topdown":40}],25:[function(require,module,exports){
 // Tree sprites are from
 // http://opengameart.org/content/tree-collection-v26-bleeds-game-art
 // Bleed - http://remusprites.carbonmade.com/
@@ -2492,24 +2547,85 @@ module.exports = AssetData = {
 }
 
 },{}],36:[function(require,module,exports){
+var BaseRenderer = module.exports = function() {
+};
+
+BaseRenderer.prototype = {};
+
+BaseRenderer.prototype.init = function(view, params) {
+    this.view = view;
+    this.viewParams = params;
+    this.onInit(params);
+}
+
+BaseRenderer.prototype.onInit = function(params) {};
+
+BaseRenderer.prototype.refresh = function() {};
+
+BaseRenderer.prototype.onRecenter = function() {};
+},{}],37:[function(require,module,exports){
+var Sprite = require('./sprite');
+var SpriteData = require('./data/sprites');
+var BaseRenderer = require('./base-renderer');
+
+var CharacterRenderer = module.exports = function(spriteId, character) {
+
+    this.character = character;
+
+    var spriteData = SpriteData[spriteId];
+    console.assert(!!spriteData, "spriteId doesn't exist: " + spriteId);
+    this.sprite = new Sprite(spriteData).setFrame(Object.keys(spriteData.frames)[0]);
+}
+
+CharacterRenderer.prototype = new BaseRenderer();
+
+CharacterRenderer.prototype.onInit = function(params) {
+    this.sprite.scaleTo(params.dims).place(params.html.characters);
+    this.bindEvents();
+
+    this.moveTo(this.character.coords);
+}
+
+CharacterRenderer.prototype.moveTo = function(coords) {
+    var pixelPosition = this.view.getPixelsFromCoords(coords, {cellAnchor:'middle'});
+    this.sprite.moveTo(pixelPosition);
+}
+
+CharacterRenderer.prototype.bindEvents = function() {
+    var self = this;
+
+    this.character.on('refresh', 'topdownRefresh', function(data) {
+        self.refresh(data);
+    })
+}
+
+CharacterRenderer.prototype.refresh = function() {
+    this.render(); // ???
+}
+
+CharacterRenderer.prototype.render = function() {
+    this.moveTo(this.character.coords);
+}
+},{"./base-renderer":36,"./data/sprites":39,"./sprite":42}],38:[function(require,module,exports){
 module.exports = Controls = {};
 
 var game;
 
-Controls.init = function(gameInstance) {
+Controls.init = function(gameInstance, params) {
     game = gameInstance;
+    this.html = params.html;
     this.bindEvents();
 }
 
 Controls.bindEvents = function() {
-    game.html.mouseOverlay.onclick = function(evt) {
+    this.html.mouseOverlay.onclick = function(evt) {
         evt.stopPropagation();
-        var offset = game.renderer.getPixelOffset();
+        var offset = game.view.getPixelOffset();
         var mousePos = {
-            x: evt.clientX - offset.x - game.renderer.bbox.left,
-            y: evt.clientY - offset.y - game.renderer.bbox.top
+            x: evt.clientX - offset.x - game.view.bbox.left,
+            y: evt.clientY - offset.y - game.view.bbox.top
         }
-        var coords = game.renderer.getCoordsFromPixels(mousePos);
+        var coords = game.view.getCoordsFromPixels(mousePos);
         game.state.advance({coords: coords});
     }
 
@@ -2537,7 +2653,7 @@ Controls.bindMovement = function() {
 
 Controls.bindInventory = function() {
     var self = this;
-    var slots = Array.apply(Array, game.html.inventory.getElementsByClassName('slot'));
+    var slots = Array.apply(Array, this.html.inventory.getElementsByClassName('slot'));
     slots.forEach(function(slotHtml) {
         slotHtml.onclick = function(evt) {
             evt.stopPropagation();
@@ -2577,15 +2693,48 @@ Controls.handlers.down = function() {
     game.refreshView();
 }
 
-},{}],37:[function(require,module,exports){
+},{}],39:[function(require,module,exports){
+module.exports = SpriteData = {};
+
+SpriteData.player = {
+    name: 'player',
+    url: 'images/player.png',
+    frame_size: {x: 80,  y:180},
+    frame_origin: {x: 40, y:90},
+
+    frames: {
+        'n': {x: 0, y:0},
+        's': {x: 1, y:0},
+        'w': {x: 2, y:0},
+        'e': {x: 3, y:0},
+    }
+}
+
+SpriteData.wizard = {
+    name: 'wizard',
+    url: 'images/wizard.png',
+    frame_size: {x: 80,  y:180},
+    frame_origin: {x: 40, y:90},
+
+    frames: {
+        'n': {x: 0, y:0},
+        's': {x: 1, y:0},
+        'w': {x: 2, y:0},
+        'e': {x: 3, y:0},
+    }
+}
+
+},{}],40:[function(require,module,exports){
 // OLD PROTOTYPE CODE
 // WARNING: SUPER MESSY
 
 var Utils = window.Utils;
 var Settings = window.Settings;
 window.UI = require('./ui');
-var MapRenderer = require('./map-renderer');
 var Controls = require('./controls');
+var TopDownView = require('./top-down-view');
+var MapRenderer = require('./map-renderer');
+var CharacterRenderer = require('./character-renderer');
 
 var game = window.game;
 var Context = null;
@@ -2619,89 +2768,96 @@ function setContext(newContext) {
 
 var init = UI.infoWrap('loading...', function() {
     var game = window.game;
-    game.html = {
-        board: document.getElementById('game'),
-        characters: document.getElementById('game-characters'),
-        inventory: document.getElementById('game-inventory'),
-        mouseOverlay: document.getElementById('mouse-overlay')
-    }
 
+    // Map
     game.map.init({
         size: game.size,
     });
 
     game.map.generate();
 
-    MapRenderer.init(game.map, {
-        window: 10,
-        dims: game.cellDims,
-        html: game.html.board
-    })
-
-    // some interfaces with other stuff
-    game.render = function() { MapRenderer.render(game.map.env); }
-    game.renderer = MapRenderer;
-
-    game.render();
-
     // Characters
-    // TODO: separate character rendering and then don't pass charElement in here
     game.wizard = Wizard(game.map);
     game.player = Player(game.map);
 
-    game.refreshView();
+
+    // Renderers
+    game.viewParams = {
+        window: 10,
+        size: game.size,
+        dims: game.cellDims,
+        margin: 2,
+        html: {
+            container: document.getElementById('board-layers'),
+            board: document.getElementById('game'),
+            characters: document.getElementById('game-characters'),
+            inventory: document.getElementById('game-inventory'),
+            mouseOverlay: document.getElementById('mouse-overlay')
+        }
+    }
+
+    game.view = new TopDownView(game.viewParams);
+    game.renderer = new MapRenderer(game.map);
+
+    game.view.addRenderer(game.renderer);
+    game.view.addRenderer(new CharacterRenderer('wizard', game.wizard));
+    game.view.addRenderer(new CharacterRenderer('player', game.player));
+
+    game.view.init(game.viewParams)
+
+    game.view.recenter(game.player.coords);
+    game.wizard.refresh();
+    game.player.refresh();
+
+    game.view.render();
+
     game.state.init(game);
-    Controls.init(game);
+    Controls.init(game, game.viewParams);
 
     game.map.startIteration();
 });
 
 function configGame(game) {
-    game.refreshView = function() {
-        if (!MapRenderer.isInWindow(game.player.coords)) {
-            game.map.recenter(game.player.coords);
+    game.refreshView2 = function() {
+        if (!game.view.isInView(game.player.coords)) {
+            game.view.recenter(game.player.coords);
             game.player.refresh();
             game.wizard.refresh();
         }
     }
 
-    game.refreshView2 = function() {
-        var d = Map.getDistanceFromWindowEdge(game.player.coords);
-        if (d.north > 0 || d.south > 0 || d.west > 0 || d.east > 0) {
+    game.refreshView = function() {
+        var margin = 3;
+        var d = game.view.getDistanceFromWindowEdge(game.player.coords);
+        if (d.north < margin || d.south < margin || d.west < margin || d.east < margin) {
             //console.log('d:', d)
-            if (d.north > 0) game.map.shiftView({x:0, y:-d.north});
-            if (d.south > 0) game.map.shiftView({x:0, y: d.south});
-            if (d.west > 0) game.map.shiftView({x:-d.west, y:0});
-            if (d.east > 0) game.map.shiftView({x: d.east, y:0});
+            if (d.north < margin) game.view.shiftView({x:0, y:-1});
+            if (d.south < margin) game.view.shiftView({x:0, y: 1});
+            if (d.west < margin) game.view.shiftView({x:-1, y:0});
+            if (d.east < margin) game.view.shiftView({x: 1, y:0});
             game.player.refresh();
             game.wizard.refresh();
         }
     }
 }
 
-},{"./controls":36,"./map-renderer":38,"./ui":39}],38:[function(require,module,exports){
+
+},{"./character-renderer":37,"./controls":38,"./map-renderer":41,"./top-down-view":43,"./ui":44}],41:[function(require,module,exports){
 var AssetData = require('./asset-data');
+var BaseRenderer = require('./base-renderer');
 
-module.exports = MapRenderer = {};
-
-MapRenderer.init = function(map, params) {
+module.exports = MapRenderer = function(map) {
     this.map = map;
-    this.window = params.window;
+}
 
-    // Direct references. So the parent should not overwrite them.
-    this.html = params.html;
+MapRenderer.prototype = new BaseRenderer();
+
+MapRenderer.prototype.onInit = function(params) {
+    this.window = params.window;
+    this.html = params.html.board;
     this.dims = params.dims;
-    this.centerCoords = this.map.center;
-    this.bbox = params.html.getBoundingClientRect();
-    this.centerPx = {
-        x: this.bbox.width / 2,
-        y: this.bbox.height / 2
-    }
-    this.viewSize = {
-        x: this.bbox.width / this.dims.x,
-        y: this.bbox.height / this.dims.y
-    }
-    this.zoomFactor = 2; // /shrug
+
+    this.view.recenter(this.map.center);
 }
 
 // Settings
@@ -2712,23 +2868,17 @@ cellIdPrefix = cellClass + cellIdDelimiter;
 
 // Methods
 
-MapRenderer.coordsToId = function(coords) {
+MapRenderer.prototype.coordsToId = function(coords) {
     return cellIdPrefix + coords.x + cellIdDelimiter + coords.y
 }
-MapRenderer.idToCoords = function(id) {
+
+MapRenderer.prototype.idToCoords = function(id) {
     var coordArray = id.slice(cellIdPrefix.length).split(cellIdDelimiter);
     return {x: coordArray[0], y: coordArray[1] }
 }
 
-// more ugh. Pixels should be relative to the top left corner of the map itself, not the html element
- MapRenderer.getCoordsFromPixels = function(pixels) {
-    return {
-        x: Math.floor(pixels.x / this.dims.x),
-        y: Math.floor(pixels.y / this.dims.y),
-    }
-}
 
-MapRenderer.createCell = function(cellObject) {
+MapRenderer.prototype.createCell = function(cellObject) {
     var cellElement = document.createElement('div');
     cellElement.setAttribute('class', cellClass);
     this.styleCell(cellElement, cellObject);
@@ -2736,7 +2886,7 @@ MapRenderer.createCell = function(cellObject) {
     return cellElement;
 }
 
-MapRenderer.styleCell = function(cellElement, cellObject) {
+MapRenderer.prototype.styleCell = function(cellElement, cellObject) {
     var assetData = AssetData[cellObject.species.id];
     cellElement.style.width = this.dims.x + 'px';
     cellElement.style.height = this.dims.y + 'px';
@@ -2760,37 +2910,32 @@ MapRenderer.styleCell = function(cellElement, cellObject) {
     }
 }
 
-MapRenderer.positionCell = function(cellElement, coords) {
+MapRenderer.prototype.positionCell = function(cellElement, coords) {
     cellElement.setAttribute('id',  this.coordsToId(coords));
 
-    var position = {
-        x: this.centerPx.x + (-this.centerCoords.x + coords.x) * this.dims.x,
-        y: this.centerPx.y + (-this.centerCoords.y + coords.y) * this.dims.y
-    }
-
+    var position = this.view.getPixelsFromCoords(coords);
     cellElement.style.left = position.x + 'px';
     cellElement.style.top = position.y + 'px';
     return cellElement;
 }
 
-MapRenderer.bindCellEvents = function(cellObject) {
+MapRenderer.prototype.bindCellEvents = function(cellObject) {
     var self = this;
     cellObject.on('change', 'refresh', function(data) {
        self.refreshCell(cellObject.coords) 
     })
 }
 
-MapRenderer.getCell = function(coords) {
+MapRenderer.prototype.getCell = function(coords) {
     return document.getElementById(this.coordsToId(coords));
 }
 
-MapRenderer.render = function(env) {
+MapRenderer.prototype.render = function(env) {
     var self = this;
-
-    self.rescale();
 
     self.html.innerHTML = '';
 
+    env = env || this.map.env;
     env.range().forEach(function(coords) {
         var cellElement = self.createCell(env.get(coords));
         self.positionCell(cellElement, coords);
@@ -2798,22 +2943,23 @@ MapRenderer.render = function(env) {
     })
 }
 
-MapRenderer.refresh = function(env, fullRefresh) {
+// Todo: what is the difference between refresh and render ???
+MapRenderer.prototype.refresh = function(env, fullRefresh) {
+    console.log('refreshing')
     var self = this;
     env = env || this.map.env;
-
-    self.rescale();
 
     var coordsToRefresh = env.range();
 
     // TODO: this is super buggy with cells that used to be in view but aren't anymore
-    if (!fullRefresh) coordsToRefresh = coordsToRefresh.filter(function(crd) { return self.isInView(crd); });
+    //if (!fullRefresh) coordsToRefresh = coordsToRefresh.filter(function(crd) { return self.view.isInView(crd); });
  
     coordsToRefresh.forEach(function(coords) { self.refreshCoords(env, coords); })
     return this;
 }
 
-MapRenderer.refreshCoords = function(env, coords) {
+MapRenderer.prototype.refreshCoords = function(env, coords) {
+    env = env || this.map.env;
     var cellObject = env.get(coords);
     var cellElement = document.getElementById(this.coordsToId(coords));
     this.styleCell(cellElement, cellObject)
@@ -2821,25 +2967,320 @@ MapRenderer.refreshCoords = function(env, coords) {
     return this;
 }
 
-MapRenderer.rescale = function() {
+MapRenderer.prototype.refreshCell = function(coords, forceRefresh) {
+    if (!forceRefresh && !this.view.isInView(coords)) return this;
+    this.refreshCoords(this.map.env, coords);
+}
+
+
+MapRenderer.prototype.isInWindow = function(coords) {
+    var distance = Math.max(
+        Math.abs(coords.x - this.map.center.x),
+        Math.abs(coords.y - this.map.center.y)
+    )
+    console.log('is in window?', coords, distance < this.window, distance, this.window)
+    return distance < this.window;
+
+}
+},{"./asset-data":35,"./base-renderer":36}],42:[function(require,module,exports){
+// warning, messy code
+
+var Sprite = module.exports = function(data) {
+    this.data = data;
+    this.scale = 1;
+
+    // determine total image size
+    this.size = {x:0, y:0};
+    for (var frame in this.data.frames) {
+        var f = this.data.frames[frame];
+        this.size.x = Math.max(this.size.x, f.x);
+        this.size.y = Math.max(this.size.y, f.y);
+    }
+    this.size.x += 1;
+    this.size.y += 1;
+    this.size.x *= this.data.frame_size.x;
+    this.size.y *= this.data.frame_size.y;
+
+    // position of sprite in the game
+    this.position = {x:0, y:0}
+
+    this.init();
+}
+
+Sprite.prototype = {};
+
+Sprite.prototype.init = function() {
+    this.html = document.createElement('div');
+    this.html.setAttribute('id', 'sprite-' + this.data.name);
+    this.html.setAttribute('class', 'sprite');
+    this.html.style.backgroundImage = 'url("' + this.data.url + '")';
+    this.frame = Object.keys(this.data.frames)[0];
+    this.refresh();
+    return this;
+}
+
+
+Sprite.prototype.refresh = function() {
+    this.refreshScale();
+    this.refreshFrame();
+    this.refreshPosition();
+    return this;
+}
+
+Sprite.prototype.refreshScale = function() {
+    // size of the background, including all frames
+    var bgSize = {
+        x: this.size.x * this.scale,
+        y: this.size.y * this.scale
+    }
+
+    // size of the sprite's html element (width, height)
+    var spriteSize = {
+        x: this.data.frame_size.x * this.scale,
+        y: this.data.frame_size.y * this.scale
+    }
+
+
+    // set html
+    this.html.style.backgroundSize = bgSize.x + 'px ' + bgSize.y + 'px';
+
+    this.html.style.width = spriteSize.x + 'px';
+    this.html.style.height = spriteSize.y + 'px';
+    
+    return this;
+}
+
+Sprite.prototype.refreshFrame = function() {
+    // position of the background (to get the proper frame)
+    var bgPos = {
+        x: -this.data.frame_size.x * this.data.frames[this.frame].x * this.scale,
+        y: -this.data.frame_size.y * this.data.frames[this.frame].y * this.scale
+    }
+
+    this.html.style.backgroundPosition = bgPos.x + 'px ' + bgPos.y + 'px';
+
+    return this;
+}
+
+Sprite.prototype.refreshPosition = function() {
+
+    // adjust the sprite until its origin is lined up with its position
+    var posOffset = {
+        x: -this.data.frame_origin.x * this.scale,
+        y: -this.data.frame_origin.y * this.scale
+    }
+
+    this.html.style.left = (posOffset.x + this.position.x) + 'px';
+    this.html.style.top = (posOffset.y + this.position.y) + 'px';
+
+    return this;
+}
+
+Sprite.prototype.setFrame = function(frame) {
+    console.assert(frame in this.data.frames, 'Sprite sheet does not contain frame "' + frame + '"')
+    if (this.frame === frame) return this; // no need to redo stuff
+    this.frame = frame;
+    this.refreshFrame();
+    return this;
+}
+
+Sprite.prototype.scaleBy = function(factor) {
+    this.scale *= factor;
+    this.refreshScale();
+    return this;
+}
+
+Sprite.prototype.scaleTo = function(size) {
+    // scales by size.y, since scale is scalar
+    this.scale = size.y / this.data.frame_size.y ;
+    this.refreshScale();
+    return this;
+}
+
+Sprite.prototype.place = function(container) {
+    container.appendChild(this.html);
+    return this;
+}
+
+Sprite.prototype.move = function(change) {
+    this.position.x += change.x;
+    this.position.y += change.y;
+    this.refreshPosition();
+    return this;
+}
+
+Sprite.prototype.moveTo = function(position) {
+    this.position.x = position.x;
+    this.position.y = position.y;
+    this.refreshPosition();
+    return this;
+}
+
+},{}],43:[function(require,module,exports){
+var TopDownView  = module.exports = function(params) {
+    this.params = params;
+    this.renderers = [];
+    this.centerCoords = {x:0, y:0};
+    this.movingLayers = [this.params.html.board, this.params.html.characters]
+    this.refresh();
+}
+
+TopDownView.prototype = {};
+
+TopDownView.prototype.addRenderer = function(renderer) {
+    this.renderers.push(renderer);
+}
+
+TopDownView.prototype.init = function() {
+    window.addEventListener("resize", () => { this.onScreenResize() }, false);
+    
+    var self = this;
+    this.renderers.forEach(function(renderer) {
+        renderer.init(self, self.params);
+    })
+}
+
+TopDownView.prototype.resizeLayers = function() {
+    this.movingLayers.forEach((html) => {
+        html.style.width = this.params.size.x * this.params.dims.x + 'px';
+        html.style.height = this.params.size.y * this.params.dims.y + 'px';
+    })
+
+    // todo: the static layers should resize to this.viewSize
+}
+
+TopDownView.prototype.refresh = function() {
+    this.bbox = this.params.html.container.getBoundingClientRect();
+    this.centerPx = {
+        x: this.bbox.width / 2,
+        y: this.bbox.height / 2
+    }
+
+    // in coords
+    this.viewSize = {
+        x: this.bbox.width / this.params.dims.x,
+        y: this.bbox.height / this.params.dims.y
+    }
+
+    this.zoomFactor = 2;
+
+    this.resizeLayers();
+}
+
+TopDownView.prototype.render = function() {
+    this.renderers.forEach(function(renderer) {
+        renderer.render();
+    })
+}
+
+TopDownView.prototype.rerender = function() {
+    this.refresh();
+    this.renderers.forEach(function(renderer) {
+        renderer.refresh();
+    })
+}
+
+// more ugh. Pixels should be relative to the top left corner of the map itself, not the html element
+TopDownView.prototype.getCoordsFromPixels = function(pixels, options) {
+    options = options || {};
+    if (options.absolute) {
+        return {
+            x: Math.floor((pixels.x - this.centerPx.x) / this.params.dims.x),
+            y: Math.floor((pixels.y - this.centerPx.y) / this.params.dims.y)
+        }
+    }
+    else {
+        return {
+            x: Math.floor((pixels.x) / this.params.dims.x),
+            y: Math.floor((pixels.y) / this.params.dims.y)
+        }
+    }
+}
+
+TopDownView.prototype.getPixelsFromCoords = function(coords, options) {
+    options = options || {};
+
+    var pixels;
+    if (options.absolute) {
+        pixels = {
+            x: this.centerPx.x + (-this.centerCoords.x + coords.x) * this.params.dims.x,
+            y: this.centerPx.y + (-this.centerCoords.y + coords.y) * this.params.dims.y
+        }
+    }
+    else {
+        pixels = {
+            x: coords.x * this.params.dims.x,
+            y: coords.y * this.params.dims.y
+        }
+    }
+
+    switch(options.cellAnchor) {
+        case 'middle':
+            pixels.x += this.params.dims.x / 2;
+            pixels.y += this.params.dims.y / 2;
+            break;
+        default:
+            break;
+    }
+
+    return pixels;
+};
+
+TopDownView.prototype.positionHtml = function(html, coords, options) {
+    var pixels = {
+        x: this.centerPx.x - (this.centerCoords.x * this.params.dims.x),
+        y: this.centerPx.y - (this.centerCoords.y * this.params.dims.y)
+    }
+    html.style.left = pixels.x + 'px';
+    html.style.top = pixels.y + 'px';
+}
+
+TopDownView.prototype.recenter = function(coords) {
+    var self = this;
+    this.centerCoords.x = coords.x;
+    this.centerCoords.y = coords.y;
+
+    this.refresh();
+
+    this.movingLayers.forEach((html) => {
+        this.positionHtml(html);
+    })
+
+    this.renderers.forEach(function(renderer) {
+        renderer.onRecenter(coords);
+    })
+    return this;
+}
+
+TopDownView.prototype.shiftView = function(dCoords) {
+    this.recenter({
+        x: this.centerCoords.x + dCoords.x,
+        y: this.centerCoords.y + dCoords.y
+    })
+    return this;
+}
+
+// what is this point of this function??
+TopDownView.prototype.rescale = function() {
+    throw new Error('what is the point of this function')
     // argh
     this.viewSize = {
-        x: this.bbox.width / this.dims.x,
-        y: this.bbox.height / this.dims.y
+        x: this.bbox.width / this.params.dims.x,
+        y: this.bbox.height / this.params.dims.y
     };
     return this;
 }
 
 // Returns the number of pixels between the html's NW corner and the map's NW corner (at 0,0) 
-MapRenderer.getPixelOffset = function() {
+TopDownView.prototype.getPixelOffset = function() {
     return {
-        x: this.centerPx.x + -this.centerCoords.x * this.dims.x,
-        y: this.centerPx.y + -this.centerCoords.y * this.dims.y
+        x: this.centerPx.x + -this.centerCoords.x * this.params.dims.x,
+        y: this.centerPx.y + -this.centerCoords.y * this.params.dims.y
     }
 }
 
 // Returns cell coords, not pixels
-MapRenderer.getViewBbox = function() {
+TopDownView.prototype.getViewBbox = function() {
     return {
         x1: this.centerCoords.x - this.viewSize.x/2,
         x2: this.centerCoords.x + this.viewSize.x/2,
@@ -2849,7 +3290,7 @@ MapRenderer.getViewBbox = function() {
 }
 
 // Returns whether a cell coords is in view or not
-MapRenderer.isInView = function(coords) {
+TopDownView.prototype.isInView = function(coords) {
     var bbox = this.getViewBbox();
     return coords.x > bbox.x1
         && coords.x < bbox.x2
@@ -2857,38 +3298,53 @@ MapRenderer.isInView = function(coords) {
         && coords.y < bbox.y2;
 }
 
-
-MapRenderer.isInWindow = function(coords) {
-    var distance = Math.max(
-            Math.abs(coords.x - this.map.center.x),
-            Math.abs(coords.y - this.map.center.y)
-        )   
-    return distance < this.window;
-
-}
-
-MapRenderer.refreshCell = function(coords, forceRefresh) {
-    if (!forceRefresh && !this.isInView(coords)) return this;
-    this.refreshCoords(this.map.env, coords);
-}
-
-MapRenderer.zoomOut = function() {
-    this.dims.x /= this.zoomFactor;
-    this.dims.y /= this.zoomFactor;
-    //this.window *= this.zoomFactor;
-    this.refresh()
+TopDownView.prototype.zoomOut = function() {
+    this.params.dims.x /= this.zoomFactor;
+    this.params.dims.y /= this.zoomFactor;
+    this.params.window *= this.zoomFactor;
+    this.rerender()
     return this;
 }
 
-MapRenderer.zoomIn = function() {
-    this.dims.x *= this.zoomFactor;
-    this.dims.y *= this.zoomFactor;
-    //this.window /= this.zoomFactor;
-    this.refresh()
+TopDownView.prototype.zoomIn = function() {
+    this.params.dims.x *= this.zoomFactor;
+    this.params.dims.y *= this.zoomFactor;
+    this.params.window /= this.zoomFactor;
+    this.rerender()
     return this;
 }
 
-},{"./asset-data":35}],39:[function(require,module,exports){
+TopDownView.prototype.getWindowEdges = function() {
+    return {
+        north: this.centerCoords.y - this.viewSize.y/2,
+        west: this.centerCoords.x - this.viewSize.x/2,
+        south: this.centerCoords.y + this.viewSize.y/2,
+        east: this.centerCoords.x + this.viewSize.x/2
+
+    }
+}
+
+TopDownView.prototype.getDistanceFromWindowEdge = function(coords) {
+    var distances = this.getWindowEdges();
+    distances.east = distances.east - coords.x;
+    distances.west = -distances.west + coords.x;
+    distances.south = distances.south - coords.y;
+    distances.north = -distances.north + coords.y;
+    return distances;
+}
+
+var resizeTimeout;
+TopDownView.prototype.onScreenResize = function() {
+    if (!resizeTimeout) {
+        resizeTimeout = setTimeout(() => {
+            resizeTimeout = null;
+            this.refresh();
+            this.recenter(this.centerCoords);
+        }, 60);
+    }
+} 
+
+},{}],44:[function(require,module,exports){
 // UI/HUD
 
 module.exports = UI = {};
@@ -2921,11 +3377,11 @@ UI.infoWrap = function(text, fn) {
     }
 }
 
-UI.zoomOut = UI.infoWrap('zooming...', function() { game.renderer.zoomOut(); })
-UI.zoomIn = UI.infoWrap('zooming...', function() { game.renderer.zoomIn(); })
+UI.zoomOut = UI.infoWrap('zooming...', function() { game.view.zoomOut(); })
+UI.zoomIn = UI.infoWrap('zooming...', function() { game.view.zoomIn(); })
 
 
-},{}],40:[function(require,module,exports){
+},{}],45:[function(require,module,exports){
 var Utils = window.Utils;
 var Character = require('./character');
 var Walking = require('./character/walking');

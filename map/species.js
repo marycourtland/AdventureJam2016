@@ -74,9 +74,7 @@ Species.prototype.nextState = function(cell, neighbors) {
     );
 
     // propagate age (this will only be used if nextState is 1)
-    // TODO: make a way to compose things together (like self.mask and cell.getAge)
-    var maskedAges = mapCoordmap(neighbors, function(cell) { return !!cell ? self.mask(cell) * cell.getAge() : 0 });
-    var age = Math.ceil(coordmapAvg(maskedAges));
+    var age = nextState == 1 ? (cell.register[this.id].age + 1) : 0;
 
     var iterationTime = Settings.mapIterationTimeout;
     if (ruleset.hasOwnProperty('iterationTime')) {

@@ -38,12 +38,25 @@ module.exports = GrowthRules = {
         ]
     },
 
-    // When plants are old enough, they become stable - less likely to grow, slightly likely to die
-    plantsStable: {
-        id: 'plantsStable',
+    trees: {
+        id: 'trees',
+        stateMap: {
+            0: [0, 0, 0, 0, 0.4, 0.4, 0.6, 0.6, 1, 1, 1, 1],
+            1: [0.6, 0.7, 0.8, 0.9, 1,   1,   1,   1,   1, 1, 1, 1]
+        },
+        weights: [
+            [1, 2, 1],
+            [2, 0, 2],
+            [1, 2, 1]
+        ]
+    },
+
+    // When trees are old enough, they become stable - less likely to grow, slightly likely to die
+    treesStable: {
+        id: 'treesStable',
         stateMap: {
             0: [  0,   0,   0, 0,   0, 0.1, 0.1, 1, 1, 1, 1,    1],
-            1: [0.9, 0.9, 0.8, 1,   1,   1,   1, 1, 1, 1, 1, 0.95]
+            1: [0.8, 0.9, 0.9, 1,   1,   1,   1, 1, 1, 1, 1, 0.95]
         },
         weights: [
             [1, 2, 1],

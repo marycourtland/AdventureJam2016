@@ -13,6 +13,7 @@ body {
   color: #CDE6BB;
   font: 10pt sans-serif;
   font: 12pt Zrnic;
+  overflow: hidden;
 }
 
 a {

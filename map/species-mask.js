@@ -11,6 +11,8 @@ var masks = {
 module.exports = SpeciesMask = function(species_id) {
     return function(cell) {
         if (!cell || !cell.species) return masks[false];
-        return masks[cell.species.id === species_id];
+        if (!cell.register[species_id]) return masks[false];
+        //return masks[cell.species.id === species_id];
+        return masks[cell.register[species_id].age > 0]
     }
 }

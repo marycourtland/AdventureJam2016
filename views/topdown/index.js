@@ -4,8 +4,10 @@
 var Utils = window.Utils;
 var Settings = window.Settings;
 window.UI = require('./ui');
-var MapRenderer = require('./map-renderer');
 var Controls = require('./controls');
+var TopDownView = require('./top-down-view');
+var MapRenderer = require('./map-renderer');
+var CharacterRenderer = require('./character-renderer');
 
 var game = window.game;
 var Context = null;
@@ -39,62 +41,76 @@ function setContext(newContext) {
 
 var init = UI.infoWrap('loading...', function() {
     var game = window.game;
-    game.html = {
-        board: document.getElementById('game'),
-        characters: document.getElementById('game-characters'),
-        inventory: document.getElementById('game-inventory'),
-        mouseOverlay: document.getElementById('mouse-overlay')
-    }
 
+    // Map
     game.map.init({
         size: game.size,
     });
 
     game.map.generate();
 
-    MapRenderer.init(game.map, {
-        window: 10,
-        dims: game.cellDims,
-        html: game.html.board
-    })
-
-    // some interfaces with other stuff
-    game.render = function() { MapRenderer.render(game.map.env); }
-    game.renderer = MapRenderer;
-
-    game.render();
-
     // Characters
-    // TODO: separate character rendering and then don't pass charElement in here
     game.wizard = Wizard(game.map);
     game.player = Player(game.map);
 
-    game.refreshView();
+
+    // Renderers
+    game.viewParams = {
+        window: 10,
+        size: game.size,
+        dims: game.cellDims,
+        margin: 2,
+        html: {
+            container: document.getElementById('board-layers'),
+            board: document.getElementById('game'),
+            characters: document.getElementById('game-characters'),
+            inventory: document.getElementById('game-inventory'),
+            mouseOverlay: document.getElementById('mouse-overlay')
+        }
+    }
+
+    game.view = new TopDownView(game.viewParams);
+    game.renderer = new MapRenderer(game.map);
+
+    game.view.addRenderer(game.renderer);
+    game.view.addRenderer(new CharacterRenderer('wizard', game.wizard));
+    game.view.addRenderer(new CharacterRenderer('player', game.player));
+
+    game.view.init(game.viewParams)
+
+    game.view.recenter(game.player.coords);
+    game.wizard.refresh();
+    game.player.refresh();
+
+    game.view.render();
+
     game.state.init(game);
-    Controls.init(game);
+    Controls.init(game, game.viewParams);
 
     game.map.startIteration();
 });
 
 function configGame(game) {
-    game.refreshView = function() {
-        if (!MapRenderer.isInWindow(game.player.coords)) {
-            game.map.recenter(game.player.coords);
+    game.refreshView2 = function() {
+        if (!game.view.isInView(game.player.coords)) {
+            game.view.recenter(game.player.coords);
             game.player.refresh();
             game.wizard.refresh();
         }
     }
 
-    game.refreshView2 = function() {
-        var d = Map.getDistanceFromWindowEdge(game.player.coords);
-        if (d.north > 0 || d.south > 0 || d.west > 0 || d.east > 0) {
+    game.refreshView = function() {
+        var margin = 3;
+        var d = game.view.getDistanceFromWindowEdge(game.player.coords);
+        if (d.north < margin || d.south < margin || d.west < margin || d.east < margin) {
             //console.log('d:', d)
-            if (d.north > 0) game.map.shiftView({x:0, y:-d.north});
-            if (d.south > 0) game.map.shiftView({x:0, y: d.south});
-            if (d.west > 0) game.map.shiftView({x:-d.west, y:0});
-            if (d.east > 0) game.map.shiftView({x: d.east, y:0});
+            if (d.north < margin) game.view.shiftView({x:0, y:-1});
+            if (d.south < margin) game.view.shiftView({x:0, y: 1});
+            if (d.west < margin) game.view.shiftView({x:-1, y:0});
+            if (d.east < margin) game.view.shiftView({x: 1, y:0});
             game.player.refresh();
             game.wizard.refresh();
         }
     }
 }
+

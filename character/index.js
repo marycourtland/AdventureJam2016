@@ -42,6 +42,11 @@ Character.prototype.canBeAt = function(coords) {
 }
 
 Character.prototype.moveTo = function(coords) {
+    // no need to do stuff if we're already there
+    if (this.coords.x === coords.x && this.coords.y === coords.y) {
+        return this;
+    }
+
     // make sure we're allowed to move to this spot
     if (!this.canBeAt(coords)) return this;
 
@@ -65,6 +70,8 @@ Character.prototype.moveTo = function(coords) {
     for (var rut_id in this.trailingRuts) {
         newCell.rut(rut_id, this.trailingRuts[rut_id]);
     }
+    
+    this.emit('refresh');
 
     return this;
 }
@@ -74,6 +81,7 @@ Character.prototype.move = function(diff) {
 
     this.moveTo({x: this.coords.x + diff.x, y: this.coords.y + diff.y});
     //this.faceDirection(diff);
+
     return this;
 }
 

@@ -58,6 +58,17 @@ speciesData.push({
     rules: {
         default: GrowthRules.plants,
         conditional: [
+            // the presence of trees catalyzes smaller plants' growth
+            {
+                species_id: 'trees',
+                min_neighbors: 3,
+                rules: GrowthRules.plantsCatalyzed
+            },
+            {
+                species_id: 'trees2',
+                min_neighbors: 3,
+                rules: GrowthRules.plantsCatalyzed
+            },
             {
                 min_neighbors: 1,
                 species_id: 'magic',
@@ -80,6 +91,17 @@ speciesData.push({
     rules: {
         default: GrowthRules.plants,
         conditional: [
+            // the presence of trees catalyzes smaller plants' growth
+            {
+                species_id: 'trees',
+                min_neighbors: 3,
+                rules: GrowthRules.plantsCatalyzed
+            },
+            {
+                species_id: 'trees2',
+                min_neighbors: 3,
+                rules: GrowthRules.plantsCatalyzed
+            },
             {
                 min_neighbors: 1,
                 species_id: 'magic',
@@ -102,7 +124,7 @@ speciesData.push({
     speed: 200,
     passable: true,
     rules: {
-        default: GrowthRules.plants,
+        default: GrowthRules.trees,
         ruts: [
             {
                 rut_id: 'footsteps',
@@ -110,18 +132,11 @@ speciesData.push({
             }
         ],
         conditional: [
-            // the presence of grass catalyzes tree growth
-            {
-                species_id: 'grass',
-                min_neighbors: 4,
-                rules: GrowthRules.plantsCatalyzed
-            },
-
             // tree growth stabilizes when the trees are old
             {
                 species_id: 'trees',
-                min_age: 3,
-                rules: GrowthRules.plantsStable
+                min_age: 10,
+                rules: GrowthRules.treesStable
             },
 
             {
@@ -142,20 +157,13 @@ speciesData.push({
     speed: 200,
     passable: true,
     rules: {
-        default: GrowthRules.plants,
+        default: GrowthRules.trees,
         conditionalnope: [
-            // the presence of grass catalyzes tree growth
-            {
-                species_id: 'grass',
-                min_neighbors: 4,
-                rules: GrowthRules.plantsCatalyzed
-            },
-
             // tree growth stabilizes when the trees are old
             {
                 species_id: 'trees2',
-                min_age: 3,
-                rules: GrowthRules.plantsStable
+                min_age: 10,
+                rules: GrowthRules.treesStable
             },
 
             {
