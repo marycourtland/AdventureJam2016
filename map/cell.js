@@ -174,6 +174,14 @@ Cell.prototype.add = function(species, age) {
     return this;
 }
 
+Cell.prototype.getRegister = function() {
+    // only return species who are present. (Age > 0)
+    var register = Object.keys(this.register).map((species_id) => this.register[species_id]);
+    register.sort((a, b) => b.age - a.age);
+    register = register.filter((reg) => reg.age > 0 && reg.species.id != 'blank')
+    return register;
+}
+
 // ITERATION STUFF
 
 

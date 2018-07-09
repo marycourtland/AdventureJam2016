@@ -8,6 +8,7 @@ var Controls = require('./controls');
 var TopDownView = require('./top-down-view');
 var MapRenderer = require('./map-renderer');
 var CharacterRenderer = require('./character-renderer');
+var CellInspectorRenderer = require('./cell-inspector-renderer');
 
 var game = window.game;
 var Context = null;
@@ -54,7 +55,7 @@ var init = UI.infoWrap('loading...', function() {
     game.player = Player(game.map);
 
 
-    // Renderers
+    // Views
     game.viewParams = {
         window: 10,
         size: game.size,
@@ -69,23 +70,42 @@ var init = UI.infoWrap('loading...', function() {
         }
     }
 
-    game.view = new TopDownView(game.viewParams);
-    game.renderer = new MapRenderer(game.map);
+    game.views = {}
 
-    game.view.addRenderer(game.renderer);
+    // Main map view
+    game.view = new TopDownView(game.viewParams);
+    game.views.main = game.view;
+    game.view.addRenderer(new MapRenderer(game.map));
     game.view.addRenderer(new CharacterRenderer('wizard', game.wizard));
     game.view.addRenderer(new CharacterRenderer('player', game.player));
+    game.view.init();
 
-    game.view.init(game.viewParams)
-
-    game.view.recenter(game.player.coords);
-    game.wizard.refresh();
-    game.player.refresh();
-
-    game.view.render();
+    game.views.cellInspector = new TopDownView({
+        dims: XY(game.cellDims.x * 2, game.cellDims.y * 2),
+        size: XY(1, 1),
+        html: {
+            container: document.getElementById('inspector'),
+            cell: document.getElementById('inspector-cell'),
+            text: document.getElementById('inspector-text'),
+        }
+    })
+    game.views.cellInspector.addRenderer(new CellInspectorRenderer());
+    game.views.cellInspector.hidden(true);
+    game.views.cellInspector.init();
 
     game.state.init(game);
     Controls.init(game, game.viewParams);
+
+    game.view.recenter(game.player.coords);
+    game.view.render();
+
+    // Todo: find better home for this
+    game.player.on('inspect-cell', 'inspect-cell', function(data) {
+        console.log('inspect cell!!', data.coords)
+        game.views.cellInspector.loadCell(game.map.getCell(data.coords));
+        var currentlyHidden = game.views.cellInspector.hidden();
+        game.views.cellInspector.hidden(!currentlyHidden);
+    })
 
     game.map.startIteration();
 });
@@ -113,4 +133,3 @@ function configGame(game) {
         }
     }
 }
-

@@ -51,6 +51,8 @@ GamePlayModes.modes.idle.finish = function() {};
 GamePlayModes.modes.idle.getNext = function(data) {
     // Clicked an inventory item
     if (!!data.item) return GamePlayModes.modes.itemSelected;
+
+    if (!!data.coords) game.player.emit('inspect-cell', {coords: data.coords});
 }
 
 // ITEM SELECTED: player is about to use this item.
@@ -86,4 +88,3 @@ GamePlayModes.modes.usingItem.finish = function() {
 GamePlayModes.modes.usingItem.getNext = function(data) {
     return GamePlayModes.modes.idle;
 }
-
