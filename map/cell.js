@@ -59,11 +59,17 @@ Cell.prototype.get = function(species_id) {
     return this.register[species_id].species;
 }
 
-// get the age of the current dominant species
+// get properties for the dominant species
 Cell.prototype.getAge = function() {
     if (!this.species) return null;
     
     return this.register[this.species.id].age;
+}
+
+Cell.prototype.getStrength = function() {
+    if (!this.species) return null;
+    
+    return this.register[this.species.id].strength;
 }
 
 // sets the dominant species
@@ -77,6 +83,7 @@ Cell.prototype.set = function(species) {
         this.species = species;
         this.add(species); // just in case it's not already set
         this.register[species.id].age = Math.max(this.register[species.id].age, 1)
+        this.register[species.id].strength = Math.max(this.register[species.id].strength, 1)
         this.emit('change', {species: species})
 
         // propagate rut activation
@@ -104,12 +111,17 @@ Cell.prototype.next = function() {
     // Which species are contenders for dominance in this cell?
     var contenders = Object.keys(nextStates).filter(function(species_id) {
         return nextStates[species_id].state === 1;
-    })
+    }).map((species_id) => this.register[species_id])
+
+    // update strength prior to the species battle
+    for (var species_id in this.register) {
+        this.register[species_id].strength = nextStates[species_id].strength;
+    }
 
     // THE SPECIES BATTLE IT OUT...
-    this.nextSpecies = this.get(SpeciesBattle.decide(contenders));
+    this.nextSpecies = SpeciesBattle.decide(contenders).species;
 
-    // Update ages for all species in the register
+    // Update age and strength for all species in the register
     for (var species_id in this.register) {
         this.register[species_id].age = nextStates[species_id].age;
     }
@@ -149,8 +161,9 @@ Cell.prototype.flush = function() {
 
 }
 
-Cell.prototype.add = function(species, age) {
+Cell.prototype.add = function(species, age, strength) {
     age = age || 0;
+    strength = strength || species.initial_strength || 1; //Math.floor(Math.random()*10);
 
     if (!species) {
         // this happens when a species dies
@@ -161,7 +174,8 @@ Cell.prototype.add = function(species, age) {
 
     this.register[species.id] = {
         species: species,
-        age: age
+        age: age,
+        strength: strength
     }
 
     // make sure there's a dominant species
@@ -177,7 +191,7 @@ Cell.prototype.add = function(species, age) {
 Cell.prototype.getRegister = function() {
     // only return species who are present. (Age > 0)
     var register = Object.keys(this.register).map((species_id) => this.register[species_id]);
-    register.sort((a, b) => b.age - a.age);
+    register.sort((a, b) => b.strength - a.strength);
     register = register.filter((reg) => reg.age > 0 && reg.species.id != 'blank')
     return register;
 }

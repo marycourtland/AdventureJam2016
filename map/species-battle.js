@@ -4,6 +4,7 @@
 
 module.exports = SpeciesBattle = {
     peckingOrder: [
+        // This is to break ties in case two species have the same strength.
         // sorted from low to high
         'blank',
         'grass',
@@ -14,16 +15,25 @@ module.exports = SpeciesBattle = {
         'neutralized'
     ],
 
-    decide: function(ids) {
-        if (ids.length === 0) return null;
-        if (ids.length === 1) return ids[0];
+    decide: function(species) {
+        if (species.length === 0) return null;
+        if (species.length === 1) return species[0];
 
         var self = this;
-        ids.sort(function(id1, id2) {
-            return self.peckingOrder.indexOf(id2) - self.peckingOrder.indexOf(id1);
+        species.sort(function(species1, species2) {
+            // blanks shouldn't be dominant over other species
+            if (species1.species.id == 'blank') return 1;
+            if (species2.species.id == 'blank') return -1;
+
+            if (species1.strength != species2.strength) {
+                return species2.strength - species1.strength
+            }
+            else {
+                return self.peckingOrder.indexOf(species2.species.id) - self.peckingOrder.indexOf(species1.species.id);
+            }
         })
 
         //return ids[Math.floor(Math.random()*ids.length)];
-        return ids[0];
+        return species[0];
     }
 }

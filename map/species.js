@@ -66,6 +66,7 @@ Species.prototype.nextState = function(cell, neighbors) {
     var maskedCell = this.mask(cell);
     var maskedNeighbors = mapCoordmap(neighbors, self.mask);
 
+
     var nextState = ruleset.transform(maskedCell, maskedNeighbors,
         Math.round(cell.forcedIterationTime)/1000
         + ' ' + 
@@ -76,12 +77,14 @@ Species.prototype.nextState = function(cell, neighbors) {
     // propagate age (this will only be used if nextState is 1)
     var age = nextState == 1 ? (cell.register[this.id].age + 1) : 0;
 
+    var strength = this.decideStrengthFromNeighbors(neighbors);
+
     var iterationTime = Settings.mapIterationTimeout;
     if (ruleset.hasOwnProperty('iterationTime')) {
         iterationTime = ruleset.iterationTime;
     }
     
-    return {state: nextState, age: age, iterationTime: iterationTime};
+    return {state: nextState, age: age, strength: strength, iterationTime: iterationTime};
 }
 
 
@@ -126,6 +129,16 @@ Species.prototype.decideRuleset = function(cell, neighbors) {
     return winningRuleset;
 }
 
+Species.prototype.decideStrengthFromNeighbors = function(neighbors) {
+    var speciesNeighbors = filterCoordmap(neighbors, (cell) => !!cell && this.id in cell.register);
+    var neighborStrength = mapCoordmap(speciesNeighbors, (cell) => {
+        return cell.register[this.id].strength;
+    })
+    var avgStrength = coordmapAvg(neighborStrength);
+    
+    return avgStrength;
+}
+
 Species.prototype.getIterationTime = function(ruts) {
     // Of all possible iteration times, pick the shortest.
     var possibleTimes = [];
@@ -163,6 +176,12 @@ Species.prototype.getIndexedRuts = function() {
 function mapCoordmap(coordmap, mapFunction) {
     return coordmap.map(function(coordmapItem) {
         return {coords: coordmapItem.coords, value: mapFunction(coordmapItem.value)};
+    })
+}
+
+function filterCoordmap(coordmap, filterFunction) {
+    return coordmap.filter(function(coordmapItem) {
+        return filterFunction(coordmapItem.value);
     })
 }
 

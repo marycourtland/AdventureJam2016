@@ -26,6 +26,7 @@ speciesData.push({
     id: 'blank',
     symbol: '~',
     color: '#5F4F29',
+    initial_strength: 1
 });
 speciesData.push({
     id: 'neutralized',
@@ -38,6 +39,8 @@ speciesData.push({
     symbol: '&#8960;',
     color: '#4C24A3',
     forceNeighborIteration: true,
+    initial_strength: 10,
+    strength_treshhold: 5,
     rules: {
         default: GrowthRules.magic,
         ruts: [
@@ -55,6 +58,8 @@ speciesData.push({
     id: 'grass',
     symbol: '&#8756;',
     color: '#46CF46', 
+    initial_strength: 1,
+    strength_treshhold: 1,
     rules: {
         default: GrowthRules.plants,
         conditional: [
@@ -88,6 +93,8 @@ speciesData.push({
     id: 'flowers',
     symbol: '&#9880;',
     color: '#E46511',
+    initial_strength: 1,
+    strength_treshhold: 1,
     rules: {
         default: GrowthRules.plants,
         conditional: [
@@ -123,6 +130,8 @@ speciesData.push({
     color: '#174925',
     speed: 200,
     passable: true,
+    initial_strength: 3,
+    strength_treshhold: 3,
     rules: {
         default: GrowthRules.trees,
         ruts: [
@@ -156,6 +165,8 @@ speciesData.push({
     color: '#174925',
     speed: 200,
     passable: true,
+    initial_strength: 3,
+    strength_treshhold: 3,
     rules: {
         default: GrowthRules.trees,
         conditionalnope: [

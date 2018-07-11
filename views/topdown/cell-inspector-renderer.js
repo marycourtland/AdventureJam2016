@@ -29,6 +29,7 @@ CellInspectorRenderer.prototype.onInit = function(params) {
                 var is_dominant = reg.species.id == cell.species.id;
                 return [
                     reg.species.id.toUpperCase() + (is_dominant ? " (Dominant)" : ""),
+                    "-- strength: " + reg.strength,
                     "-- age: " + reg.age,
                     ""
                 ].join('\n')
