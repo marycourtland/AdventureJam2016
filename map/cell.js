@@ -193,6 +193,7 @@ Cell.prototype.getRegister = function() {
     var register = Object.keys(this.register).map((species_id) => this.register[species_id]);
     register.sort((a, b) => b.strength - a.strength);
     register = register.filter((reg) => reg.age > 0 && reg.species.id != 'blank')
+    register = register.map((reg) => {reg.is_dominant = reg.species.id == this.species.id; return reg; })
     return register;
 }
 

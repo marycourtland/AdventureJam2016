@@ -1,0 +1,19 @@
+<style>
+    #inspector div {
+        margin-bottom: 1rem;
+    }
+</style>
+
+<div>Coords: ({{=it.cell.coords.x}}, {{=it.cell.coords.y}})</div>
+
+<div>Species:</div>
+
+{{~ it.register :reg}}
+    <div>
+        {{=reg.species.id.toUpperCase() + (reg.is_dominant ? " (Dominant)" : "")}}
+        <br />
+        -- strength: {{=reg.strength}}
+        <br />
+        -- age: {{=reg.age}}
+    </div>
+{{~}}

@@ -1,6 +1,9 @@
 var BaseRenderer = require('./base-renderer');
 var Cell = require('./components/cell');
-var CellInspectorTemplate = require('./templates/cell-inspector');
+var doT = require('dot');
+var fs = require('fs');
+
+var template = doT.compile(fs.readFileSync('./views/topdown/templates/cell-inspector.html', 'utf8'));
 
 var CellInspectorRenderer = module.exports = function() {
 }
@@ -21,7 +24,7 @@ CellInspectorRenderer.prototype.onInit = function(params) {
         }
         this.html.cell.appendChild(cellHtml.element);
 
-        this.html.text.innerText = new CellInspectorTemplate(cell).render();
+        this.html.text.innerHTML = template({cell: cell, register: cell.getRegister() });
     }
 
     // more bad code
