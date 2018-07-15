@@ -2,9 +2,9 @@ var AssetData = require('../asset-data');
 var Cell = module.exports = {};
 
 // Settings
-cellClass = 'cell'
-cellIdDelimiter = '_'
-cellIdPrefix = cellClass + cellIdDelimiter;
+const cellClass = 'cell'
+const cellIdDelimiter = '_'
+const cellIdPrefix = cellClass + cellIdDelimiter;
 
 var Cell = module.exports = function(cellObject, renderer, options) {
     this.renderer = renderer;

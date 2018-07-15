@@ -1,4 +1,4 @@
-module.exports = PhaserCharacter = function(character, sprite) {
+var PhaserCharacter = module.exports = function(character, sprite) {
     this.character = character;
     this.sprite = sprite;
 

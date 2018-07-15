@@ -15,7 +15,7 @@
 //  ruleset.transform(0, [[1,1,1],[0,0,0],[0,0,0]]) => 1
 
 
-module.exports = RuleSet = function(ruleParams) {
+var RuleSet = module.exports = function(ruleParams) {
     ruleParams = ruleParams || {};
 
     this.id = ruleParams.id;

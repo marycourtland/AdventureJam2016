@@ -3,7 +3,7 @@ var Env = require('./environment');
 var Species = require('./species');
 var SpeciesData = require('./data/species') 
 
-module.exports = Map = {};
+var Map = module.exports = {};
 
 // initialize species based on the data
 Map.species = {};

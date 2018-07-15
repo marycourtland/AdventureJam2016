@@ -2,7 +2,7 @@
 // Usage:
 // var box_instance = ToolChest.make(ToolChest.types.box);
 
-module.exports = ToolChest = {};
+var ToolChest = module.exports = {};
 
 // todo: put these in their own directory and auto discover them
 var typeObjects = [

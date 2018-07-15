@@ -10,7 +10,7 @@ var Context;
 var PhaserCell = require('../cell.js')
 var PhaserCharacter = require('../character.js')
 
-module.exports = Play = function (_game) { 
+var Play = module.exports = function (_game) { 
     game = _game;
 };
 

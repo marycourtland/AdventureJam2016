@@ -1,4 +1,4 @@
-module.exports = Walker = function(char, getNextDir, onStep) {
+var Walker = module.exports = function(char, getNextDir, onStep) {
     this.char = char;
     this.timeout = null;
     this.walking = false;

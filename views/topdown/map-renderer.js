@@ -2,7 +2,7 @@ var AssetData = require('./asset-data');
 var BaseRenderer = require('./base-renderer');
 var Cell = require('./components/cell');
 
-module.exports = MapRenderer = function(map) {
+var MapRenderer = module.exports = function(map) {
     this.map = map;
 }
 

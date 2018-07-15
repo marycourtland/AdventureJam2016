@@ -2,7 +2,7 @@ var Utils = window.Utils;
 var RuleSet = require('./ruleset');
 var SpeciesMask = require('./species-mask');
 
-module.exports = Species = function(params) {
+var Species = module.exports = function(params) {
     this.id = params.id || 'species' + Math.floor(Math.random()*1e8);
 
     // behavior

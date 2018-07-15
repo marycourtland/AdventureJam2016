@@ -1,7 +1,7 @@
 var SpeciesSprites = require('./data/species-sprites')
 var Utils = window.Utils;
 
-module.exports = PhaserCell = function(cell) {
+var PhaserCell = module.exports = function(cell) {
     this.cell = cell;
 
     // Cache each sprite so we're not creating them on the fly

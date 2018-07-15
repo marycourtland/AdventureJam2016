@@ -4,7 +4,7 @@
 
 // Also. This should be view independent
 
-module.exports = GamePlayModes = {};
+var GamePlayModes = module.exports = {};
 var game;
 var currentData = {}; // blah, some scope, so that different modes can communicate w/ each other
 

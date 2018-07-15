@@ -1,4 +1,4 @@
-module.exports = Inventory = function(char) {
+var Inventory = module.exports = function(char) {
     this.char = char;
     this.items = {};
     this.numSlots = 20;

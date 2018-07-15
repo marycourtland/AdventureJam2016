@@ -8,7 +8,7 @@ var masks = {
     false: 0
 }
 
-module.exports = SpeciesMask = function(species_id) {
+var SpeciesMask = module.exports = function(species_id) {
     return function(cell) {
         if (!cell || !cell.species) return masks[false];
         if (!cell.register[species_id]) return masks[false];

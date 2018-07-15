@@ -1,5 +1,6 @@
 var BaseRenderer = require('./base-renderer');
 var Cell = require('./components/cell');
+var CellInspectorTemplate = require('./templates/cell-inspector');
 
 var CellInspectorRenderer = module.exports = function() {
 }
@@ -20,21 +21,7 @@ CellInspectorRenderer.prototype.onInit = function(params) {
         }
         this.html.cell.appendChild(cellHtml.element);
 
-        this.html.text.innerText = [
-            'Coords: (' + cell.coords.x + ', ' + cell.coords.y + ')',
-            '',
-            'Species:',
-            '',
-            cell.getRegister().map((reg) => {
-                var is_dominant = reg.species.id == cell.species.id;
-                return [
-                    reg.species.id.toUpperCase() + (is_dominant ? " (Dominant)" : ""),
-                    "-- strength: " + reg.strength,
-                    "-- age: " + reg.age,
-                    ""
-                ].join('\n')
-            }).join('\n')
-        ].join('\n')
+        this.html.text.innerText = new CellInspectorTemplate(cell).render();
     }
 
     // more bad code

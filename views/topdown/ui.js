@@ -1,6 +1,6 @@
 // UI/HUD
 
-module.exports = UI = {};
+var UI = module.exports = {};
 
 UI.infoTimeout = null;
 

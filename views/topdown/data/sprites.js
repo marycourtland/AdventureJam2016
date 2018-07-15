@@ -1,4 +1,4 @@
-module.exports = SpriteData = {};
+var SpriteData = module.exports = {};
 
 SpriteData.player = {
     name: 'player',

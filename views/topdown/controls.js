@@ -1,4 +1,4 @@
-module.exports = Controls = {};
+var Controls = module.exports = {};
 
 var game;
 

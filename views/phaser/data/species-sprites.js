@@ -1,6 +1,6 @@
 // Index of which sprites to show for each species.
 
-module.exports = SpeciesSprites = {};
+var SpeciesSprites = module.exports = {};
 
 // test species 
 SpeciesSprites['blue'] =  { id: 'blue' }

@@ -2,7 +2,7 @@
 // 
 // For now, it's just 'which species is higher in the pecking order'
 
-module.exports = SpeciesBattle = {
+var SpeciesBattle = module.exports = {
     peckingOrder: [
         // This is to break ties in case two species have the same strength.
         // sorted from low to high

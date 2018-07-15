@@ -1,6 +1,6 @@
 // Empty placeholder object. TODO
 
-module.exports = Detector = {};
+var Detector = module.exports = {};
 Detector.id = 'detector';
 
 Detector.useAt = function(coords) {

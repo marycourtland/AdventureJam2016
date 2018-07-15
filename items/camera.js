@@ -1,6 +1,6 @@
 // Empty placeholder object. TODO
 
-module.exports = Camera= {};
+var Camera = module.exports = {};
 Camera.id = 'camera';
 
 Camera.useAt = function(coords) {

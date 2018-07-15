@@ -14,7 +14,7 @@ var game = window.game;
 var Context = null;
 var ToolChest, Wizard, Player; // these will get instantiated in setContext()
 
-module.exports = topdown = {}; 
+var topdown = module.exports = {}; 
 
 topdown.load = function(globalContext) {
     setContext(globalContext);
@@ -101,7 +101,6 @@ var init = UI.infoWrap('loading...', function() {
 
     // Todo: find better home for this
     game.player.on('inspect-cell', 'inspect-cell', function(data) {
-        console.log('inspect cell!!', data.coords)
         game.views.cellInspector.loadCell(game.map.getCell(data.coords));
         var currentlyHidden = game.views.cellInspector.hidden();
         game.views.cellInspector.hidden(!currentlyHidden);

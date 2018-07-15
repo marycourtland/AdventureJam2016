@@ -1,4 +1,4 @@
-module.exports = phaserIso = {};
+var phaserIso = module.exports = {};
 
 phaserIso.load = function(Context) {
     var GameStates = require('./states');

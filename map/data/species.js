@@ -2,7 +2,7 @@ var GrowthRules = require('./growth-rules')
 
 // Conditional growth rules are sorted by priority, low > high.
 
-module.exports = speciesData = [];
+var speciesData = module.exports = [];
 
 // TESTING ONLY
 speciesData.push({

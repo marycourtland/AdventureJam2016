@@ -1,4 +1,4 @@
-module.exports = GrowthRules = {
+var GrowthRules = module.exports = {
     magic: {
         id: 'magic',
         stateMap: {

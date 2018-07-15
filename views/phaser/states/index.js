@@ -1,4 +1,4 @@
-module.exports = GameStates = {
+var GameStates = module.exports = {
     Boot: require('./boot.js'),
     Menu: require('./menu.js'),
     Play: require('./play.js'),

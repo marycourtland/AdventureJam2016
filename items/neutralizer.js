@@ -1,4 +1,4 @@
-module.exports = Neutralizer = {};
+var Neutralizer = module.exports = {};
 Neutralizer.id = 'neutralizer';
 
 // TODO: do something other than accessing the global game instance

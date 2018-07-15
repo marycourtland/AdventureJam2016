@@ -1,6 +1,6 @@
 // warning, messy code
 
-module.exports = Sprite = function(data) {
+var Sprite = module.exports = function(data) {
     this.data = data;
     this.scale = 1;
 

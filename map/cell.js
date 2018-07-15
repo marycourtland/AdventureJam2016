@@ -9,7 +9,7 @@ var SpeciesBattle = require('./species-battle')
 var Events = window.Events;
 var Utils = window.Utils;
 
-module.exports = Cell = function(blank, coords) {
+var Cell = module.exports = function(blank, coords) {
     this.species = null;
     this.coords = coords;
     this.neighbors = [];
