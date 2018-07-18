@@ -68,7 +68,7 @@ a {
 }
 
 
-#mouse-overlay:hover,
+,mouse-overlay:hover,
 #game-inventory .slot:hover {
   cursor: pointer;
 }

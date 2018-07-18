@@ -2,7 +2,7 @@ var Utils = window.Utils;
 var Character = require('./character');
 var Walking = require('./character/walking');
 
-module.exports = Wizard = function(map) {
+var Wizard = module.exports = function(map) {
     var wizard = new Character({
         map: map,
         id: 'wizard',

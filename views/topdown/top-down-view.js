@@ -1,8 +1,12 @@
 var TopDownView  = module.exports = function(params) {
+    if (!params.html.container) throw new Error('there should be a container for a view')
     this.params = params;
     this.renderers = [];
+    this.html = params.html;
+    this.size = params.size;
+    this.dims = params.dims || {x:1, y:1}
     this.centerCoords = {x:0, y:0};
-    this.movingLayers = [this.params.html.board, this.params.html.characters]
+    this.worldLayers = Object.keys(this.html).map((key) => this.html[key]).filter((html) => html.dataset.worldRelative == 'true');
     this.refresh();
 }
 
@@ -14,24 +18,32 @@ TopDownView.prototype.addRenderer = function(renderer) {
 
 TopDownView.prototype.init = function() {
     window.addEventListener("resize", () => { this.onScreenResize() }, false);
-    
-    var self = this;
-    this.renderers.forEach(function(renderer) {
-        renderer.init(self, self.params);
+
+    this.renderers.forEach((renderer) => {
+        renderer.init(this, this.params);
     })
 }
 
+TopDownView.prototype.hidden = function(newHiddenState) {
+    if (typeof newHiddenState == 'undefined') {
+        return this.html.container.style.display == 'none';
+    }
+    else {
+        this.html.container.style.display = newHiddenState ? 'none' : '';
+    }
+}
+
 TopDownView.prototype.resizeLayers = function() {
-    this.movingLayers.forEach((html) => {
-        html.style.width = this.params.size.x * this.params.dims.x + 'px';
-        html.style.height = this.params.size.y * this.params.dims.y + 'px';
+    this.worldLayers.forEach((html) => {
+        html.style.width = this.size.x * this.dims.x + 'px';
+        html.style.height = this.size.y * this.dims.y + 'px';
     })
 
     // todo: the static layers should resize to this.viewSize
 }
 
 TopDownView.prototype.refresh = function() {
-    this.bbox = this.params.html.container.getBoundingClientRect();
+    this.bbox = this.html.container.getBoundingClientRect();
     this.centerPx = {
         x: this.bbox.width / 2,
         y: this.bbox.height / 2
@@ -39,8 +51,8 @@ TopDownView.prototype.refresh = function() {
 
     // in coords
     this.viewSize = {
-        x: this.bbox.width / this.params.dims.x,
-        y: this.bbox.height / this.params.dims.y
+        x: this.bbox.width / this.dims.x,
+        y: this.bbox.height / this.dims.y
     }
 
     this.zoomFactor = 2;
@@ -66,14 +78,14 @@ TopDownView.prototype.getCoordsFromPixels = function(pixels, options) {
     options = options || {};
     if (options.absolute) {
         return {
-            x: Math.floor((pixels.x - this.centerPx.x) / this.params.dims.x),
-            y: Math.floor((pixels.y - this.centerPx.y) / this.params.dims.y)
+            x: Math.floor((pixels.x - this.centerPx.x) / this.dims.x),
+            y: Math.floor((pixels.y - this.centerPx.y) / this.dims.y)
         }
     }
     else {
         return {
-            x: Math.floor((pixels.x) / this.params.dims.x),
-            y: Math.floor((pixels.y) / this.params.dims.y)
+            x: Math.floor((pixels.x) / this.dims.x),
+            y: Math.floor((pixels.y) / this.dims.y)
         }
     }
 }
@@ -84,21 +96,21 @@ TopDownView.prototype.getPixelsFromCoords = function(coords, options) {
     var pixels;
     if (options.absolute) {
         pixels = {
-            x: this.centerPx.x + (-this.centerCoords.x + coords.x) * this.params.dims.x,
-            y: this.centerPx.y + (-this.centerCoords.y + coords.y) * this.params.dims.y
+            x: this.centerPx.x + (-this.centerCoords.x + coords.x) * this.dims.x,
+            y: this.centerPx.y + (-this.centerCoords.y + coords.y) * this.dims.y
         }
     }
     else {
         pixels = {
-            x: coords.x * this.params.dims.x,
-            y: coords.y * this.params.dims.y
+            x: coords.x * this.dims.x,
+            y: coords.y * this.dims.y
         }
     }
 
     switch(options.cellAnchor) {
         case 'middle':
-            pixels.x += this.params.dims.x / 2;
-            pixels.y += this.params.dims.y / 2;
+            pixels.x += this.dims.x / 2;
+            pixels.y += this.dims.y / 2;
             break;
         default:
             break;
@@ -109,8 +121,8 @@ TopDownView.prototype.getPixelsFromCoords = function(coords, options) {
 
 TopDownView.prototype.positionHtml = function(html, coords, options) {
     var pixels = {
-        x: this.centerPx.x - (this.centerCoords.x * this.params.dims.x),
-        y: this.centerPx.y - (this.centerCoords.y * this.params.dims.y)
+        x: this.centerPx.x - (this.centerCoords.x * this.dims.x),
+        y: this.centerPx.y - (this.centerCoords.y * this.dims.y)
     }
     html.style.left = pixels.x + 'px';
     html.style.top = pixels.y + 'px';
@@ -123,7 +135,7 @@ TopDownView.prototype.recenter = function(coords) {
 
     this.refresh();
 
-    this.movingLayers.forEach((html) => {
+    this.worldLayers.forEach((html) => {
         this.positionHtml(html);
     })
 
@@ -146,8 +158,8 @@ TopDownView.prototype.rescale = function() {
     throw new Error('what is the point of this function')
     // argh
     this.viewSize = {
-        x: this.bbox.width / this.params.dims.x,
-        y: this.bbox.height / this.params.dims.y
+        x: this.bbox.width / this.dims.x,
+        y: this.bbox.height / this.dims.y
     };
     return this;
 }
@@ -155,8 +167,8 @@ TopDownView.prototype.rescale = function() {
 // Returns the number of pixels between the html's NW corner and the map's NW corner (at 0,0) 
 TopDownView.prototype.getPixelOffset = function() {
     return {
-        x: this.centerPx.x + -this.centerCoords.x * this.params.dims.x,
-        y: this.centerPx.y + -this.centerCoords.y * this.params.dims.y
+        x: this.centerPx.x + -this.centerCoords.x * this.dims.x,
+        y: this.centerPx.y + -this.centerCoords.y * this.dims.y
     }
 }
 
@@ -180,16 +192,16 @@ TopDownView.prototype.isInView = function(coords) {
 }
 
 TopDownView.prototype.zoomOut = function() {
-    this.params.dims.x /= this.zoomFactor;
-    this.params.dims.y /= this.zoomFactor;
+    this.dims.x /= this.zoomFactor;
+    this.dims.y /= this.zoomFactor;
     this.params.window *= this.zoomFactor;
     this.rerender()
     return this;
 }
 
 TopDownView.prototype.zoomIn = function() {
-    this.params.dims.x *= this.zoomFactor;
-    this.params.dims.y *= this.zoomFactor;
+    this.dims.x *= this.zoomFactor;
+    this.dims.y *= this.zoomFactor;
     this.params.window /= this.zoomFactor;
     this.rerender()
     return this;

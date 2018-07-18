@@ -1,0 +1,10 @@
+<h2>Coords: ({{=it.cell.coords.x}}, {{=it.cell.coords.y}})</h2>
+
+{{~ it.register :reg}}
+    <div class="species-row" onclick="game.state.advance({inspector: true, species_id: '{{=reg.species.id}}'});">
+        <!-- <p></p> -->
+        <h4>{{=it.catalogue.species[reg.species.id].description.plural.toUpperCase() + (reg.is_dominant ? " (Dominant)" : "")}}</h4>
+        <p>strength: {{=reg.strength}}</p>
+        <p>age: {{=reg.age}}</p>
+    </div>
+{{~}}

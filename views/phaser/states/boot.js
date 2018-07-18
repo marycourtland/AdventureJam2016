@@ -3,7 +3,7 @@ var AssetData = require('../asset_data');
 
 var game;
 
-module.exports = Boot = function (_game) { 
+var Boot = module.exports = function (_game) { 
     game = _game;
 };
 

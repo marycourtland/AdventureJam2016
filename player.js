@@ -3,7 +3,7 @@ var ToolChest = require('./items');
 
 var CELL_CHANGE_EVT = 'check_cell_for_magic';
 
-module.exports = Player = function(map) {
+var Player = module.exports = function(map) {
     var player = new Character({
         map: map,
         id: 'player',

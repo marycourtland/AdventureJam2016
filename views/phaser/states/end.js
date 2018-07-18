@@ -1,6 +1,6 @@
 var game;
 
-module.exports = End = function (_game) { 
+var End = module.exports = function (_game) { 
     game = _game;
 };
 

@@ -14,12 +14,15 @@
 //
 //  ruleset.transform(0, [[1,1,1],[0,0,0],[0,0,0]]) => 1
 
+var Catalogue = require('./catalogue');
 
-module.exports = RuleSet = function(ruleParams) {
+var RuleSet = module.exports = function(ruleParams) {
     ruleParams = ruleParams || {};
 
     this.id = ruleParams.id;
     this.stateMap = ruleParams.stateMap || {};
+
+    this.description = ruleParams.description || "has an unknown behavior"
 
     // TODO: this should really be a coordmap...
     this.weights = indexWeights(ruleParams.weights || [
@@ -29,6 +32,8 @@ module.exports = RuleSet = function(ruleParams) {
     ]);
 
     if (ruleParams.debug) this.debug = true;
+
+    Catalogue.add('rules', this);
 }
 
 RuleSet.prototype = {};

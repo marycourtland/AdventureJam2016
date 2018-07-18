@@ -5,7 +5,7 @@ var XY = window.XY;
 var Cell = require('./cell.js')
 var Advancerator = require('./advancerator.js');
 
-module.exports = Env = function(size, blank_cell) {
+var Env = module.exports = function(size, blank_cell) {
     this.size = size;
     this.init(blank_cell);
 };
@@ -46,6 +46,8 @@ Env.prototype.OOB = function(coords) {
 }
 
 Env.prototype.get = function(coords) {
+    if (!coords) return null;
+    if (!coords.hasOwnProperty('x') || !coords.hasOwnProperty('y')) return null;
     if (this.OOB(coords)) return null;
     return this.cells[coords.x][coords.y];
 }

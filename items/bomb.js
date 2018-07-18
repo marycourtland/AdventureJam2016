@@ -1,4 +1,4 @@
-module.exports = Bomb = {};
+var Bomb = module.exports = {};
 Bomb.id = 'bomb';
 
 Bomb.useAt = function(coords) {

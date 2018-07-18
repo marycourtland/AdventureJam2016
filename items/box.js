@@ -1,4 +1,4 @@
 // Empty placeholder object. TODO
 
-module.exports = Box = {};
+var Box = module.exports = {};
 Box.id = 'box';

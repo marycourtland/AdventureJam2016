@@ -19,7 +19,7 @@ function initGame() {
         board: document.getElementById('game'),
         characters: document.getElementById('game-characters'),
         inventory: document.getElementById('game-inventory'),
-        mouseOverlay: document.getElementById('mouse-overlay')
+        mapOverlay: document.getElementById('map-overlay')
     }
 
     game.map.init({

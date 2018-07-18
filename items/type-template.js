@@ -1,5 +1,5 @@
 // Methods that should be callable for each item type.
-module.exports = TypeTemplate = {};
+var TypeTemplate = module.exports = {};
 
 // Should be implemented differently for each item
 TypeTemplate.useAt = function(coords) {

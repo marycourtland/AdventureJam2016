@@ -2,7 +2,7 @@
 // http://opengameart.org/content/tree-collection-v26-bleeds-game-art
 // Bleed - http://remusprites.carbonmade.com/
 
-module.exports = AssetData = {
+var AssetData = module.exports = {
     blue: {
         symbol:  '~',
         color:   '#00B'

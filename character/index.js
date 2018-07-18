@@ -4,7 +4,7 @@ var Inventory = require('./inventory');
 
 var CHAR_SPECIES_LISTENER_PREFIX = 'character-species-listener-';
 
-module.exports = Character = function(params) {
+var Character = module.exports = function(params) {
     params.id = params.id || '';
 
     this.map = params.map;

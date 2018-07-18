@@ -4,7 +4,7 @@
 // Takes an environment and advances it to its next iteration.
 
 
-module.exports = Advancerator = function(env) {
+var Advancerator = module.exports = function(env) {
     var range = env.shuffledRange();
 
     // compute the next iteration 

@@ -1,0 +1,29 @@
+{
+  "name": "neutralizegame",
+  "version": "1.0.0",
+  "description": "(Working title)",
+  "main": "game.js",
+  "scripts": {
+    "build": "node build.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/marycourtland/NeutralizeGame.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/marycourtland/NeutralizeGame/issues"
+  },
+  "homepage": "https://github.com/marycourtland/NeutralizeGame#readme",
+  "dependencies": {
+    "@babel/core": "^7.0.0-beta.53",
+    "@babel/plugin-proposal-class-properties": "^7.0.0-beta.53",
+    "@babel/preset-env": "^7.0.0-beta.53",
+    "babelify": "^9.0.0",
+    "brfs": "^2.0.0",
+    "browserify": "^16.2.2",
+    "dot": "^1.0.0"
+  }
+}
