@@ -1,9 +1,11 @@
 var Utils = window.Utils;
 var RuleSet = require('./ruleset');
 var SpeciesMask = require('./species-mask');
+var Catalogue = require('./catalogue');
 
 var Species = module.exports = function(params) {
     this.id = params.id || 'species' + Math.floor(Math.random()*1e8);
+    this.description = params.description || "unknown species" 
 
     // behavior
     // TODO: fix passable for phaser
@@ -25,6 +27,8 @@ var Species = module.exports = function(params) {
 
     // This is a function to decide whether a cell hosts this species or not
     this.mask = SpeciesMask(this.id);
+
+    Catalogue.add('species', this);
 }
 
 Species.prototype = {};
@@ -34,7 +38,7 @@ Species.prototype.initRules = function(rules) {
     this.rules = rules || {};
 
     // The default rules govern how the species spreads based on its own presence
-    this.rules.default = new RuleSet(this.rules.default)   
+    this.rules.default = new RuleSet(this.rules.default)
 
     // Ruts are like conditionals, but semantically different
     this.rules.ruts = this.rules.ruts || [];

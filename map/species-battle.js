@@ -8,9 +8,9 @@ var SpeciesBattle = module.exports = {
         // sorted from low to high
         'blank',
         'grass',
-        'flowers',
         'trees2',
         'trees',
+        'flowers',
         'magic',
         'neutralized'
     ],

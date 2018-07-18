@@ -8,7 +8,7 @@ var Controls = require('./controls');
 var TopDownView = require('./top-down-view');
 var MapRenderer = require('./map-renderer');
 var CharacterRenderer = require('./character-renderer');
-var CellInspectorRenderer = require('./cell-inspector-renderer');
+var InspectorRenderer = require('./cell-inspector-renderer');
 
 var game = window.game;
 var Context = null;
@@ -89,7 +89,7 @@ var init = UI.infoWrap('loading...', function() {
             text: document.getElementById('inspector-text'),
         }
     })
-    game.views.cellInspector.addRenderer(new CellInspectorRenderer());
+    game.views.cellInspector.addRenderer(new InspectorRenderer());
     game.views.cellInspector.hidden(true);
     game.views.cellInspector.init();
 
@@ -104,6 +104,11 @@ var init = UI.infoWrap('loading...', function() {
         game.views.cellInspector.loadCell(game.map.getCell(data.coords));
         var currentlyHidden = game.views.cellInspector.hidden();
         game.views.cellInspector.hidden(!currentlyHidden);
+    })
+
+    game.player.on('inspect-species', 'inspect-species', function(data) {
+        game.views.cellInspector.loadSpecies(data.species_id);
+        game.views.cellInspector.hidden(false);
     })
 
     game.map.startIteration();

@@ -1,0 +1,21 @@
+<h2>{{=it.species.description.plural.capitalize()}}</h2>
+
+<div>{{=it.species.description.singular.capitalize()}} {{=it.species.rules.default.description}}.</div>
+
+<hr>
+
+{{~ it.species.rules.conditional :rule}}
+    <div>
+        It {{=rule.rules.description}} when {{=it.catalogue.species[rule.species_id].description.singular}} is nearby.
+    </div>
+{{~}}
+
+<hr>
+
+{{~ it.species.rules.ruts :rut}}
+    <div>
+        When {{=it.catalogue.ruts[rut.rut_id].description}}, it {{=rut.rules.description}}.
+    </div>
+{{~}}
+
+<div class="back" onclick="game.state.advance({navigate: 'back'})">BACK</div>

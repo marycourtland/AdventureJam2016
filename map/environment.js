@@ -46,6 +46,8 @@ Env.prototype.OOB = function(coords) {
 }
 
 Env.prototype.get = function(coords) {
+    if (!coords) return null;
+    if (!coords.hasOwnProperty('x') || !coords.hasOwnProperty('y')) return null;
     if (this.OOB(coords)) return null;
     return this.cells[coords.x][coords.y];
 }

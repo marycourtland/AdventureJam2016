@@ -9,7 +9,8 @@ var GrowthRules = module.exports = {
             [1, 1, 1],
             [1, 0, 1],
             [1, 1, 1]
-        ]
+        ],
+        description: "spreads irregularily"
     },
 
     // mostly used with ruts?
@@ -23,7 +24,8 @@ var GrowthRules = module.exports = {
             [1, 1, 1],
             [1, 0, 1],
             [1, 1, 1]
-        ]
+        ],
+        description: "spreads rapidly"
     },
     absoluteActivation: {
         id: 'absoluteActivation',
@@ -35,7 +37,8 @@ var GrowthRules = module.exports = {
             [1, 1, 1],
             [1, 0, 1],
             [1, 1, 1]
-        ]
+        ],
+        description: "spreads rapidly"
     },
 
     trees: {
@@ -48,7 +51,8 @@ var GrowthRules = module.exports = {
             [1, 2, 1],
             [2, 0, 2],
             [1, 2, 1]
-        ]
+        ],
+        description: "grows steadily"
     },
 
     // When trees are old enough, they become stable - less likely to grow, slightly likely to die
@@ -62,7 +66,8 @@ var GrowthRules = module.exports = {
             [1, 2, 1],
             [2, 0, 2],
             [1, 2, 1]
-        ]
+        ],
+        description: "stabilizes its growth"
     },
 
     plants: {
@@ -75,7 +80,8 @@ var GrowthRules = module.exports = {
             [1, 2, 1],
             [2, 0, 2],
             [1, 2, 1]
-        ]
+        ],
+        description: "grows steadily"
     },
 
     plantsCatalyzed: {
@@ -88,7 +94,8 @@ var GrowthRules = module.exports = {
             [1, 2, 1],
             [2, 0, 2],
             [1, 2, 1]
-        ]
+        ],
+        description: "grows rapidly"
     },
     plantsDying: {
         id: 'plantsDying',
@@ -100,13 +107,15 @@ var GrowthRules = module.exports = {
             [1, 1, 1],
             [1, 0, 1],
             [1, 1, 1]
-        ]
+        ],
+        description: "dies off"
     },
     completeDeath: {
         id: 'completeDeath',
         stateMap: {
             0: [0, 0, 0, 0, 0, 0, 0, 0, 0],
             1: [0, 0, 0, 0, 0, 0, 0, 0, 0]
-        }
+        },
+        description: "is eradicated"
     }
 }

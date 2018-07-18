@@ -4,9 +4,16 @@
 
 // Also. This should be view independent
 
+// ***** TODO!!!
+// Instead of passing random properties through game.state.advance,
+// there should be more context as to what the player actually did, like
+// {selected_cell_coords: <coords>} instead of {coords: <coords>}
+// (that might not be the best way to do it)
+
+
 var GamePlayModes = module.exports = {};
 var game;
-var currentData = {}; // blah, some scope, so that different modes can communicate w/ each other
+var currentData = {}; // blah, some scope, so that different modes can communicate w/ each other. TODO: improve this!!
 
 GamePlayModes.init = function(gameInstance) {
     game = gameInstance;
@@ -17,15 +24,52 @@ GamePlayModes.init = function(gameInstance) {
     }
 
     this.current = this.modes.idle;
+    this.history = [{mode: this.current, data: {}}];
+    this.history_index = 0;
+
+    this.transitionData = {}; // not the best to keep it here, but needs to be overwritten by back/forward
 }
 
 GamePlayModes.advance = function(transitionData) {
-    var next = this.current.getNext(transitionData);
+    if (Object.keys(transitionData).length == 0) return;
+    this.transitionData = transitionData;
+    var next = this.getNext();
     if (!next) return; // staying in the same state 
 
     this.current.finish();
+    this.historyPush(next);
     this.current = next;
-    this.current.execute(transitionData);
+    this.current.execute(this.transitionData);
+}
+
+
+GamePlayModes.getNext = function() {
+    // Maybe these checks for navigation should happen for each mode, not up front?
+    if (this.transitionData.navigate == 'back') return this.historyBack();
+    if (this.transitionData.navigate == 'forward') return this.historyForward();
+    return this.current.getNext(this.transitionData);
+}
+
+GamePlayModes.historyPush = function(mode) {
+    if (this.history_index > 0) {
+        this.history = this.history.slice(this.history_index);
+    }
+    this.history.splice(0, 0, {mode: mode, data: Utils.shallowClone(this.transitionData)});
+    this.history_index = 0;
+}
+
+GamePlayModes.historyBack = function() {
+    this.history_index += 1;
+    var item = this.history[this.history_index];
+    this.transitionData = item.data;
+    return item.mode;
+}
+
+GamePlayModes.historyForward = function() {
+    this.history_index = Math.max(0, this.history_index - 1);
+    var item = this.history[this.history_index];
+    this.transitionData = item.data;
+    return item.mode;
 }
 
 GamePlayModes.get = function() { return this.current.id; }
@@ -51,8 +95,10 @@ GamePlayModes.modes.idle.finish = function() {};
 GamePlayModes.modes.idle.getNext = function(data) {
     // Clicked an inventory item
     if (!!data.item) return GamePlayModes.modes.itemSelected;
+    if (!!data.inspector) return GamePlayModes.modes.viewingInspector;
 
-    if (!!data.coords) game.player.emit('inspect-cell', {coords: data.coords});
+    // if (!!data.coords) game.player.emit('inspect-cell', {coords: data.coords});
+    // if (!!data.species_id) game.player.emit('inspect-species', {species_id: data.species_id});
 }
 
 // ITEM SELECTED: player is about to use this item.
@@ -87,4 +133,34 @@ GamePlayModes.modes.usingItem.finish = function() {
 }
 GamePlayModes.modes.usingItem.getNext = function(data) {
     return GamePlayModes.modes.idle;
+}
+
+
+// VIEWING INSPECTOR
+GamePlayModes.modes.viewingInspector = {}
+GamePlayModes.modes.viewingInspector.execute = function(data) {
+    if (!!data.coords) {
+        game.player.emit('inspect-cell', {coords: data.coords});
+        currentData = {coords: data.coords};
+    }
+    if (!!data.species_id) {
+        game.player.emit('inspect-species', {species_id: data.species_id});
+        currentData = {species_id: data.species_id};
+    }
+}
+
+GamePlayModes.modes.viewingInspector.finish = function() {
+    // It would also be nice to emit a different event to the player (see getNext)
+    game.player.emit('inspect-cell', {}); // this will toggle the inspector off (ugh)
+}
+GamePlayModes.modes.viewingInspector.getNext = function(data) {
+    // TODO: IMPROVE THIS - it would be nice if the event coming from the UI didn't appear
+    // as if the player intended to open the inspector (when the inspector is already open).
+    if (data.inspector && data.coords) {
+        return GamePlayModes.modes.idle;
+    }
+
+    // TODO: improve this too
+    if (currentData.coords && !data.coords) return this;
+    if (currentData.species_id && !data.species_id) return this;
 }

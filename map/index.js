@@ -1,7 +1,9 @@
 var Settings = window.Settings;
 var Env = require('./environment');
 var Species = require('./species');
-var SpeciesData = require('./data/species') 
+var SpeciesData = require('./data/species');
+var RutData = require('./data/ruts');
+var Catalogue = require('./catalogue');
 
 var Map = module.exports = {};
 
@@ -9,6 +11,11 @@ var Map = module.exports = {};
 Map.species = {};
 SpeciesData.forEach(function(s) {
     Map.species[s.id] = new Species(s);
+})
+
+// inialize ruts, at least in the catalogue
+RutData.forEach((rut) => {
+    Catalogue.add('ruts', rut)
 })
 
 

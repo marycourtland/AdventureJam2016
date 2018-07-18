@@ -17,7 +17,7 @@ Controls.bindEvents = function() {
             y: evt.clientY - offset.y - game.view.bbox.top
         }
         var coords = game.view.getCoordsFromPixels(mousePos);
-        game.state.advance({coords: coords});
+        game.state.advance({inspector: true, coords: coords});
     }
 
     document.body.onclick = function() {
