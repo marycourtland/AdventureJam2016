@@ -6,6 +6,7 @@ var TopDownView  = module.exports = function(params) {
     this.size = params.size;
     this.dims = params.dims || {x:1, y:1}
     this.centerCoords = {x:0, y:0};
+    this.zoom = 1;
     this.worldLayers = Object.keys(this.html).map((key) => this.html[key]).filter((html) => html.dataset.worldRelative == 'true');
     this.refresh();
 }
@@ -34,9 +35,20 @@ TopDownView.prototype.hidden = function(newHiddenState) {
 }
 
 TopDownView.prototype.resizeLayers = function() {
+    var w = this.size.x * this.dims.x + 'px';
+    var h  = this.size.y * this.dims.y + 'px';
+
     this.worldLayers.forEach((html) => {
-        html.style.width = this.size.x * this.dims.x + 'px';
-        html.style.height = this.size.y * this.dims.y + 'px';
+        html.style.width = w;
+        html.style.height = h;
+
+        // The canvas will clear itself when resized, so only do this when necessary
+        if (html.tagName.toLowerCase() == 'canvas'
+            && (w !== html.getAttribute('width') || h !== html.getAttribute('height'))
+        ) {
+            html.setAttribute('width', w);
+            html.setAttribute('height', h);
+        }
     })
 
     // todo: the static layers should resize to this.viewSize
@@ -192,6 +204,7 @@ TopDownView.prototype.isInView = function(coords) {
 }
 
 TopDownView.prototype.zoomOut = function() {
+    this.zoom /= this.zoomFactor;
     this.dims.x /= this.zoomFactor;
     this.dims.y /= this.zoomFactor;
     this.params.window *= this.zoomFactor;
@@ -200,6 +213,7 @@ TopDownView.prototype.zoomOut = function() {
 }
 
 TopDownView.prototype.zoomIn = function() {
+    this.zoom *= this.zoomFactor;
     this.dims.x *= this.zoomFactor;
     this.dims.y *= this.zoomFactor;
     this.params.window /= this.zoomFactor;

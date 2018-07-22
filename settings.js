@@ -58,3 +58,6 @@ Settings.itemUsageRadii = {
     detector: 1.5
 }
 
+Settings.margin = 6;
+Settings.visibilityPlayer = 6;
+Settings.visibilityCamera = 3;

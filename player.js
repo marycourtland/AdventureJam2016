@@ -7,6 +7,7 @@ var Player = module.exports = function(map) {
     var player = new Character({
         map: map,
         id: 'player',
+        visibility: Settings.visibilityPlayer,
 
         speciesResponses: {
             'magic': function() {

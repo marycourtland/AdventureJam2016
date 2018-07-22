@@ -94,8 +94,10 @@ GamePlayModes.modes.idle.execute = function() {
 GamePlayModes.modes.idle.finish = function() {};
 GamePlayModes.modes.idle.getNext = function(data) {
     // Clicked an inventory item
-    if (!!data.item) return GamePlayModes.modes.itemSelected;
-    if (!!data.inspector) return GamePlayModes.modes.viewingInspector;
+    if (!!data.item)
+        return GamePlayModes.modes.itemSelected;
+    if (!!data.inspector && !!data.coords && game.player.isCoordsVisible(data.coords))
+        return GamePlayModes.modes.viewingInspector;
 
     // if (!!data.coords) game.player.emit('inspect-cell', {coords: data.coords});
     // if (!!data.species_id) game.player.emit('inspect-species', {species_id: data.species_id});

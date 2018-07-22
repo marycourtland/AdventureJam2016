@@ -4,12 +4,16 @@ var Inventory = require('./inventory');
 
 var CHAR_SPECIES_LISTENER_PREFIX = 'character-species-listener-';
 
+var VISIBILITY_ALL = -1;
+
 var Character = module.exports = function(params) {
     params.id = params.id || '';
 
     this.map = params.map;
     this.id = params.id;
     this.coords = {x:0, y:0};
+
+    this.visibility = params.hasOwnProperty('visibility') ? params.visibility : VISIBILITY_ALL;
 
     this.inventory = new Inventory(this);
     this.health = Settings.maxHealth;
@@ -112,6 +116,33 @@ Character.prototype.getSpeed = function() {
 // not sure if this is needed anymore
 Character.prototype.refresh = function() {
     this.moveTo(this.coords);
+}
+
+// ============================== VISIBILITY
+
+// Returns a bounding box; {x1, y1, x2, y2}
+Character.prototype.getVisibility = function() {
+    if (this.visibility == VISIBILITY_ALL) {
+        return {x1: 0, y1: 0, x2: this.map.size.x, y2: this.map.size.y}
+    }
+    else {
+        return {
+            x1: this.coords.x - this.visibility,
+            x2: this.coords.x + this.visibility,
+            y1: this.coords.y - this.visibility,
+            y2: this.coords.y + this.visibility,
+        }
+    }
+}
+
+Character.prototype.isCoordsVisible = function(coords) {
+    var visibilityBbox = this.getVisibility();
+    return (
+        coords.x >= visibilityBbox.x1 &&
+        coords.x <= visibilityBbox.x2 &&
+        coords.y >= visibilityBbox.y1 &&
+        coords.y <= visibilityBbox.y2
+    )
 }
 
 // ============================== HEALTH ETC
