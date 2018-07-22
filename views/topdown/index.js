@@ -8,7 +8,7 @@ var Controls = require('./controls');
 var TopDownView = require('./top-down-view');
 var MapRenderer = require('./map-renderer');
 var CharacterRenderer = require('./character-renderer');
-var InspectorRenderer = require('./cell-inspector-renderer');
+var InspectorRenderer = require('./inspector-renderer');
 
 var game = window.game;
 var Context = null;
