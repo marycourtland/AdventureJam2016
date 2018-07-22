@@ -121,7 +121,7 @@ a {
 /* Inventory: 10x2 array of slots */
 
 #game-inventory {
-  width: 520px; /* 10*(50+1+1) */
+  width: 533px;
   margin: 1em auto;
   font-size: 0;
   border-width: 4px 12px;
@@ -227,6 +227,7 @@ a {
     position: absolute;
     bottom: 1rem;
     right: 1rem;
+    border-width: 4px 8px;
 }
 
 #inspector-wrapper {

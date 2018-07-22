@@ -171,9 +171,12 @@ Character.prototype.gets = function(item) {
 }
 
 Character.prototype.use = function(item, coords) {
-    if (!this.inventory.has(item.id)) return;
-    if (Utils.distance(coords, this.coords) > item.usageRadius) return;
+    if (!this.inventory.has(item.id) || Utils.distance(coords, this.coords) > item.usageRadius) {
+        game.state.advance({success: false, item: item.id});
+        return;
+    }
 
     this.inventory.removeItem(item);
     item.useAt(coords);
+    game.state.advance({success: true, item: item.id});
 }

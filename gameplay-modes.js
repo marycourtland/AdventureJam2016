@@ -34,7 +34,7 @@ GamePlayModes.advance = function(transitionData) {
     if (Object.keys(transitionData).length == 0) return;
     this.transitionData = transitionData;
     var next = this.getNext();
-    if (!next) return; // staying in the same state 
+    if (!next) return; // staying in the same state
 
     this.current.finish();
     this.historyPush(next);
@@ -116,25 +116,33 @@ GamePlayModes.modes.itemSelected.finish = function() {
 }
 GamePlayModes.modes.itemSelected.getNext = function(data) {
     // If you click a cell, use the item on that cell
-    if (!!data.coords) return GamePlayModes.modes.usingItem; 
+    if (!!data.coords && data.visible) return GamePlayModes.modes.usingItem; 
+
+    if (!!data.item) return GamePlayModes.modes.itemSelected;
 
     // If you click somewhere else, then cancel this use
     return GamePlayModes.modes.idle;
 }
 
 // USING ITEM: you're using an item.
-// It should automatically advance to the idle mode.
 GamePlayModes.modes.usingItem = {};
 GamePlayModes.modes.usingItem.execute = function(data) {
     game.player.use(currentData.item, data.coords);
-
-    if (Settings.advanceAllCells) GamePlayModes.advance();
 }
 GamePlayModes.modes.usingItem.finish = function() {
-    delete currentData.item;
+    if (currentData.success) {
+        currentData.item.deselect();
+        delete currentData.item;
+    }
 }
 GamePlayModes.modes.usingItem.getNext = function(data) {
-    return GamePlayModes.modes.idle;
+    currentData.success = data.success;
+    if (!data.success) {
+        return GamePlayModes.modes.itemSelected;
+    }
+    else {
+        return GamePlayModes.modes.idle;
+    }
 }
 
 

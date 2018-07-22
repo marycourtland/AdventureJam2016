@@ -11,10 +11,6 @@ function getUrlParam(key) {
 Settings.view = getUrlParam('view') || 'phaserIso';
 Settings.mode = getUrlParam('mode') || 'default';
 
-
-// === Feature flags
-Settings.advanceAllCells = false; // advance all the cells at the same time, periodically
-
 // === Game settings
 Settings.mapSize = {x: 60, y:60}; // measured in game cells
 Settings.gameAnchor = [0.5, -0.5];
