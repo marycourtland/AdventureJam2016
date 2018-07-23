@@ -7,6 +7,7 @@ var Utils = window.Utils;
 var Inventory = require('./inventory');
 
 var CHAR_SPECIES_LISTENER_PREFIX = 'character-species-listener-';
+var VISIBILITY_ALL = -1;
 
 var Character = module.exports = function (params) {
   params.id = params.id || '';
@@ -16,6 +17,7 @@ var Character = module.exports = function (params) {
     x: 0,
     y: 0
   };
+  this.visibility = params.hasOwnProperty('visibility') ? params.visibility : VISIBILITY_ALL;
   this.inventory = new Inventory(this);
   this.health = Settings.maxHealth;
   Events.init(this); // Responses to species. These specify what happens when the char either walks onto a new species, or the current cell changes.
@@ -105,6 +107,31 @@ Character.prototype.getSpeed = function () {
 
 Character.prototype.refresh = function () {
   this.moveTo(this.coords);
+}; // ============================== VISIBILITY
+// Returns a bounding box; {x1, y1, x2, y2}
+
+
+Character.prototype.getVisibility = function () {
+  if (this.visibility == VISIBILITY_ALL) {
+    return {
+      x1: 0,
+      y1: 0,
+      x2: this.map.size.x,
+      y2: this.map.size.y
+    };
+  } else {
+    return {
+      x1: this.coords.x - this.visibility,
+      x2: this.coords.x + this.visibility,
+      y1: this.coords.y - this.visibility,
+      y2: this.coords.y + this.visibility
+    };
+  }
+};
+
+Character.prototype.isCoordsVisible = function (coords) {
+  var visibilityBbox = this.getVisibility();
+  return coords.x >= visibilityBbox.x1 && coords.x <= visibilityBbox.x2 && coords.y >= visibilityBbox.y1 && coords.y <= visibilityBbox.y2;
 }; // ============================== HEALTH ETC
 
 
@@ -128,10 +155,20 @@ Character.prototype.gets = function (item) {
 };
 
 Character.prototype.use = function (item, coords) {
-  if (!this.inventory.has(item.id)) return;
-  if (Utils.distance(coords, this.coords) > item.usageRadius) return;
+  if (!this.inventory.has(item.id) || Utils.distance(coords, this.coords) > item.usageRadius) {
+    game.state.advance({
+      success: false,
+      item: item.id
+    });
+    return;
+  }
+
   this.inventory.removeItem(item);
   item.useAt(coords);
+  game.state.advance({
+    success: true,
+    item: item.id
+  });
 };
 
 },{"./inventory":2}],2:[function(require,module,exports){
@@ -271,7 +308,7 @@ window.onload = function () {
   Views[Settings.view].load(Context);
 };
 
-},{"./gameplay-modes":5,"./items":10,"./map":20,"./player":28,"./views":29,"./wizard":52}],5:[function(require,module,exports){
+},{"./gameplay-modes":5,"./items":10,"./map":20,"./player":28,"./views":29,"./wizard":53}],5:[function(require,module,exports){
 "use strict";
 
 // Game modes are called 'modes' to avoid conflict with phaser game states.
@@ -307,7 +344,7 @@ GamePlayModes.advance = function (transitionData) {
   if (Object.keys(transitionData).length == 0) return;
   this.transitionData = transitionData;
   var next = this.getNext();
-  if (!next) return; // staying in the same state 
+  if (!next) return; // staying in the same state
 
   this.current.finish();
   this.historyPush(next);
@@ -376,7 +413,7 @@ GamePlayModes.modes.idle.finish = function () {};
 GamePlayModes.modes.idle.getNext = function (data) {
   // Clicked an inventory item
   if (!!data.item) return GamePlayModes.modes.itemSelected;
-  if (!!data.inspector) return GamePlayModes.modes.viewingInspector; // if (!!data.coords) game.player.emit('inspect-cell', {coords: data.coords});
+  if (!!data.inspector && !!data.coords && game.player.isCoordsVisible(data.coords)) return GamePlayModes.modes.viewingInspector; // if (!!data.coords) game.player.emit('inspect-cell', {coords: data.coords});
   // if (!!data.species_id) game.player.emit('inspect-species', {species_id: data.species_id});
 }; // ITEM SELECTED: player is about to use this item.
 
@@ -395,26 +432,34 @@ GamePlayModes.modes.itemSelected.finish = function () {
 
 GamePlayModes.modes.itemSelected.getNext = function (data) {
   // If you click a cell, use the item on that cell
-  if (!!data.coords) return GamePlayModes.modes.usingItem; // If you click somewhere else, then cancel this use
+  if (!!data.coords && data.visible) return GamePlayModes.modes.usingItem;
+  if (!!data.item) return GamePlayModes.modes.itemSelected; // If you click somewhere else, then cancel this use
 
   return GamePlayModes.modes.idle;
 }; // USING ITEM: you're using an item.
-// It should automatically advance to the idle mode.
 
 
 GamePlayModes.modes.usingItem = {};
 
 GamePlayModes.modes.usingItem.execute = function (data) {
   game.player.use(currentData.item, data.coords);
-  if (Settings.advanceAllCells) GamePlayModes.advance();
 };
 
 GamePlayModes.modes.usingItem.finish = function () {
-  delete currentData.item;
+  if (currentData.success) {
+    currentData.item.deselect();
+    delete currentData.item;
+  }
 };
 
 GamePlayModes.modes.usingItem.getNext = function (data) {
-  return GamePlayModes.modes.idle;
+  currentData.success = data.success;
+
+  if (!data.success) {
+    return GamePlayModes.modes.itemSelected;
+  } else {
+    return GamePlayModes.modes.idle;
+  }
 }; // VIEWING INSPECTOR
 
 
@@ -955,8 +1000,22 @@ Cell.prototype.activateRut = function (rut_id) {
 }; // ITEMS =======
 
 
-Cell.prototype.addItem = function (coords, item) {
+Cell.prototype.addItem = function (item) {
   this.items.push(item);
+  this.emit('add-item', {
+    item: item
+  });
+};
+
+Cell.prototype.removeItem = function (item) {
+  var index = this.items.indexOf(item);
+
+  if (index > -1) {
+    this.items.splice(index, 1);
+    this.emit('remove-item', {
+      item: item
+    });
+  }
 };
 
 },{"./species-battle":22}],16:[function(require,module,exports){
@@ -1432,6 +1491,7 @@ Map.init = function (params) {
 
   };
   this.env = new Env(this.size, this.species.blank);
+  this.items = {}; // indexed by item type
 };
 
 Map.startIteration = function () {
@@ -1836,6 +1896,20 @@ Map.log = function () {
     }).join(' ');
   }).join('\n');
   console.log(ascii);
+}; // items
+
+
+Map.placeItem = function (coords, item) {
+  if (!this.items[item.type_id]) this.items[item.type_id] = {};
+  this.items[item.type_id][item.id] = coords;
+  var cell = this.env.get(coords);
+  cell.addItem(item);
+};
+
+Map.removeItem = function (coords, item) {
+  if (this.items[item.type_id]) delete this.items[item.type_id][item.id];
+  var cell = this.env.get(coords);
+  cell.removeItem(item);
 };
 
 },{"./catalogue":14,"./data/ruts":17,"./data/species":18,"./environment":19,"./species":24}],21:[function(require,module,exports){
@@ -2460,6 +2534,7 @@ var Player = module.exports = function (map) {
   var player = new Character({
     map: map,
     id: 'player',
+    visibility: Settings.visibilityPlayer,
     speciesResponses: {
       'magic': function magic() {
         player.ouch();
@@ -3109,76 +3184,6 @@ BaseRenderer.prototype.onRecenter = function () {};
 },{}],42:[function(require,module,exports){
 "use strict";
 
-var BaseRenderer = require('./base-renderer');
-
-var Cell = require('./components/cell');
-
-var doT = require('dot');
-
-
-
-var Catalogue = require('../../map/catalogue');
-
-var speciesTemplate = doT.compile("<h2>{{=it.species.description.plural.capitalize()}}</h2>\n\n<div>{{=it.species.description.singular.capitalize()}} {{=it.species.rules.default.description}}.</div>\n\n<hr>\n\n{{~ it.species.rules.conditional :rule}}\n    <div>\n        It {{=rule.rules.description}} when {{=it.catalogue.species[rule.species_id].description.singular}} is nearby.\n    </div>\n{{~}}\n\n<hr>\n\n{{~ it.species.rules.ruts :rut}}\n    <div>\n        When {{=it.catalogue.ruts[rut.rut_id].description}}, it {{=rut.rules.description}}.\n    </div>\n{{~}}\n\n<div class=\"back\" onclick=\"game.state.advance({navigate: 'back'})\">BACK</div>");
-var cellTemplate = doT.compile("<h2>Coords: ({{=it.cell.coords.x}}, {{=it.cell.coords.y}})</h2>\n\n{{~ it.register :reg}}\n    <div class=\"species-row\" onclick=\"game.state.advance({inspector: true, species_id: '{{=reg.species.id}}'});\">\n        <!-- <p></p> -->\n        <h4>{{=it.catalogue.species[reg.species.id].description.plural.toUpperCase() + (reg.is_dominant ? \" (Dominant)\" : \"\")}}</h4>\n        <p>strength: {{=reg.strength}}</p>\n        <p>age: {{=reg.age}}</p>\n    </div>\n{{~}}");
-
-var InspectorRenderer = module.exports = function () {};
-
-InspectorRenderer.prototype = new BaseRenderer();
-
-InspectorRenderer.prototype.onInit = function (params) {
-  var _this = this;
-
-  this.html = params.html; // ugh, bad code
-
-  this.view.loadCell = function (cell) {
-    if (!cell) return;
-
-    _this.view.recenter(cell.coords);
-
-    var cellHtml = new Cell(cell, _this, {
-      noPositioning: true
-    });
-
-    if (_this.html.cell.firstChild) {
-      _this.html.cell.removeChild(_this.html.cell.firstChild);
-    }
-
-    _this.html.cell.appendChild(cellHtml.element);
-
-    _this.html.text.innerHTML = cellTemplate({
-      cell: cell,
-      register: cell.getRegister(),
-      catalogue: Catalogue
-    });
-  };
-
-  this.view.loadSpecies = function (species_id) {
-    // TODO: create fake cell with the species
-    // var cellHtml = new Cell(cell, this, {noPositioning: true});
-    // if (this.html.cell.firstChild) {
-    //     this.html.cell.removeChild(this.html.cell.firstChild);
-    // }
-    // this.html.cell.appendChild(cellHtml.element);
-    _this.html.text.innerHTML = speciesTemplate({
-      species: catalogue.species[species_id],
-      catalogue: Catalogue
-    });
-  }; // more bad code
-
-
-  this.view.getPixelsFromCoords = function () {
-    return XY(0, 0);
-  };
-};
-
-InspectorRenderer.prototype.refresh = function () {};
-
-InspectorRenderer.prototype.render = function () {};
-
-},{"../../map/catalogue":14,"./base-renderer":41,"./components/cell":44,"dot":27}],43:[function(require,module,exports){
-"use strict";
-
 var Sprite = require('./sprite');
 
 var SpriteData = require('./data/sprites');
@@ -3222,7 +3227,7 @@ CharacterRenderer.prototype.render = function () {
   this.moveTo(this.character.coords);
 };
 
-},{"./base-renderer":41,"./data/sprites":46,"./sprite":49}],44:[function(require,module,exports){
+},{"./base-renderer":41,"./data/sprites":45,"./sprite":50}],43:[function(require,module,exports){
 "use strict";
 
 var AssetData = require('../asset-data');
@@ -3270,6 +3275,19 @@ Cell.prototype.refresh = function () {
 
     this.element.innerHTML = rut_string;
     this.element.style.color = 'red';
+  } // items
+
+
+  if (this.object.items.length > 0) {
+    // TODO: rendering multiple items?
+    var url = "./images/items/" + this.object.items[0].type_id + '.png';
+    var img = document.createElement('img');
+    img.setAttribute('src', url);
+    this.element.appendChild(img);
+  } else if (this.element.children.length > 0) {
+    for (var i = 0; i < this.element.children.length; i++) {
+      this.element.children[i].remove();
+    }
   } // positioning
 
 
@@ -3298,7 +3316,7 @@ Cell.idToCoords = function (id) {
   };
 };
 
-},{"../asset-data":40}],45:[function(require,module,exports){
+},{"../asset-data":40}],44:[function(require,module,exports){
 "use strict";
 
 var Controls = module.exports = {};
@@ -3321,7 +3339,8 @@ Controls.bindEvents = function () {
     var coords = game.view.getCoordsFromPixels(mousePos);
     game.state.advance({
       inspector: true,
-      coords: coords
+      coords: coords,
+      visible: game.player.isCoordsVisible(coords)
     });
   };
 
@@ -3380,7 +3399,7 @@ Controls.handlers.left = function () {
   game.refreshView();
 };
 
-},{}],46:[function(require,module,exports){
+},{}],45:[function(require,module,exports){
 "use strict";
 
 var SpriteData = module.exports = {};
@@ -3445,7 +3464,82 @@ SpriteData.wizard = {
   }
 };
 
-},{}],47:[function(require,module,exports){
+},{}],46:[function(require,module,exports){
+"use strict";
+
+var BaseRenderer = require('./base-renderer');
+
+var FogRenderer = module.exports = function (game) {
+  this.game = game;
+};
+
+FogRenderer.prototype = new BaseRenderer();
+
+FogRenderer.prototype.onInit = function (params) {
+  this.html = params.html.fog;
+  this.ctx = this.html.getContext('2d');
+  this.render();
+  this.bindEvents();
+};
+
+FogRenderer.prototype.bindEvents = function () {
+  var _this = this;
+
+  this.game.player.on('refresh', 'visibilityUpdate', function () {
+    _this.render();
+  });
+};
+
+FogRenderer.prototype.refresh = function () {
+  this.render(); // ???
+};
+
+FogRenderer.prototype.render = function () {
+  var _this2 = this;
+
+  var size = XY(game.size.x * game.cellDims.x, game.size.y * game.cellDims.y);
+  this.ctx.clearRect(0, 0, size.x, size.y);
+  this.ctx.globalCompositeOperation = 'source-over';
+  this.ctx.filter = 'none';
+  this.ctx.fillStyle = "#0C1416";
+  this.ctx.fillRect(0, 0, size.x, size.y);
+  this.getVisibilityBoxes().forEach(function (visibilityBbox) {
+    // If all cells are visible, don't bother with the extra operations.
+    // TODO: prevent all visibility bbox updates if any of them cover the whole map
+    // (and prevent the full fog fill above)
+    if (visibilityBbox.x1 === 0 && visibilityBbox.y1 === 0 && visibilityBbox.x2 === game.size.x && visibilityBbox.y2 === game.size.y) {
+      return;
+    }
+
+    _this2.ctx.globalCompositeOperation = 'destination-out';
+    _this2.ctx.filter = 'blur(' + 10 * game.view.zoom + 'px)'; // note: this isn't compatible w/ all browsers
+
+    _this2.ctx.fillRect(visibilityBbox.x1 * game.cellDims.x, visibilityBbox.y1 * game.cellDims.y, (visibilityBbox.x2 - visibilityBbox.x1) * game.cellDims.x, (visibilityBbox.y2 - visibilityBbox.y1) * game.cellDims.y);
+  });
+};
+
+FogRenderer.prototype.getVisibilityBoxes = function () {
+  var visBoxes = []; // Player visibility
+
+  visBoxes.push(game.player.getVisibility()); // Areas of visibility around cameras
+  // TODO: this code could live on the camera item. (But, currently no access to the item from here)
+
+  if (game.map.items.camera) {
+    for (var item_id in this.game.map.items.camera) {
+      var coords = this.game.map.items.camera[item_id];
+      visBoxes.push({
+        x1: coords.x - Settings.visibilityCamera,
+        y1: coords.y - Settings.visibilityCamera,
+        x2: coords.x + Settings.visibilityCamera + 1,
+        y2: coords.y + Settings.visibilityCamera + 1
+      });
+    }
+  }
+
+  return visBoxes;
+};
+
+},{"./base-renderer":41}],47:[function(require,module,exports){
 "use strict";
 
 // OLD PROTOTYPE CODE
@@ -3460,9 +3554,11 @@ var TopDownView = require('./top-down-view');
 
 var MapRenderer = require('./map-renderer');
 
+var FogRenderer = require('./fog-renderer');
+
 var CharacterRenderer = require('./character-renderer');
 
-var InspectorRenderer = require('./cell-inspector-renderer');
+var InspectorRenderer = require('./inspector-renderer');
 
 var game = window.game;
 var Context = null;
@@ -3511,8 +3607,10 @@ var init = UI.infoWrap('loading...', function () {
       container: document.getElementById('board-layers'),
       board: document.getElementById('game'),
       characters: document.getElementById('game-characters'),
+      items: document.getElementById('game-items'),
       inventory: document.getElementById('game-inventory'),
-      mouseOverlay: document.getElementById('mouse-overlay')
+      mouseOverlay: document.getElementById('mouse-overlay'),
+      fog: document.getElementById('fog')
     }
   };
   game.views = {}; // Main map view
@@ -3520,6 +3618,7 @@ var init = UI.infoWrap('loading...', function () {
   game.view = new TopDownView(game.viewParams);
   game.views.main = game.view;
   game.view.addRenderer(new MapRenderer(game.map));
+  game.view.addRenderer(new FogRenderer(game));
   game.view.addRenderer(new CharacterRenderer('wizard', game.wizard));
   game.view.addRenderer(new CharacterRenderer('player', game.player));
   game.view.init();
@@ -3562,7 +3661,7 @@ function configGame(game) {
   };
 
   game.refreshView = function () {
-    var margin = 3;
+    var margin = Settings.margin;
     var d = game.view.getDistanceFromWindowEdge(game.player.coords);
 
     if (d.north < margin || d.south < margin || d.west < margin || d.east < margin) {
@@ -3589,7 +3688,77 @@ function configGame(game) {
   };
 }
 
-},{"./cell-inspector-renderer":42,"./character-renderer":43,"./controls":45,"./map-renderer":48,"./top-down-view":50,"./ui":51}],48:[function(require,module,exports){
+},{"./character-renderer":42,"./controls":44,"./fog-renderer":46,"./inspector-renderer":48,"./map-renderer":49,"./top-down-view":51,"./ui":52}],48:[function(require,module,exports){
+"use strict";
+
+var BaseRenderer = require('./base-renderer');
+
+var Cell = require('./components/cell');
+
+var doT = require('dot');
+
+
+
+var Catalogue = require('../../map/catalogue');
+
+var speciesTemplate = doT.compile("<h2>{{=it.species.description.plural.capitalize()}}</h2>\n\n<div>{{=it.species.description.singular.capitalize()}} {{=it.species.rules.default.description}}.</div>\n\n<hr>\n\n{{~ it.species.rules.conditional :rule}}\n    <div>\n        It {{=rule.rules.description}} when {{=it.catalogue.species[rule.species_id].description.singular}} is nearby.\n    </div>\n{{~}}\n\n<hr>\n\n{{~ it.species.rules.ruts :rut}}\n    <div>\n        When {{=it.catalogue.ruts[rut.rut_id].description}}, it {{=rut.rules.description}}.\n    </div>\n{{~}}\n\n<div class=\"back\" onclick=\"game.state.advance({navigate: 'back'})\">BACK</div>");
+var cellTemplate = doT.compile("<h2>Coordinates: ({{=it.cell.coords.x}}, {{=it.cell.coords.y}})</h2>\n\n{{~ it.register :reg}}\n    <div class=\"species-row\" onclick=\"game.state.advance({inspector: true, species_id: '{{=reg.species.id}}'});\">\n        <!-- <p></p> -->\n        <h4>{{=it.catalogue.species[reg.species.id].description.plural.toUpperCase() + (reg.is_dominant ? \" (Dominant)\" : \"\")}}</h4>\n        <p>strength: {{=reg.strength}}</p>\n        <p>age: {{=reg.age}}</p>\n    </div>\n{{~}}");
+
+var InspectorRenderer = module.exports = function () {};
+
+InspectorRenderer.prototype = new BaseRenderer();
+
+InspectorRenderer.prototype.onInit = function (params) {
+  var _this = this;
+
+  this.html = params.html; // ugh, bad code
+
+  this.view.loadCell = function (cell) {
+    if (!cell) return;
+
+    _this.view.recenter(cell.coords);
+
+    var cellHtml = new Cell(cell, _this, {
+      noPositioning: true
+    });
+
+    if (_this.html.cell.firstChild) {
+      _this.html.cell.removeChild(_this.html.cell.firstChild);
+    }
+
+    _this.html.cell.appendChild(cellHtml.element);
+
+    _this.html.text.innerHTML = cellTemplate({
+      cell: cell,
+      register: cell.getRegister(),
+      catalogue: Catalogue
+    });
+  };
+
+  this.view.loadSpecies = function (species_id) {
+    // TODO: create fake cell with the species
+    // var cellHtml = new Cell(cell, this, {noPositioning: true});
+    // if (this.html.cell.firstChild) {
+    //     this.html.cell.removeChild(this.html.cell.firstChild);
+    // }
+    // this.html.cell.appendChild(cellHtml.element);
+    _this.html.text.innerHTML = speciesTemplate({
+      species: catalogue.species[species_id],
+      catalogue: Catalogue
+    });
+  }; // more bad code
+
+
+  this.view.getPixelsFromCoords = function () {
+    return XY(0, 0);
+  };
+};
+
+InspectorRenderer.prototype.refresh = function () {};
+
+InspectorRenderer.prototype.render = function () {};
+
+},{"../../map/catalogue":14,"./base-renderer":41,"./components/cell":43,"dot":27}],49:[function(require,module,exports){
 "use strict";
 
 var AssetData = require('./asset-data');
@@ -3612,7 +3781,10 @@ MapRenderer.prototype.onInit = function (params) {
 
 MapRenderer.prototype.bindCellEvents = function (cellObject) {
   var self = this;
-  cellObject.on('change', 'refresh', function (data) {
+  cellObject.on('change', 'cell-change', function (data) {
+    self.refreshCell(cellObject.coords);
+  });
+  cellObject.on('add-item', 'cell-add-item', function (data) {
     self.refreshCell(cellObject.coords);
   });
 };
@@ -3669,7 +3841,7 @@ MapRenderer.prototype.isInWindow = function (coords) {
   return distance < this.window;
 };
 
-},{"./asset-data":40,"./base-renderer":41,"./components/cell":44}],49:[function(require,module,exports){
+},{"./asset-data":40,"./base-renderer":41,"./components/cell":43}],50:[function(require,module,exports){
 "use strict";
 
 // warning, messy code
@@ -3799,7 +3971,7 @@ Sprite.prototype.moveTo = function (position) {
   return this;
 };
 
-},{}],50:[function(require,module,exports){
+},{}],51:[function(require,module,exports){
 "use strict";
 
 var TopDownView = module.exports = function (params) {
@@ -3818,6 +3990,7 @@ var TopDownView = module.exports = function (params) {
     x: 0,
     y: 0
   };
+  this.zoom = 1;
   this.worldLayers = Object.keys(this.html).map(function (key) {
     return _this.html[key];
   }).filter(function (html) {
@@ -3852,11 +4025,16 @@ TopDownView.prototype.hidden = function (newHiddenState) {
 };
 
 TopDownView.prototype.resizeLayers = function () {
-  var _this3 = this;
-
+  var w = this.size.x * this.dims.x + 'px';
+  var h = this.size.y * this.dims.y + 'px';
   this.worldLayers.forEach(function (html) {
-    html.style.width = _this3.size.x * _this3.dims.x + 'px';
-    html.style.height = _this3.size.y * _this3.dims.y + 'px';
+    html.style.width = w;
+    html.style.height = h; // The canvas will clear itself when resized, so only do this when necessary
+
+    if (html.tagName.toLowerCase() == 'canvas' && (w !== html.getAttribute('width') || h !== html.getAttribute('height'))) {
+      html.setAttribute('width', w);
+      html.setAttribute('height', h);
+    }
   }); // todo: the static layers should resize to this.viewSize
 };
 
@@ -3944,14 +4122,14 @@ TopDownView.prototype.positionHtml = function (html, coords, options) {
 };
 
 TopDownView.prototype.recenter = function (coords) {
-  var _this4 = this;
+  var _this3 = this;
 
   var self = this;
   this.centerCoords.x = coords.x;
   this.centerCoords.y = coords.y;
   this.refresh();
   this.worldLayers.forEach(function (html) {
-    _this4.positionHtml(html);
+    _this3.positionHtml(html);
   });
   this.renderers.forEach(function (renderer) {
     renderer.onRecenter(coords);
@@ -4003,6 +4181,7 @@ TopDownView.prototype.isInView = function (coords) {
 };
 
 TopDownView.prototype.zoomOut = function () {
+  this.zoom /= this.zoomFactor;
   this.dims.x /= this.zoomFactor;
   this.dims.y /= this.zoomFactor;
   this.params.window *= this.zoomFactor;
@@ -4011,6 +4190,7 @@ TopDownView.prototype.zoomOut = function () {
 };
 
 TopDownView.prototype.zoomIn = function () {
+  this.zoom *= this.zoomFactor;
   this.dims.x *= this.zoomFactor;
   this.dims.y *= this.zoomFactor;
   this.params.window /= this.zoomFactor;
@@ -4039,20 +4219,20 @@ TopDownView.prototype.getDistanceFromWindowEdge = function (coords) {
 var resizeTimeout;
 
 TopDownView.prototype.onScreenResize = function () {
-  var _this5 = this;
+  var _this4 = this;
 
   if (!resizeTimeout) {
     resizeTimeout = setTimeout(function () {
       resizeTimeout = null;
 
-      _this5.refresh();
+      _this4.refresh();
 
-      _this5.recenter(_this5.centerCoords);
+      _this4.recenter(_this4.centerCoords);
     }, 60);
   }
 };
 
-},{}],51:[function(require,module,exports){
+},{}],52:[function(require,module,exports){
 "use strict";
 
 // UI/HUD
@@ -4080,7 +4260,8 @@ UI.infoWrap = function (text, fn) {
       UI.info('');
     }, 0);
   };
-};
+}; // TODO: should these live elsewhere?
+
 
 UI.zoomOut = UI.infoWrap('zooming...', function () {
   game.view.zoomOut();
@@ -4088,8 +4269,16 @@ UI.zoomOut = UI.infoWrap('zooming...', function () {
 UI.zoomIn = UI.infoWrap('zooming...', function () {
   game.view.zoomIn();
 });
+UI.fogOff = UI.infoWrap('unfogging...', function () {
+  game.player.visibility = -1;
+  game.view.rerender();
+});
+UI.fogOn = UI.infoWrap('fogging...', function () {
+  game.player.visibility = Settings.visibilityPlayer;
+  game.view.rerender();
+});
 
-},{}],52:[function(require,module,exports){
+},{}],53:[function(require,module,exports){
 "use strict";
 
 var Utils = window.Utils;

@@ -30,6 +30,17 @@ UI.infoWrap = function(text, fn) {
     }
 }
 
+// TODO: should these live elsewhere?
+
 UI.zoomOut = UI.infoWrap('zooming...', function() { game.view.zoomOut(); })
 UI.zoomIn = UI.infoWrap('zooming...', function() { game.view.zoomIn(); })
 
+UI.fogOff = UI.infoWrap('unfogging...', () => {
+    game.player.visibility = -1;
+    game.view.rerender();
+})
+
+UI.fogOn = UI.infoWrap('fogging...', () => {
+    game.player.visibility = Settings.visibilityPlayer;
+    game.view.rerender();
+})

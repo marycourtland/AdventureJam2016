@@ -23,6 +23,7 @@ Map.init = function(params) {
     this.size = params.size;
     this.center = {x: Math.floor(this.size.x/2), y: Math.floor(this.size.y/2)} // use Map.setCenter to change this
     this.env = new Env(this.size, this.species.blank);
+    this.items = {}; // indexed by item type
 }
 
 Map.startIteration = function() {
@@ -276,4 +277,21 @@ Map.log = function() {
         }).join(' ');
     }).join('\n');
     console.log(ascii);
+}
+
+// items
+
+Map.placeItem = function(coords, item) {
+    if (!this.items[item.type_id]) this.items[item.type_id] = {};
+    this.items[item.type_id][item.id] = coords;
+
+    var cell = this.env.get(coords);
+    cell.addItem(item);
+}
+
+Map.removeItem = function(coords, item) {
+    if (this.items[item.type_id]) delete this.items[item.type_id][item.id];
+
+    var cell = this.env.get(coords);
+    cell.removeItem(item);
 }

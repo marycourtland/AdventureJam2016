@@ -4,12 +4,16 @@ var Inventory = require('./inventory');
 
 var CHAR_SPECIES_LISTENER_PREFIX = 'character-species-listener-';
 
+var VISIBILITY_ALL = -1;
+
 var Character = module.exports = function(params) {
     params.id = params.id || '';
 
     this.map = params.map;
     this.id = params.id;
     this.coords = {x:0, y:0};
+
+    this.visibility = params.hasOwnProperty('visibility') ? params.visibility : VISIBILITY_ALL;
 
     this.inventory = new Inventory(this);
     this.health = Settings.maxHealth;
@@ -114,6 +118,33 @@ Character.prototype.refresh = function() {
     this.moveTo(this.coords);
 }
 
+// ============================== VISIBILITY
+
+// Returns a bounding box; {x1, y1, x2, y2}
+Character.prototype.getVisibility = function() {
+    if (this.visibility == VISIBILITY_ALL) {
+        return {x1: 0, y1: 0, x2: this.map.size.x, y2: this.map.size.y}
+    }
+    else {
+        return {
+            x1: this.coords.x - this.visibility,
+            x2: this.coords.x + this.visibility,
+            y1: this.coords.y - this.visibility,
+            y2: this.coords.y + this.visibility,
+        }
+    }
+}
+
+Character.prototype.isCoordsVisible = function(coords) {
+    var visibilityBbox = this.getVisibility();
+    return (
+        coords.x >= visibilityBbox.x1 &&
+        coords.x <= visibilityBbox.x2 &&
+        coords.y >= visibilityBbox.y1 &&
+        coords.y <= visibilityBbox.y2
+    )
+}
+
 // ============================== HEALTH ETC
 
 Character.prototype.ouch = function() {
@@ -140,9 +171,12 @@ Character.prototype.gets = function(item) {
 }
 
 Character.prototype.use = function(item, coords) {
-    if (!this.inventory.has(item.id)) return;
-    if (Utils.distance(coords, this.coords) > item.usageRadius) return;
+    if (!this.inventory.has(item.id) || Utils.distance(coords, this.coords) > item.usageRadius) {
+        game.state.advance({success: false, item: item.id});
+        return;
+    }
 
     this.inventory.removeItem(item);
     item.useAt(coords);
+    game.state.advance({success: true, item: item.id});
 }

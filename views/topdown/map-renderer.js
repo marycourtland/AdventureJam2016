@@ -17,7 +17,10 @@ MapRenderer.prototype.onInit = function(params) {
 
 MapRenderer.prototype.bindCellEvents = function(cellObject) {
     var self = this;
-    cellObject.on('change', 'refresh', function(data) {
+    cellObject.on('change', 'cell-change', function(data) {
+       self.refreshCell(cellObject.coords) 
+    })
+    cellObject.on('add-item', 'cell-add-item', function(data) {
        self.refreshCell(cellObject.coords) 
     })
 }

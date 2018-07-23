@@ -113,6 +113,15 @@ a {
   transition: background-color 0.5s linear;
 }
 
+.cell img {
+  background-color: #0C1416;
+  position: absolute;
+  top: 15%;
+  left: 15%;
+  width: 70%;
+  height: 70%
+}
+
 .sprite {
   position: absolute;
   background-repeat: no-repeat;
@@ -121,7 +130,7 @@ a {
 /* Inventory: 10x2 array of slots */
 
 #game-inventory {
-  width: 520px; /* 10*(50+1+1) */
+  width: 533px;
   margin: 1em auto;
   font-size: 0;
   border-width: 4px 12px;
@@ -227,6 +236,7 @@ a {
     position: absolute;
     bottom: 1rem;
     right: 1rem;
+    border-width: 4px 8px;
 }
 
 #inspector-wrapper {

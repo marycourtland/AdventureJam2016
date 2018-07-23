@@ -7,8 +7,9 @@ window.UI = require('./ui');
 var Controls = require('./controls');
 var TopDownView = require('./top-down-view');
 var MapRenderer = require('./map-renderer');
+var FogRenderer = require('./fog-renderer');
 var CharacterRenderer = require('./character-renderer');
-var InspectorRenderer = require('./cell-inspector-renderer');
+var InspectorRenderer = require('./inspector-renderer');
 
 var game = window.game;
 var Context = null;
@@ -65,8 +66,10 @@ var init = UI.infoWrap('loading...', function() {
             container: document.getElementById('board-layers'),
             board: document.getElementById('game'),
             characters: document.getElementById('game-characters'),
+            items: document.getElementById('game-items'),
             inventory: document.getElementById('game-inventory'),
-            mouseOverlay: document.getElementById('mouse-overlay')
+            mouseOverlay: document.getElementById('mouse-overlay'),
+            fog: document.getElementById('fog'),
         }
     }
 
@@ -76,6 +79,7 @@ var init = UI.infoWrap('loading...', function() {
     game.view = new TopDownView(game.viewParams);
     game.views.main = game.view;
     game.view.addRenderer(new MapRenderer(game.map));
+    game.view.addRenderer(new FogRenderer(game));
     game.view.addRenderer(new CharacterRenderer('wizard', game.wizard));
     game.view.addRenderer(new CharacterRenderer('player', game.player));
     game.view.init();
@@ -124,7 +128,7 @@ function configGame(game) {
     }
 
     game.refreshView = function() {
-        var margin = 3;
+        var margin = Settings.margin;
         var d = game.view.getDistanceFromWindowEdge(game.player.coords);
         if (d.north < margin || d.south < margin || d.west < margin || d.east < margin) {
             //console.log('d:', d)
