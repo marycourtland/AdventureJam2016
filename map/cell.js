@@ -340,3 +340,11 @@ Cell.prototype.addItem = function(item) {
     this.items.push(item);
     this.emit('add-item', {item: item})
 }
+
+Cell.prototype.removeItem = function(item) {
+    var index = this.items.indexOf(item);
+    if (index > -1) {
+        this.items.splice(index, 1);
+        this.emit('remove-item', {item: item})
+    }
+}
