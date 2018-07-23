@@ -66,6 +66,7 @@ var init = UI.infoWrap('loading...', function() {
             container: document.getElementById('board-layers'),
             board: document.getElementById('game'),
             characters: document.getElementById('game-characters'),
+            items: document.getElementById('game-items'),
             inventory: document.getElementById('game-inventory'),
             mouseOverlay: document.getElementById('mouse-overlay'),
             fog: document.getElementById('fog'),

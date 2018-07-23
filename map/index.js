@@ -26,6 +26,7 @@ Map.init = function(params) {
 }
 
 Map.startIteration = function() {
+    return;
     // this is just the first timeout
     function getTimeout(){
         // flat distribution because it's the first iteration
@@ -276,4 +277,11 @@ Map.log = function() {
         }).join(' ');
     }).join('\n');
     console.log(ascii);
+}
+
+// items
+
+Map.placeItem = function(coords, item) {
+    var cell = this.env.get(coords);
+    cell.addItem(item);
 }

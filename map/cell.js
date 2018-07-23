@@ -336,6 +336,7 @@ Cell.prototype.activateRut = function(rut_id) {
 
 // ITEMS =======
 
-Cell.prototype.addItem = function(coords, item) {
+Cell.prototype.addItem = function(item) {
     this.items.push(item);
+    this.emit('add-item', {item: item})
 }

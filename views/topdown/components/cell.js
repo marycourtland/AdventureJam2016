@@ -46,6 +46,20 @@ Cell.prototype.refresh = function() {
         this.element.style.color = 'red'
     }
 
+    // items
+    if (this.object.items.length > 0) {
+        // TODO: rendering multiple items?
+        var url = "./images/items/" + this.object.items[0].type_id + '.png'
+        var img = document.createElement('img');
+        img.setAttribute('src', url);
+        this.element.appendChild(img);
+    }
+    else if (this.element.children.length > 0) {
+        for (var i = 0; i < this.element.children.length; i++) {
+            this.element.children[i].remove(); 
+        }
+    }
+
     // positioning
     this.element.setAttribute('id', Cell.coordsToId(this.object.coords));
     if (!this.options.noPositioning) {
