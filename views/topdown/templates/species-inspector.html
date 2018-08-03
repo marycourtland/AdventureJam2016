@@ -4,6 +4,14 @@
 
 <hr>
 
+{{~ it.species.rules.lifespan :rule}}
+    <div>
+        After age {{=rule.min_age}}, it {{=rule.rules.description}}.
+    </div>
+{{~}}
+
+<hr>
+
 {{~ it.species.rules.conditional :rule}}
     <div>
         It {{=rule.rules.description}} when {{=it.catalogue.species[rule.species_id].description.singular}} is nearby.

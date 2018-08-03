@@ -60,10 +60,13 @@ Cell.prototype.get = function(species_id) {
 }
 
 // get properties for the dominant species
-Cell.prototype.getAge = function() {
-    if (!this.species) return null;
+Cell.prototype.getAge = function(species_id) {
+    if (!species_id && !this.species) return null;
+    species_id = species_id || this.species.id;
+
+    if (!this.register[species_id]) return null;
     
-    return this.register[this.species.id].age;
+    return this.register[species_id].age;
 }
 
 Cell.prototype.getStrength = function() {

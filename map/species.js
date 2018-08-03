@@ -46,11 +46,19 @@ Species.prototype.initRules = function(rules) {
         rut.rules = new RuleSet(rut.rules);
     })
 
+    // Lifespan rules are conditional on this species' age
+    this.rules.lifespan = this.rules.lifespan || [];
+
+    this.rules.lifespan.forEach(function(condition) {
+        condition.mask = SpeciesMask(condition.species_id, condition.min_age);
+        condition.rules = new RuleSet(condition.rules);
+    })
+
     // Conditional rules are based on other species
     this.rules.conditional = this.rules.conditional || [];
 
     this.rules.conditional.forEach(function(condition) {
-        condition.mask = SpeciesMask(condition.species_id);
+        condition.mask = SpeciesMask(condition.species_id, condition.min_age);
         condition.rules = new RuleSet(condition.rules);
     })
 }
@@ -115,6 +123,14 @@ Species.prototype.decideRuleset = function(cell, neighbors) {
 
     // CONDITIONAL RULES
     // - should be sorted from lowest priority to highest.
+    
+
+    this.rules.lifespan.forEach(function(condition) {
+        // the cell age has to meet the age threshhold
+        if (condition.min_age && cell.getAge(condition.species_id) < condition.min_age) return;
+        winningRuleset = condition.rules;
+    })
+
 
     this.rules.conditional.forEach(function(condition) {
         var maskedNeighbors = mapCoordmap(neighbors, condition.mask);
@@ -122,9 +138,6 @@ Species.prototype.decideRuleset = function(cell, neighbors) {
 
         // the number of neighbors has to meet the neighbor threshhold
         if (condition.min_neighbors && count < condition.min_neighbors) return;
-
-        // the cell age has to meet the age threshhold
-        if (condition.min_age && cell.getAge() < condition.min_age) return;
 
         winningRuleset = condition.rules;
     })
