@@ -29,10 +29,10 @@ var Player = module.exports = function(map) {
 
     // Starting inventory
     initInventory(player, {
-        neutralizer: 5,
-        bomb: 3,
-        camera: 3,
-        detector: 3
+        neutralizer: 1,
+        bomb: 4,
+        camera: 8,
+        detector: 4
     })
 
     player.inventory.rendersTo(document.getElementById('game-inventory'));

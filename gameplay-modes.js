@@ -130,14 +130,14 @@ GamePlayModes.modes.usingItem.execute = function(data) {
     game.player.use(currentData.item, data.coords);
 }
 GamePlayModes.modes.usingItem.finish = function() {
-    if (currentData.success) {
+    if (currentData.success && !currentData.item.infinite) {
         currentData.item.deselect();
         delete currentData.item;
     }
 }
 GamePlayModes.modes.usingItem.getNext = function(data) {
     currentData.success = data.success;
-    if (!data.success) {
+    if (!data.success || currentData.item.infinite) {
         return GamePlayModes.modes.itemSelected;
     }
     else {
@@ -167,6 +167,10 @@ GamePlayModes.modes.viewingInspector.getNext = function(data) {
     // TODO: IMPROVE THIS - it would be nice if the event coming from the UI didn't appear
     // as if the player intended to open the inspector (when the inspector is already open).
     if (data.inspector && data.coords) {
+        return GamePlayModes.modes.idle;
+    }
+
+    if (data.escape) {
         return GamePlayModes.modes.idle;
     }
 

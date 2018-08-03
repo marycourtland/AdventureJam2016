@@ -25,11 +25,12 @@ var AssetData = module.exports = {
     },
 	magic: {
         symbol: '&#8960;',
-        color:  '#4C24A3'
+        color:  '#4C24A3',
+        color2: '#a2a5e6'
     },
 	dirt: {
         symbol: '&#8960;',
-        color:  '#4C24A3'
+        color:  '#616831'
     },
 	grass: {
         symbol: '&#8756;',
@@ -37,14 +38,16 @@ var AssetData = module.exports = {
     },
 	flowers: {
         symbol: '&#9880;',
-        color:  '#E46511'
+        color:  '#E46511',
+        color2: '#991900'
     },
 	trees: {
         symbol: '&psi;',
         color:  '#174925'
     },
 	trees2: {
-        symbol: '&#;',
         symbol: '&psi;',
+        color:  '#1f5214',
+        color2: '#457b1e'
     }
 }

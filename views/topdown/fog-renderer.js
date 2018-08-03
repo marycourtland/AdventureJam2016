@@ -28,19 +28,21 @@ FogRenderer.prototype.render = function() {
 
     this.ctx.clearRect(0, 0, size.x, size.y);
 
+    var visBoxes = this.getVisibilityBoxes();
+
+    // If all cells are visible, don't bother with the extra operations.
+    var completeVisibilities = visBoxes.filter((visibilityBbox) => {
+        return visibilityBbox.x1 === 0 && visibilityBbox.y1 === 0 && visibilityBbox.x2 === game.size.x && visibilityBbox.y2 === game.size.y;
+    })
+    if (completeVisibilities.length > 0) return;
+
+
     this.ctx.globalCompositeOperation = 'source-over';
     this.ctx.filter = 'none';
     this.ctx.fillStyle = "#0C1416";
     this.ctx.fillRect(0, 0, size.x, size.y);
 
-    this.getVisibilityBoxes().forEach((visibilityBbox) => {
-        // If all cells are visible, don't bother with the extra operations.
-        // TODO: prevent all visibility bbox updates if any of them cover the whole map
-        // (and prevent the full fog fill above)
-        if (visibilityBbox.x1 === 0 && visibilityBbox.y1 === 0 && visibilityBbox.x2 === game.size.x && visibilityBbox.y2 === game.size.y) {
-            return;
-        }
-
+    visBoxes.forEach((visibilityBbox) => {
         this.ctx.globalCompositeOperation = 'destination-out';
         this.ctx.filter = 'blur(' + (10 * game.view.zoom) + 'px)'; // note: this isn't compatible w/ all browsers
         this.ctx.fillRect(

@@ -176,7 +176,7 @@ Character.prototype.use = function(item, coords) {
         return;
     }
 
-    this.inventory.removeItem(item);
+    if (!item.infinite) this.inventory.removeItem(item);
     item.useAt(coords);
     game.state.advance({success: true, item: item.id});
 }
