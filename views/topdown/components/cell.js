@@ -45,7 +45,13 @@ Cell.prototype.refresh = function() {
 
         var rut_string = '';
         for (var r in this.object.getActiveRuts()) {
-            rut_string += r[0].toUpperCase(); 
+            var rutAssetData = AssetData[r];
+            if (rutAssetData && rutAssetData.symbol) {
+                rut_string += rutAssetData.symbol;
+            }
+            else {
+                rut_string += r[0].toUpperCase(); 
+            }
         }
 
         this.element.innerHTML = rut_string;

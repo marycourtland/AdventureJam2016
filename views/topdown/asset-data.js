@@ -49,5 +49,9 @@ var AssetData = module.exports = {
         symbol: '&psi;',
         color:  '#1f5214',
         color2: '#457b1e'
+    },
+    // TODO: this is a rut ID. Should it be separate from the species IDS?
+    footsteps: {
+        symbol: '&#x1F463;'
     }
 }

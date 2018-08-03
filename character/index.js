@@ -72,7 +72,10 @@ Character.prototype.moveTo = function(coords) {
     
     // trail ruts underfoot, like footsteps or whatnot
     for (var rut_id in this.trailingRuts) {
-        newCell.rut(rut_id, this.trailingRuts[rut_id]);
+        newCell.rut(rut_id, {
+            intensity: this.trailingRuts[rut_id],
+            active: true
+        });
     }
     
     this.emit('refresh');

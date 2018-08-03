@@ -139,7 +139,7 @@ Map.generateTest = function() {
     
     rut_cells.forEach(function(coords) {
         var cell = self.env.get(coords);
-        cell.rut('magic', 1);
+        cell.rut('magic', {intensity: 1});
     })
 
     //self.env.set({x:1,y:1}, self.species.trees)

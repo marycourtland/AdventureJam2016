@@ -301,12 +301,17 @@ Cell.prototype.forceNeighborIteration = function() {
 
 // RUTS =======
 
-Cell.prototype.rut = function(rut_id, intensity) {
-    if (typeof intensity === 'undefined') intensity = 1;
+Cell.prototype.rut = function(rut_id, options) {
+    options = options || {};
+    options.active = options.active || false;
+    options.intensity = options.intensity || 1;
     this.ruts[rut_id] = {
-        active: false,
-        intensity: intensity
-    } 
+        active: options.active,
+        intensity: options.intensity
+    }
+    if (options.active) {
+        this.iterate();
+    }
 }
 
 // ruts should only be active if any of the cells in the neighborhood
