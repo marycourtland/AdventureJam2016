@@ -205,6 +205,11 @@ Cell.prototype.getRuts = function() {
     return Object.keys(this.ruts);
 }
 
+Cell.prototype.getItem = function(item_id) {
+    var matching_items = this.items.filter((item) => item.id == item_id);
+    return (matching_items.length > 0) ? matching_items[0] : null;
+}
+
 // ITERATION STUFF
 
 

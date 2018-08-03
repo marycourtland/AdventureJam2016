@@ -57,20 +57,18 @@ FogRenderer.prototype.render = function() {
 FogRenderer.prototype.getVisibilityBoxes = function() {
     var visBoxes = [];
 
+    // TODO: this called every time the player moves. Would be nice to know
+    // whether we need to refresh the camera visibility boxes or not.
+
     // Player visibility
     visBoxes.push(game.player.getVisibility());
 
     // Areas of visibility around cameras
-    // TODO: this code could live on the camera item. (But, currently no access to the item from here)
     if (game.map.items.camera) {
         for (var item_id in this.game.map.items.camera) {
             var coords = this.game.map.items.camera[item_id];
-            visBoxes.push({
-                x1: coords.x - Settings.visibilityCamera,
-                y1: coords.y - Settings.visibilityCamera,
-                x2: coords.x + Settings.visibilityCamera + 1,
-                y2: coords.y + Settings.visibilityCamera + 1,
-            })
+            var item = this.game.map.getCell(coords).getItem(item_id);
+            visBoxes.push(item.getVisibility());
         }
     }
 
