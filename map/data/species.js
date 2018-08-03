@@ -159,7 +159,6 @@ speciesData.push({
         singular: 'a pine tree',
         plural: 'pine trees'
     },
-    speed: 200,
     passable: true,
     initial_strength: 3,
     strength_threshhold: 3,
@@ -198,7 +197,6 @@ speciesData.push({
         singular: 'a cedar tree',
         plural: 'cedar trees'
     },
-    speed: 200,
     passable: true,
     initial_strength: 3,
     strength_threshhold: 3,
