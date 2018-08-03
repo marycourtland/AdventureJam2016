@@ -200,6 +200,11 @@ Cell.prototype.getRegister = function() {
     return register;
 }
 
+Cell.prototype.getRuts = function() {
+    // eh...
+    return Object.keys(this.ruts);
+}
+
 // ITERATION STUFF
 
 

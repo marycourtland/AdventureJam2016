@@ -28,7 +28,12 @@ InspectorRenderer.prototype.onInit = function(params) {
         }
         this.html.cell.appendChild(cellHtml.element);
 
-        this.html.text.innerHTML = cellTemplate({cell: cell, register: cell.getRegister(), catalogue: Catalogue });
+        this.html.text.innerHTML = cellTemplate({
+            cell: cell,
+            register: cell.getRegister(),
+            ruts: cell.getRuts(),
+            catalogue: Catalogue
+        });
     }
 
     this.view.loadSpecies = (species_id) => {
