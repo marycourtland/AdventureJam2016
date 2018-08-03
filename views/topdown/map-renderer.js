@@ -43,7 +43,6 @@ MapRenderer.prototype.render = function(env) {
 
 // Todo: what is the difference between refresh and render ???
 MapRenderer.prototype.refresh = function(env, fullRefresh) {
-    console.log('refreshing')
     var self = this;
     env = env || this.map.env;
 

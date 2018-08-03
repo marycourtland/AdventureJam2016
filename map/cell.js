@@ -220,14 +220,14 @@ Cell.prototype.refreshTimeout = function() {
 };
 
 Cell.prototype.scheduleIteration = function() {
-    clearTimeout(this.iterationTimeout);
+    // clearTimeout(this.iterationTimeout);
     this._timeout = this.getIterationTime();
     this._t = new Date() + this._timeout; // the time at which the cell will iterate again
 
     var self = this;
-    this.iterationTimeout = setTimeout(function() {
+    this.iterationTimeout = window.game.clock.schedule(self._timeout, function() {
         self.iterate();
-    }, self._timeout);
+    });
 
     //reset the forced iteration
     this.forcedIterationTime = -1;

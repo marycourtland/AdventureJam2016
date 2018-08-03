@@ -65,7 +65,7 @@ speciesData.push({
         ruts: [
             {
                 rut_id: 'magic',
-                timeToIteration: 100,
+                timeToIteration: 1,
                 forceNeighborIteration: true,
                 rules: GrowthRules.absoluteActivation
             }

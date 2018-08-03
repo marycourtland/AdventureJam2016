@@ -29,8 +29,9 @@ if (Settings.mode === 'test') {
 
 // === Map iteration
 // if the randomize switch is on, it only makes sense to do timeout at least 10sec, if not 20
-Settings.mapIterationTimeout    = 20000; // millis between map updates. Use 0 to disable automatic updates
+Settings.mapIterationTimeout    = 200; // millis between map updates. Use 0 to disable automatic updates
 Settings.randomizeCellIteration = true;
+Settings.clockInterval = 50;
 
 // === Characters
 Settings.maxHealth = 10;

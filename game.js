@@ -1,9 +1,11 @@
 var Settings = window.Settings;
 var Views = require('./views');
+var Clock = require('./clock');
 
 // view-independent modules
 var Context = {
     Map: require('./map'),
+    clock: new Clock(),
     GamePlayModes: require('./gameplay-modes'),
     Items: require('./items'),
     Player: require('./player'),

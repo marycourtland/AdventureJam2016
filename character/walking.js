@@ -10,9 +10,9 @@ Walker.prototype = {};
 
 Walker.prototype.timeTillNextStep = function() {
     // 3-4 seconds, but once in a while stop for a bit
-    var base = 3000;
-    if (Math.random() < 1/10) base = 8000;
-    return base +  Math.random() * 1000;
+    var base = 60;
+    if (Math.random() < 1/10) base = 160;
+    return (base +  Math.random() * 20);
 }
 
 Walker.prototype.start = function() {
@@ -34,8 +34,8 @@ Walker.prototype.step = function() {
     this.onStep(dir);
 
     var self = this;
-    window.clearTimeout(this.timeout);
-    this.timeout = window.setTimeout(function() {
+    // window.clearTimeout(this.timeout);
+    window.game.clock.schedule(this.timeTillNextStep(), function() {
         self.step();
     }, this.timeTillNextStep());
 }

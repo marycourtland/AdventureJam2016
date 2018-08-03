@@ -29,8 +29,10 @@ function setContext(newContext) {
     Wizard = Context.Wizard;
     Player = Context.Player;
 
+    // TODO: the game should be set up elsewhere
     var game = window.game;
-    game.state = Context.GamePlayModes; // NOT THE SAME AS IT WAS BEFORE
+    game.clock = Context.clock;
+    game.state = Context.GamePlayModes;
     game.map = Context.Map;
 
     //game.size = Settings.gameSize; 
@@ -114,10 +116,14 @@ var init = UI.infoWrap('loading...', function() {
         game.views.cellInspector.hidden(false);
     })
 
-    game.map.startIteration();
+    game.start();
 });
 
 function configGame(game) {
+    game.start = function() {
+        game.map.startIteration();
+    }
+
     game.refreshView2 = function() {
         if (!game.view.isInView(game.player.coords)) {
             game.view.recenter(game.player.coords);

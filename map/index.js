@@ -34,7 +34,8 @@ Map.startIteration = function() {
     }
 
     this.forEach(function(coords, cell) {
-        setTimeout(function() { cell.iterate(); }, getTimeout());
+        window.game.clock.schedule(getTimeout(), function() { cell.iterate(); })
+        //setTimeout(function() { cell.iterate(); }, getTimeout());
     })
 }
 
