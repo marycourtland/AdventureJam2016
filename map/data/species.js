@@ -165,10 +165,6 @@ speciesData.push({
     rules: {
         default: GrowthRules.trees,
         ruts: [
-            {
-                rut_id: 'footsteps',
-                rules: GrowthRules.completeDeath
-            }
         ],
         lifespan: [
             // tree growth stabilizes when the trees are old
