@@ -72,7 +72,10 @@ Character.prototype.moveTo = function(coords) {
     
     // trail ruts underfoot, like footsteps or whatnot
     for (var rut_id in this.trailingRuts) {
-        newCell.rut(rut_id, this.trailingRuts[rut_id]);
+        newCell.rut(rut_id, {
+            intensity: this.trailingRuts[rut_id],
+            active: true
+        });
     }
     
     this.emit('refresh');
@@ -128,9 +131,9 @@ Character.prototype.getVisibility = function() {
     else {
         return {
             x1: this.coords.x - this.visibility,
-            x2: this.coords.x + this.visibility,
+            x2: this.coords.x + this.visibility + 1,
             y1: this.coords.y - this.visibility,
-            y2: this.coords.y + this.visibility,
+            y2: this.coords.y + this.visibility + 1,
         }
     }
 }
@@ -176,7 +179,7 @@ Character.prototype.use = function(item, coords) {
         return;
     }
 
-    this.inventory.removeItem(item);
+    if (!item.infinite) this.inventory.removeItem(item);
     item.useAt(coords);
     game.state.advance({success: true, item: item.id});
 }

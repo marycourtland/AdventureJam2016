@@ -16,7 +16,7 @@ Settings.mapSize = {x: 60, y:60}; // measured in game cells
 Settings.gameAnchor = [0.5, -0.5];
 Settings.gameAnchor = [0.5, 0.5];
 Settings.gameDims = {x: 4000, y: 4000}; // pixels
-Settings.cellDims = {x: 38, y:38}; // isometric pixels per cell
+Settings.cellDims = {x: 24, y:24}; // isometric pixels per cell
 Settings.cameraDeadzone = 0.4;
 
 // TEST SETTINGS - smaller map etc
@@ -34,7 +34,7 @@ Settings.randomizeCellIteration = true;
 
 // === Characters
 Settings.maxHealth = 10;
-Settings.playerStart = {x: 20, y: 10};
+Settings.playerStart = {x: 30, y: 30};
 Settings.wizardMin = {x: 35, y: 35};
 Settings.wizardStart = {x: 3, y: 5};
 Settings.defaultSpeed = 500;

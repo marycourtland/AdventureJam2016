@@ -65,7 +65,10 @@ Character.prototype.moveTo = function (coords) {
   }); // trail ruts underfoot, like footsteps or whatnot
 
   for (var rut_id in this.trailingRuts) {
-    newCell.rut(rut_id, this.trailingRuts[rut_id]);
+    newCell.rut(rut_id, {
+      intensity: this.trailingRuts[rut_id],
+      active: true
+    });
   }
 
   this.emit('refresh');
@@ -122,9 +125,9 @@ Character.prototype.getVisibility = function () {
   } else {
     return {
       x1: this.coords.x - this.visibility,
-      x2: this.coords.x + this.visibility,
+      x2: this.coords.x + this.visibility + 1,
       y1: this.coords.y - this.visibility,
-      y2: this.coords.y + this.visibility
+      y2: this.coords.y + this.visibility + 1
     };
   }
 };
@@ -163,7 +166,7 @@ Character.prototype.use = function (item, coords) {
     return;
   }
 
-  this.inventory.removeItem(item);
+  if (!item.infinite) this.inventory.removeItem(item);
   item.useAt(coords);
   game.state.advance({
     success: true,
@@ -446,7 +449,7 @@ GamePlayModes.modes.usingItem.execute = function (data) {
 };
 
 GamePlayModes.modes.usingItem.finish = function () {
-  if (currentData.success) {
+  if (currentData.success && !currentData.item.infinite) {
     currentData.item.deselect();
     delete currentData.item;
   }
@@ -455,7 +458,7 @@ GamePlayModes.modes.usingItem.finish = function () {
 GamePlayModes.modes.usingItem.getNext = function (data) {
   currentData.success = data.success;
 
-  if (!data.success) {
+  if (!data.success || currentData.item.infinite) {
     return GamePlayModes.modes.itemSelected;
   } else {
     return GamePlayModes.modes.idle;
@@ -495,6 +498,10 @@ GamePlayModes.modes.viewingInspector.getNext = function (data) {
   // as if the player intended to open the inspector (when the inspector is already open).
   if (data.inspector && data.coords) {
     return GamePlayModes.modes.idle;
+  }
+
+  if (data.escape) {
+    return GamePlayModes.modes.idle;
   } // TODO: improve this too
 
 
@@ -529,8 +536,24 @@ Camera.id = 'camera';
 
 Camera.useAt = function (coords) {
   // Put the item in the spot...
+  this.coords = coords;
   var map = window.game.map;
   map.placeItem(coords, this);
+};
+
+Camera.getVisibility = function () {
+  return {
+    x1: this.coords.x - Settings.visibilityCamera,
+    y1: this.coords.y - Settings.visibilityCamera,
+    x2: this.coords.x + Settings.visibilityCamera + 1,
+    y2: this.coords.y + Settings.visibilityCamera + 1
+  };
+}; // Same as character.isCoordsVisible. TODO: a single 'visibility' component would be nice
+
+
+Camera.isCoordsVisible = function (coords) {
+  var visibilityBbox = this.getVisibility();
+  return coords.x >= visibilityBbox.x1 && coords.x <= visibilityBbox.x2 && coords.y >= visibilityBbox.y1 && coords.y <= visibilityBbox.y2;
 };
 
 },{}],9:[function(require,module,exports){
@@ -592,7 +615,8 @@ ToolChest.nextID = function () {
 "use strict";
 
 var Neutralizer = module.exports = {};
-Neutralizer.id = 'neutralizer'; // TODO: do something other than accessing the global game instance
+Neutralizer.id = 'neutralizer';
+Neutralizer.infinite = true; // TODO: do something other than accessing the global game instance
 
 Neutralizer.useAt = function (coords) {
   var map = window.game.map;
@@ -730,9 +754,11 @@ Cell.prototype.get = function (species_id) {
 }; // get properties for the dominant species
 
 
-Cell.prototype.getAge = function () {
-  if (!this.species) return null;
-  return this.register[this.species.id].age;
+Cell.prototype.getAge = function (species_id) {
+  if (!species_id && !this.species) return null;
+  species_id = species_id || this.species.id;
+  if (!this.register[species_id]) return null;
+  return this.register[species_id].age;
 };
 
 Cell.prototype.getStrength = function () {
@@ -872,6 +898,18 @@ Cell.prototype.getRegister = function () {
     return reg;
   });
   return register;
+};
+
+Cell.prototype.getRuts = function () {
+  // eh...
+  return Object.keys(this.ruts);
+};
+
+Cell.prototype.getItem = function (item_id) {
+  var matching_items = this.items.filter(function (item) {
+    return item.id == item_id;
+  });
+  return matching_items.length > 0 ? matching_items[0] : null;
 }; // ITERATION STUFF
 // This is for when a cell gets manually set, and we have to pull various properties about it
 // e.g. the magic iteration time
@@ -956,12 +994,18 @@ Cell.prototype.forceNeighborIteration = function () {
 }; // RUTS =======
 
 
-Cell.prototype.rut = function (rut_id, intensity) {
-  if (typeof intensity === 'undefined') intensity = 1;
+Cell.prototype.rut = function (rut_id, options) {
+  options = options || {};
+  options.active = options.active || false;
+  options.intensity = options.intensity || 1;
   this.ruts[rut_id] = {
-    active: false,
-    intensity: intensity
+    active: options.active,
+    intensity: options.intensity
   };
+
+  if (options.active) {
+    this.iterate();
+  }
 }; // ruts should only be active if any of the cells in the neighborhood
 // has the rut's species as dominant
 
@@ -1259,7 +1303,6 @@ speciesData.push({
     singular: 'a pine tree',
     plural: 'pine trees'
   },
-  speed: 200,
   passable: true,
   initial_strength: 3,
   strength_threshhold: 3,
@@ -1269,12 +1312,12 @@ speciesData.push({
       rut_id: 'footsteps',
       rules: GrowthRules.completeDeath
     }],
-    conditional: [// tree growth stabilizes when the trees are old
+    lifespan: [// tree growth stabilizes when the trees are old
     {
-      species_id: 'trees',
       min_age: 10,
       rules: GrowthRules.treesStable
-    }, {
+    }],
+    conditional: [{
       min_neighbors: 1,
       species_id: 'magic',
       rules: GrowthRules.plantsDying
@@ -1291,18 +1334,17 @@ speciesData.push({
     singular: 'a cedar tree',
     plural: 'cedar trees'
   },
-  speed: 200,
   passable: true,
   initial_strength: 3,
   strength_threshhold: 3,
   rules: {
     default: GrowthRules.trees,
-    conditionalnope: [// tree growth stabilizes when the trees are old
+    lifespan: [// tree growth stabilizes when the trees are old
     {
-      species_id: 'trees2',
       min_age: 10,
       rules: GrowthRules.treesStable
-    }, {
+    }],
+    conditional: [{
       min_neighbors: 1,
       species_id: 'magic',
       rules: GrowthRules.plantsDying
@@ -1741,7 +1783,9 @@ Map.generateTest = function () {
   }];
   rut_cells.forEach(function (coords) {
     var cell = self.env.get(coords);
-    cell.rut('magic', 1);
+    cell.rut('magic', {
+      intensity: 1
+    });
   }); //self.env.set({x:1,y:1}, self.species.trees)
 
   self.rect(self.species.trees, {
@@ -2039,12 +2083,13 @@ var masks = {
   false: 0
 };
 
-var SpeciesMask = module.exports = function (species_id) {
+var SpeciesMask = module.exports = function (species_id, min_age) {
+  min_age = min_age || 0;
   return function (cell) {
     if (!cell || !cell.species) return masks[false];
     if (!cell.register[species_id]) return masks[false]; //return masks[cell.species.id === species_id];
 
-    return masks[cell.register[species_id].age > 0];
+    return masks[cell.register[species_id].age > min_age];
   };
 };
 
@@ -2094,11 +2139,17 @@ Species.prototype.initRules = function (rules) {
   this.rules.ruts = this.rules.ruts || [];
   this.rules.ruts.forEach(function (rut) {
     rut.rules = new RuleSet(rut.rules);
+  }); // Lifespan rules are conditional on this species' age
+
+  this.rules.lifespan = this.rules.lifespan || [];
+  this.rules.lifespan.forEach(function (condition) {
+    condition.mask = SpeciesMask(condition.species_id, condition.min_age);
+    condition.rules = new RuleSet(condition.rules);
   }); // Conditional rules are based on other species
 
   this.rules.conditional = this.rules.conditional || [];
   this.rules.conditional.forEach(function (condition) {
-    condition.mask = SpeciesMask(condition.species_id);
+    condition.mask = SpeciesMask(condition.species_id, condition.min_age);
     condition.rules = new RuleSet(condition.rules);
   });
 };
@@ -2157,13 +2208,16 @@ Species.prototype.decideRuleset = function (cell, neighbors) {
   // - should be sorted from lowest priority to highest.
 
 
+  this.rules.lifespan.forEach(function (condition) {
+    // the cell age has to meet the age threshhold
+    if (condition.min_age && cell.getAge(condition.species_id) < condition.min_age) return;
+    winningRuleset = condition.rules;
+  });
   this.rules.conditional.forEach(function (condition) {
     var maskedNeighbors = mapCoordmap(neighbors, condition.mask);
     var count = coordmapSum(maskedNeighbors); // the number of neighbors has to meet the neighbor threshhold
 
-    if (condition.min_neighbors && count < condition.min_neighbors) return; // the cell age has to meet the age threshhold
-
-    if (condition.min_age && cell.getAge() < condition.min_age) return;
+    if (condition.min_neighbors && count < condition.min_neighbors) return;
     winningRuleset = condition.rules;
   });
   return winningRuleset;
@@ -2551,12 +2605,29 @@ var Player = module.exports = function (map) {
   map.diamondClump(player.coords, map.species.grass); // Starting inventory
 
   initInventory(player, {
-    neutralizer: 5,
-    bomb: 3,
-    camera: 3,
-    detector: 3
+    neutralizer: 1,
+    bomb: 4,
+    camera: 8,
+    detector: 4
   });
-  player.inventory.rendersTo(document.getElementById('game-inventory'));
+  player.inventory.rendersTo(document.getElementById('game-inventory')); // Override visibility to count the cells viewable via camera
+
+  player.isCoordsVisible = function (coords) {
+    var selfVisible = this.__proto__.isCoordsVisible.call(this, coords);
+
+    if (selfVisible) return true;
+
+    if (game.map.items.camera) {
+      for (var item_id in game.map.items.camera) {
+        var item_coords = game.map.items.camera[item_id];
+        var item = game.map.getCell(item_coords).getItem(item_id);
+        if (item.isCoordsVisible(coords)) return true;
+      }
+    }
+
+    return false;
+  };
+
   return player;
 };
 
@@ -3108,8 +3179,6 @@ function onTap(pointer, doubleTap) {
 },{"../asset_data":30,"../cell.js":31,"../character.js":32}],40:[function(require,module,exports){
 "use strict";
 
-function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
-
 // Tree sprites are from
 // http://opengameart.org/content/tree-collection-v26-bleeds-game-art
 // Bleed - http://remusprites.carbonmade.com/
@@ -3136,11 +3205,12 @@ var AssetData = module.exports = {
   },
   magic: {
     symbol: '&#8960;',
-    color: '#4C24A3'
+    color: '#4C24A3',
+    color2: '#a2a5e6'
   },
   dirt: {
     symbol: '&#8960;',
-    color: '#4C24A3'
+    color: '#616831'
   },
   grass: {
     symbol: '&#8756;',
@@ -3148,15 +3218,22 @@ var AssetData = module.exports = {
   },
   flowers: {
     symbol: '&#9880;',
-    color: '#E46511'
+    color: '#E46511',
+    color2: '#991900'
   },
   trees: {
     symbol: '&psi;',
     color: '#174925'
   },
-  trees2: _defineProperty({
-    symbol: '&#;'
-  }, "symbol", '&psi;')
+  trees2: {
+    symbol: '&psi;',
+    color: '#1f5214',
+    color2: '#457b1e'
+  },
+  // TODO: this is a rut ID. Should it be separate from the species IDS?
+  footsteps: {
+    symbol: '&#x1F463;'
+  }
 };
 
 },{}],41:[function(require,module,exports){
@@ -3261,20 +3338,30 @@ Cell.prototype.refresh = function () {
   this.element.style.height = this.renderer.dims.y + 'px';
   this.element.style.lineHeight = this.renderer.dims.y + 'px';
   this.element.style.backgroundColor = assetData.color;
+  this.element.style.color = assetData.color2 || "";
+  if (this.object.species.id == 'magic') this.element.style.animation = "magic-colors 10s linear ".concat(Math.random() * 10, "s infinite");else this.element.style.animation = '';
   this.element.innerHTML = assetData.symbol; // highlight ruts
 
+  var rut_color = '#1f1816';
+
   if (Object.keys(this.object.ruts).length > 0) {
-    this.element.style.border = '1px solid red';
+    this.element.style.border = "1px solid ".concat(rut_color);
     this.element.style.width = this.renderer.dims.x - 2 + 'px';
     this.element.style.height = this.renderer.dims.y - 2 + 'px';
     var rut_string = '';
 
     for (var r in this.object.getActiveRuts()) {
-      rut_string += r[0].toUpperCase();
+      var rutAssetData = AssetData[r];
+
+      if (rutAssetData && rutAssetData.symbol) {
+        rut_string += rutAssetData.symbol;
+      } else {
+        rut_string += r[0].toUpperCase();
+      }
     }
 
     this.element.innerHTML = rut_string;
-    this.element.style.color = 'red';
+    this.element.style.color = rut_color;
   } // items
 
 
@@ -3349,15 +3436,16 @@ Controls.bindEvents = function () {
   };
 
   this.bindInventory();
-  this.bindMovement();
+  this.bindKeyboard();
 };
 
-Controls.bindMovement = function () {
+Controls.bindKeyboard = function () {
   var keyboardCallbacks = {
     37: Controls.handlers.left,
     39: Controls.handlers.right,
     38: Controls.handlers.up,
-    40: Controls.handlers.down
+    40: Controls.handlers.down,
+    27: Controls.handlers.escape
   };
   window.addEventListener('keydown', function (event) {
     var keycode = event.fake || window.event ? event.keyCode : event.which;
@@ -3397,6 +3485,12 @@ Controls.handlers.left = function () {
 }, Controls.handlers.down = function () {
   game.player.move(Utils.dirs['s']);
   game.refreshView();
+}; // MISC
+
+Controls.handlers.escape = function () {
+  game.state.advance({
+    escape: true
+  });
 };
 
 },{}],45:[function(require,module,exports){
@@ -3499,18 +3593,17 @@ FogRenderer.prototype.render = function () {
 
   var size = XY(game.size.x * game.cellDims.x, game.size.y * game.cellDims.y);
   this.ctx.clearRect(0, 0, size.x, size.y);
+  var visBoxes = this.getVisibilityBoxes(); // If all cells are visible, don't bother with the extra operations.
+
+  var completeVisibilities = visBoxes.filter(function (visibilityBbox) {
+    return visibilityBbox.x1 === 0 && visibilityBbox.y1 === 0 && visibilityBbox.x2 === game.size.x && visibilityBbox.y2 === game.size.y;
+  });
+  if (completeVisibilities.length > 0) return;
   this.ctx.globalCompositeOperation = 'source-over';
   this.ctx.filter = 'none';
   this.ctx.fillStyle = "#0C1416";
   this.ctx.fillRect(0, 0, size.x, size.y);
-  this.getVisibilityBoxes().forEach(function (visibilityBbox) {
-    // If all cells are visible, don't bother with the extra operations.
-    // TODO: prevent all visibility bbox updates if any of them cover the whole map
-    // (and prevent the full fog fill above)
-    if (visibilityBbox.x1 === 0 && visibilityBbox.y1 === 0 && visibilityBbox.x2 === game.size.x && visibilityBbox.y2 === game.size.y) {
-      return;
-    }
-
+  visBoxes.forEach(function (visibilityBbox) {
     _this2.ctx.globalCompositeOperation = 'destination-out';
     _this2.ctx.filter = 'blur(' + 10 * game.view.zoom + 'px)'; // note: this isn't compatible w/ all browsers
 
@@ -3519,20 +3612,17 @@ FogRenderer.prototype.render = function () {
 };
 
 FogRenderer.prototype.getVisibilityBoxes = function () {
-  var visBoxes = []; // Player visibility
+  var visBoxes = []; // TODO: this called every time the player moves. Would be nice to know
+  // whether we need to refresh the camera visibility boxes or not.
+  // Player visibility
 
   visBoxes.push(game.player.getVisibility()); // Areas of visibility around cameras
-  // TODO: this code could live on the camera item. (But, currently no access to the item from here)
 
   if (game.map.items.camera) {
     for (var item_id in this.game.map.items.camera) {
       var coords = this.game.map.items.camera[item_id];
-      visBoxes.push({
-        x1: coords.x - Settings.visibilityCamera,
-        y1: coords.y - Settings.visibilityCamera,
-        x2: coords.x + Settings.visibilityCamera + 1,
-        y2: coords.y + Settings.visibilityCamera + 1
-      });
+      var item = this.game.map.getCell(coords).getItem(item_id);
+      visBoxes.push(item.getVisibility());
     }
   }
 
@@ -3636,7 +3726,6 @@ var init = UI.infoWrap('loading...', function () {
   game.views.cellInspector.init();
   game.state.init(game);
   Controls.init(game, game.viewParams);
-  game.view.recenter(game.player.coords);
   game.view.render(); // Todo: find better home for this
 
   game.player.on('inspect-cell', 'inspect-cell', function (data) {
@@ -3665,7 +3754,6 @@ function configGame(game) {
     var d = game.view.getDistanceFromWindowEdge(game.player.coords);
 
     if (d.north < margin || d.south < margin || d.west < margin || d.east < margin) {
-      //console.log('d:', d)
       if (d.north < margin) game.view.shiftView({
         x: 0,
         y: -1
@@ -3686,6 +3774,12 @@ function configGame(game) {
       game.wizard.refresh();
     }
   };
+
+  game.recenter = function () {
+    if (!game.view.isInView(game.player.coords)) {
+      game.view.recenter(game.player.coords);
+    }
+  };
 }
 
 },{"./character-renderer":42,"./controls":44,"./fog-renderer":46,"./inspector-renderer":48,"./map-renderer":49,"./top-down-view":51,"./ui":52}],48:[function(require,module,exports){
@@ -3701,8 +3795,10 @@ var doT = require('dot');
 
 var Catalogue = require('../../map/catalogue');
 
-var speciesTemplate = doT.compile("<h2>{{=it.species.description.plural.capitalize()}}</h2>\n\n<div>{{=it.species.description.singular.capitalize()}} {{=it.species.rules.default.description}}.</div>\n\n<hr>\n\n{{~ it.species.rules.conditional :rule}}\n    <div>\n        It {{=rule.rules.description}} when {{=it.catalogue.species[rule.species_id].description.singular}} is nearby.\n    </div>\n{{~}}\n\n<hr>\n\n{{~ it.species.rules.ruts :rut}}\n    <div>\n        When {{=it.catalogue.ruts[rut.rut_id].description}}, it {{=rut.rules.description}}.\n    </div>\n{{~}}\n\n<div class=\"back\" onclick=\"game.state.advance({navigate: 'back'})\">BACK</div>");
-var cellTemplate = doT.compile("<h2>Coordinates: ({{=it.cell.coords.x}}, {{=it.cell.coords.y}})</h2>\n\n{{~ it.register :reg}}\n    <div class=\"species-row\" onclick=\"game.state.advance({inspector: true, species_id: '{{=reg.species.id}}'});\">\n        <!-- <p></p> -->\n        <h4>{{=it.catalogue.species[reg.species.id].description.plural.toUpperCase() + (reg.is_dominant ? \" (Dominant)\" : \"\")}}</h4>\n        <p>strength: {{=reg.strength}}</p>\n        <p>age: {{=reg.age}}</p>\n    </div>\n{{~}}");
+var CellObject = require('../../map/cell');
+
+var speciesTemplate = doT.compile("<h2>{{=it.species.description.plural.capitalize()}}</h2>\n\n<div>{{=it.species.description.singular.capitalize()}} {{=it.species.rules.default.description}}.</div>\n\n<hr>\n\n{{~ it.species.rules.lifespan :rule}}\n    <div>\n        After age {{=rule.min_age}}, it {{=rule.rules.description}}.\n    </div>\n{{~}}\n\n<hr>\n\n{{~ it.species.rules.conditional :rule}}\n    <div>\n        It {{=rule.rules.description}} when {{=it.catalogue.species[rule.species_id].description.singular}} is nearby.\n    </div>\n{{~}}\n\n<hr>\n\n{{~ it.species.rules.ruts :rut}}\n    <div>\n        When {{=it.catalogue.ruts[rut.rut_id].description}}, it {{=rut.rules.description}}.\n    </div>\n{{~}}\n\n<div class=\"back\" onclick=\"game.state.advance({navigate: 'back'})\">BACK</div>");
+var cellTemplate = doT.compile("<h2>Coordinates: ({{=it.cell.coords.x}}, {{=it.cell.coords.y}})</h2>\n\n{{~ it.ruts :rut_id}}\n    <div style=\"font-size: smaller\">{{=it.catalogue.ruts[rut_id].description.capitalize()}}.</div>\n{{~}}\n\n{{~ it.register :reg}}\n    <div class=\"species-row\" onclick=\"game.state.advance({inspector: true, species_id: '{{=reg.species.id}}'});\">\n        <!-- <p></p> -->\n        <h4>{{=it.catalogue.species[reg.species.id].description.plural.toUpperCase() + (reg.is_dominant ? \" (Dominant)\" : \"\")}}</h4>\n        <p>strength: {{=reg.strength}}</p>\n        <p>age: {{=reg.age}}</p>\n    </div>\n{{~}}");
 
 var InspectorRenderer = module.exports = function () {};
 
@@ -3731,19 +3827,28 @@ InspectorRenderer.prototype.onInit = function (params) {
     _this.html.text.innerHTML = cellTemplate({
       cell: cell,
       register: cell.getRegister(),
+      ruts: cell.getRuts(),
       catalogue: Catalogue
     });
   };
 
   this.view.loadSpecies = function (species_id) {
-    // TODO: create fake cell with the species
-    // var cellHtml = new Cell(cell, this, {noPositioning: true});
-    // if (this.html.cell.firstChild) {
-    //     this.html.cell.removeChild(this.html.cell.firstChild);
-    // }
-    // this.html.cell.appendChild(cellHtml.element);
+    var species = Catalogue.species[species_id]; // Create a fake cell object to show the species
+
+    var cell = new CellObject('', XY(0, 0));
+    cell.add(species);
+    var cellHtml = new Cell(cell, _this, {
+      noPositioning: true
+    }); // this could be more concise
+
+    if (_this.html.cell.firstChild) {
+      _this.html.cell.removeChild(_this.html.cell.firstChild);
+    }
+
+    _this.html.cell.appendChild(cellHtml.element);
+
     _this.html.text.innerHTML = speciesTemplate({
-      species: catalogue.species[species_id],
+      species: species,
       catalogue: Catalogue
     });
   }; // more bad code
@@ -3758,7 +3863,7 @@ InspectorRenderer.prototype.refresh = function () {};
 
 InspectorRenderer.prototype.render = function () {};
 
-},{"../../map/catalogue":14,"./base-renderer":41,"./components/cell":43,"dot":27}],49:[function(require,module,exports){
+},{"../../map/catalogue":14,"../../map/cell":15,"./base-renderer":41,"./components/cell":43,"dot":27}],49:[function(require,module,exports){
 "use strict";
 
 var AssetData = require('./asset-data');
@@ -4185,7 +4290,10 @@ TopDownView.prototype.zoomOut = function () {
   this.dims.x /= this.zoomFactor;
   this.dims.y /= this.zoomFactor;
   this.params.window *= this.zoomFactor;
-  this.rerender();
+  this.recenter(this.centerCoords);
+  this.renderers.forEach(function (renderer) {
+    renderer.refresh();
+  });
   return this;
 };
 
@@ -4194,7 +4302,10 @@ TopDownView.prototype.zoomIn = function () {
   this.dims.x *= this.zoomFactor;
   this.dims.y *= this.zoomFactor;
   this.params.window /= this.zoomFactor;
-  this.rerender();
+  this.recenter(this.centerCoords);
+  this.renderers.forEach(function (renderer) {
+    renderer.refresh();
+  });
   return this;
 };
 
@@ -4261,13 +4372,17 @@ UI.infoWrap = function (text, fn) {
     }, 0);
   };
 }; // TODO: should these live elsewhere?
+// Note: using game.recenter() after zooming is a little redundant/less efficient,
+// but the simplest for now
 
 
 UI.zoomOut = UI.infoWrap('zooming...', function () {
   game.view.zoomOut();
+  game.recenter();
 });
 UI.zoomIn = UI.infoWrap('zooming...', function () {
   game.view.zoomIn();
+  game.recenter();
 });
 UI.fogOff = UI.infoWrap('unfogging...', function () {
   game.player.visibility = -1;

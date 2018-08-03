@@ -28,22 +28,34 @@ Cell.prototype.refresh = function() {
     this.element.style.width = this.renderer.dims.x + 'px';
     this.element.style.height = this.renderer.dims.y + 'px';
     this.element.style.lineHeight = this.renderer.dims.y + 'px';
-    this.element.style.backgroundColor = assetData.color; 
+    this.element.style.backgroundColor = assetData.color;
+    this.element.style.color = assetData.color2  || "";
+    if (this.object.species.id == 'magic')
+        this.element.style.animation = `magic-colors 10s linear ${Math.random() * 10}s infinite`
+    else
+        this.element.style.animation = ''
     this.element.innerHTML = assetData.symbol;
 
     // highlight ruts
+    var rut_color = '#1f1816'
     if (Object.keys(this.object.ruts).length > 0) {
-        this.element.style.border = '1px solid red';
+        this.element.style.border = `1px solid ${rut_color}`;
         this.element.style.width = (this.renderer.dims.x - 2) + 'px';
         this.element.style.height = (this.renderer.dims.y - 2) + 'px';
 
         var rut_string = '';
         for (var r in this.object.getActiveRuts()) {
-            rut_string += r[0].toUpperCase(); 
+            var rutAssetData = AssetData[r];
+            if (rutAssetData && rutAssetData.symbol) {
+                rut_string += rutAssetData.symbol;
+            }
+            else {
+                rut_string += r[0].toUpperCase(); 
+            }
         }
 
         this.element.innerHTML = rut_string;
-        this.element.style.color = 'red'
+        this.element.style.color = rut_color;
     }
 
     // items

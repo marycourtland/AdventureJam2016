@@ -25,15 +25,16 @@ Controls.bindEvents = function() {
     }
     
     this.bindInventory();
-    this.bindMovement();
+    this.bindKeyboard();
 }
 
-Controls.bindMovement = function() {
+Controls.bindKeyboard = function() {
     var keyboardCallbacks = {
         37: Controls.handlers.left,
         39: Controls.handlers.right,
         38: Controls.handlers.up,
-        40: Controls.handlers.down
+        40: Controls.handlers.down,
+        27: Controls.handlers.escape
     }
 
     window.addEventListener('keydown', function(event) {
@@ -82,4 +83,10 @@ Controls.handlers.up = function() {
 Controls.handlers.down = function() {
     game.player.move(Utils.dirs['s']);
     game.refreshView();
+}
+
+// MISC
+
+Controls.handlers.escape = function() {
+    game.state.advance({escape: true})
 }

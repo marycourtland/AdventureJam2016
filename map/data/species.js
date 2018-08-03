@@ -159,7 +159,6 @@ speciesData.push({
         singular: 'a pine tree',
         plural: 'pine trees'
     },
-    speed: 200,
     passable: true,
     initial_strength: 3,
     strength_threshhold: 3,
@@ -171,14 +170,14 @@ speciesData.push({
                 rules: GrowthRules.completeDeath
             }
         ],
-        conditional: [
+        lifespan: [
             // tree growth stabilizes when the trees are old
             {
-                species_id: 'trees',
                 min_age: 10,
                 rules: GrowthRules.treesStable
-            },
-
+            }
+        ],
+        conditional: [
             {
                 min_neighbors: 1,
                 species_id: 'magic',
@@ -198,20 +197,19 @@ speciesData.push({
         singular: 'a cedar tree',
         plural: 'cedar trees'
     },
-    speed: 200,
     passable: true,
     initial_strength: 3,
     strength_threshhold: 3,
     rules: {
         default: GrowthRules.trees,
-        conditionalnope: [
+        lifespan: [
             // tree growth stabilizes when the trees are old
             {
-                species_id: 'trees2',
                 min_age: 10,
                 rules: GrowthRules.treesStable
-            },
-
+            }
+        ],
+        conditional: [
             {
                 min_neighbors: 1,
                 species_id: 'magic',

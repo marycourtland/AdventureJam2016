@@ -32,8 +32,17 @@ UI.infoWrap = function(text, fn) {
 
 // TODO: should these live elsewhere?
 
-UI.zoomOut = UI.infoWrap('zooming...', function() { game.view.zoomOut(); })
-UI.zoomIn = UI.infoWrap('zooming...', function() { game.view.zoomIn(); })
+// Note: using game.recenter() after zooming is a little redundant/less efficient,
+// but the simplest for now
+
+UI.zoomOut = UI.infoWrap('zooming...', function() {
+    game.view.zoomOut();
+    game.recenter();
+})
+UI.zoomIn = UI.infoWrap('zooming...', function() {
+    game.view.zoomIn();
+    game.recenter();
+})
 
 UI.fogOff = UI.infoWrap('unfogging...', () => {
     game.player.visibility = -1;

@@ -300,3 +300,24 @@ a {
   left: 50%;
   margin-left: -100px;
 }
+
+@keyframes magic-colors {
+  0% {
+    color: #6467bb;
+  }
+  20% {
+    color: #888ddf;
+  }
+  40% {
+    color: #4e3f7f;
+  }
+  60% {
+    color: #7878b2;
+  }
+  80% {
+    color: #5e5586;
+  }
+  100% {
+    color: #6467bb;
+  }
+}

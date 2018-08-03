@@ -1,5 +1,9 @@
 <h2>Coordinates: ({{=it.cell.coords.x}}, {{=it.cell.coords.y}})</h2>
 
+{{~ it.ruts :rut_id}}
+    <div style="font-size: smaller">{{=it.catalogue.ruts[rut_id].description.capitalize()}}.</div>
+{{~}}
+
 {{~ it.register :reg}}
     <div class="species-row" onclick="game.state.advance({inspector: true, species_id: '{{=reg.species.id}}'});">
         <!-- <p></p> -->

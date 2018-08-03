@@ -60,10 +60,13 @@ Cell.prototype.get = function(species_id) {
 }
 
 // get properties for the dominant species
-Cell.prototype.getAge = function() {
-    if (!this.species) return null;
+Cell.prototype.getAge = function(species_id) {
+    if (!species_id && !this.species) return null;
+    species_id = species_id || this.species.id;
+
+    if (!this.register[species_id]) return null;
     
-    return this.register[this.species.id].age;
+    return this.register[species_id].age;
 }
 
 Cell.prototype.getStrength = function() {
@@ -197,6 +200,16 @@ Cell.prototype.getRegister = function() {
     return register;
 }
 
+Cell.prototype.getRuts = function() {
+    // eh...
+    return Object.keys(this.ruts);
+}
+
+Cell.prototype.getItem = function(item_id) {
+    var matching_items = this.items.filter((item) => item.id == item_id);
+    return (matching_items.length > 0) ? matching_items[0] : null;
+}
+
 // ITERATION STUFF
 
 
@@ -288,12 +301,17 @@ Cell.prototype.forceNeighborIteration = function() {
 
 // RUTS =======
 
-Cell.prototype.rut = function(rut_id, intensity) {
-    if (typeof intensity === 'undefined') intensity = 1;
+Cell.prototype.rut = function(rut_id, options) {
+    options = options || {};
+    options.active = options.active || false;
+    options.intensity = options.intensity || 1;
     this.ruts[rut_id] = {
-        active: false,
-        intensity: intensity
-    } 
+        active: options.active,
+        intensity: options.intensity
+    }
+    if (options.active) {
+        this.iterate();
+    }
 }
 
 // ruts should only be active if any of the cells in the neighborhood

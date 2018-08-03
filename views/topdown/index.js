@@ -100,7 +100,6 @@ var init = UI.infoWrap('loading...', function() {
     game.state.init(game);
     Controls.init(game, game.viewParams);
 
-    game.view.recenter(game.player.coords);
     game.view.render();
 
     // Todo: find better home for this
@@ -131,13 +130,18 @@ function configGame(game) {
         var margin = Settings.margin;
         var d = game.view.getDistanceFromWindowEdge(game.player.coords);
         if (d.north < margin || d.south < margin || d.west < margin || d.east < margin) {
-            //console.log('d:', d)
             if (d.north < margin) game.view.shiftView({x:0, y:-1});
             if (d.south < margin) game.view.shiftView({x:0, y: 1});
             if (d.west < margin) game.view.shiftView({x:-1, y:0});
             if (d.east < margin) game.view.shiftView({x: 1, y:0});
             game.player.refresh();
             game.wizard.refresh();
+        }
+    }
+
+    game.recenter = function() {
+        if (!game.view.isInView(game.player.coords)) {
+            game.view.recenter(game.player.coords);
         }
     }
 }

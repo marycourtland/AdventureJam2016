@@ -29,13 +29,29 @@ var Player = module.exports = function(map) {
 
     // Starting inventory
     initInventory(player, {
-        neutralizer: 5,
-        bomb: 3,
-        camera: 3,
-        detector: 3
+        neutralizer: 1,
+        bomb: 4,
+        camera: 8,
+        detector: 4
     })
 
     player.inventory.rendersTo(document.getElementById('game-inventory'));
+
+    // Override visibility to count the cells viewable via camera
+    player.isCoordsVisible = function(coords) {
+        var selfVisible = this.__proto__.isCoordsVisible.call(this, coords);
+        if (selfVisible) return true;
+
+        if (game.map.items.camera) {
+            for (var item_id in game.map.items.camera) {
+                var item_coords = game.map.items.camera[item_id];
+                var item = game.map.getCell(item_coords).getItem(item_id);
+                if (item.isCoordsVisible(coords)) return true;
+            }
+        }
+
+        return false;
+    }
 
     return player;
 }
