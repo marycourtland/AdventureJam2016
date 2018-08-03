@@ -128,9 +128,9 @@ Character.prototype.getVisibility = function() {
     else {
         return {
             x1: this.coords.x - this.visibility,
-            x2: this.coords.x + this.visibility,
+            x2: this.coords.x + this.visibility + 1,
             y1: this.coords.y - this.visibility,
-            y2: this.coords.y + this.visibility,
+            y2: this.coords.y + this.visibility + 1,
         }
     }
 }

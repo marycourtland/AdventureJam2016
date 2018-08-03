@@ -208,7 +208,10 @@ TopDownView.prototype.zoomOut = function() {
     this.dims.x /= this.zoomFactor;
     this.dims.y /= this.zoomFactor;
     this.params.window *= this.zoomFactor;
-    this.rerender()
+    this.recenter(this.centerCoords);
+    this.renderers.forEach(function(renderer) {
+        renderer.refresh();
+    })
     return this;
 }
 
@@ -217,7 +220,10 @@ TopDownView.prototype.zoomIn = function() {
     this.dims.x *= this.zoomFactor;
     this.dims.y *= this.zoomFactor;
     this.params.window /= this.zoomFactor;
-    this.rerender()
+    this.recenter(this.centerCoords);
+    this.renderers.forEach(function(renderer) {
+        renderer.refresh();
+    })
     return this;
 }
 
