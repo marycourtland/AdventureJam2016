@@ -4,6 +4,7 @@ var Walker = module.exports = function(char, getNextDir, onStep) {
     this.walking = false;
     this.getNextDir = getNextDir;
     this.onStep = typeof onStep === 'function' ? onStep : function() {};
+    this.nextStepTime = [0,0];
 }
 
 Walker.prototype = {};
@@ -21,7 +22,7 @@ Walker.prototype.start = function() {
 }
 
 Walker.prototype.stop = function() {
-    window.clearTimeout(this.timeout);
+    window.game.clock.cancel(...this.nextStepTime)
     this.timeout = null;
     this.walking = false;
 }
@@ -34,8 +35,7 @@ Walker.prototype.step = function() {
     this.onStep(dir);
 
     var self = this;
-    // window.clearTimeout(this.timeout);
-    window.game.clock.schedule(this.timeTillNextStep(), function() {
+    this.nextStepTime = window.game.clock.schedule(this.timeTillNextStep(), function() {
         self.step();
     }, this.timeTillNextStep());
 }

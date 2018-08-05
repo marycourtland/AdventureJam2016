@@ -11,6 +11,7 @@ var Utils = window.Utils;
 
 var Cell = module.exports = function(blank, coords) {
     this.species = null;
+    this.display_species = null; // for aggregating over time
     this.coords = coords;
     this.neighbors = [];
     this.items = [];
@@ -28,10 +29,8 @@ var Cell = module.exports = function(blank, coords) {
     this.nextSpecies = null;
 
     this.iterationTime = Settings.mapIterationTimeout; // this will be overwritten after setting a species
-
     this.forcedIterationTime = -1;
-
-//    this.callbacks = {add:{}, change:{}}
+    this.nextIteration = [0,0];
 
     this.set(blank || '');
 };
@@ -221,13 +220,33 @@ Cell.prototype.refreshTimeout = function() {
 
 Cell.prototype.scheduleIteration = function() {
     // clearTimeout(this.iterationTimeout);
+    window.game.clock.cancel(...this.nextIteration);
     this._timeout = this.getIterationTime();
     this._t = new Date() + this._timeout; // the time at which the cell will iterate again
 
-    var self = this;
-    this.iterationTimeout = window.game.clock.schedule(self._timeout, function() {
-        self.iterate();
+    this.nextIteration = window.game.clock.schedule(this._timeout, (t, is_long_tick) => {
+        // Some junk related to time-averaging the display (if the clock is going fast enough)
+        if (typeof is_long_tick !== 'undefined') {
+            if (!this.isPausedEvent('change')) {
+                this.pauseEvent('change');
+            }
+
+            if (is_long_tick) {
+                // this will cause an aggregated 'change' event to be emitted
+                this.display_species = window.catalogue.magic;
+                this.resumeEvent('change');
+                this.pauseEvent('change');
+            }
+        }
+        else {
+            if (this.isPausedEvent('change')) {
+                this.display_species = null;
+                this.resumeEvent('change');
+            }
+        }
+        this.iterate();
     });
+    // console.log('cell', this.coords, 'scheduled iteration:', this.nextIteration[0]);
 
     //reset the forced iteration
     this.forcedIterationTime = -1;

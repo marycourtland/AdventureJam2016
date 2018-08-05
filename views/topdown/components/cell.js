@@ -22,15 +22,17 @@ Cell.prototype.create = function() {
     this.element.cell = this;
 }
 
-Cell.prototype.refresh = function() {
+Cell.prototype.refresh = function(species) {
+    var species = this.object.display_species || this.object.species;
+
     // styling
-    var assetData = AssetData[this.object.species.id];
+    var assetData = AssetData[species.id];
     this.element.style.width = this.renderer.dims.x + 'px';
     this.element.style.height = this.renderer.dims.y + 'px';
     this.element.style.lineHeight = this.renderer.dims.y + 'px';
     this.element.style.backgroundColor = assetData.color;
     this.element.style.color = assetData.color2  || "";
-    if (this.object.species.id == 'magic')
+    if (species.id == 'magic')
         this.element.style.animation = `magic-colors 10s linear ${Math.random() * 10}s infinite`
     else
         this.element.style.animation = ''

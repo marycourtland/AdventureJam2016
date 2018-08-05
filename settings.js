@@ -31,7 +31,12 @@ if (Settings.mode === 'test') {
 // if the randomize switch is on, it only makes sense to do timeout at least 10sec, if not 20
 Settings.mapIterationTimeout    = 200; // millis between map updates. Use 0 to disable automatic updates
 Settings.randomizeCellIteration = true;
-Settings.clockInterval = 50;
+Settings.clockInterval = 100;
+
+// if the clock interval is too fast (shorter than longTickLimit), then the display
+// will only be rendered every longTick ticks.
+Settings.longTickLimit = 50;
+Settings.longTick = 10;
 
 // === Characters
 Settings.maxHealth = 10;

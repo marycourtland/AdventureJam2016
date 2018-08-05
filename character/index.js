@@ -97,6 +97,7 @@ Character.prototype.isAt = function(coords) {
 }
 
 Character.prototype.respondToSpecies = function(species) {
+    if (!species) return; // TODO: remove once the time-averaged ticks emit real data
     if (species.id in this.speciesResponses) {
         this.speciesResponses[species.id]();
     }

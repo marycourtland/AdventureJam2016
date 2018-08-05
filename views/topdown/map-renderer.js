@@ -75,5 +75,4 @@ MapRenderer.prototype.isInWindow = function(coords) {
     )
     console.log('is in window?', coords, distance < this.window, distance, this.window)
     return distance < this.window;
-
 }
